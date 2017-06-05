@@ -18,6 +18,7 @@ import toolBar from './components/toolBar';
 
 const DELETE = 'DELETE';
 const CREATEEDGE = 'CREATEEDGE';
+const POINTER = 'POINTER';
 
 export default {
   props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram'],
@@ -39,6 +40,14 @@ export default {
       mouseOutNode: () => {
         this.$emit('mouseoutnode');
       },
+      canDrag: () => this.mouseState === POINTER,
+    });
+
+    this.graph.nodeOptions.setClickNode((node) => {
+      if (this.mouseState === DELETE) {
+        // Recalculate the nodes after deleting the node.
+        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+      }
     });
 
     // TODO: create from savedDiagram.
@@ -84,7 +93,7 @@ export default {
       });
     },
     changeMouseState(state) {
-      if (!(state === DELETE || state === CREATEEDGE)) {
+      if (!(state === DELETE || state === CREATEEDGE || state === POINTER)) {
         console.error('Not sure what state', state, 'is');
       } else {
         this.mouseState = state;

@@ -13,6 +13,14 @@ export default {
   data() {
     return {
       tools: {
+        pointed: {
+          action: 'POINTER',
+          icon: 'pointer',
+        },
+        arrow: {
+          action: 'CREATEEDGE',
+          icon: 'edgeicon',
+        },
         delete: {
           action: 'DELETE',
           icon: 'iconurl',

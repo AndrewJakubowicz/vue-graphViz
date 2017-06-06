@@ -117,7 +117,7 @@ export default {
       const newIds = new Set(current.map(v => v.id));
       old.forEach((v) => {
         if (!newIds.has(v.id)) {
-          this.graph.removeNode(v.id.toString());
+          this.graph.removeNode(`${v.id}`);
         }
       });
       // Nodes that are passed in but aren't drawn go in the list.
@@ -127,7 +127,7 @@ export default {
   methods: {
     toNode(nodeProtocolObject) {
       return {
-        hash: nodeProtocolObject.id.toString(),
+        hash: `${nodeProtocolObject.id}`,
         shortname: nodeProtocolObject.text,
         ...nodeProtocolObject,
       };
@@ -154,7 +154,7 @@ export default {
     },
     recalculateNodesOutside() {
       this.nodesOutsideDiagram = this.nodes.filter((v) => {
-        const result = !this.graph.hasNode(v.id.toString());
+        const result = !this.graph.hasNode(`${v.id}`);
         return result;
       });
     },

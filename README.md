@@ -1,5 +1,11 @@
 # graphviz
 
+[DEMO](http://vue-test-component.surge.sh/)
+
+Click nodes on the left to commit them to the graph.
+Use the tools on the right to draw out your graph.
+ - Second tool is the edge drawing tool. Click and drag two nodes together to create an edge. (Very wonky currently)
+
 > networkVizJs component
 
 ## Very quick rough prototype of structure mapper.

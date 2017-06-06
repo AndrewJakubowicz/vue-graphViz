@@ -1,5 +1,6 @@
 <template>
   <div id="graph-viz">
+    <link v-once rel="stylesheet" href="./static/style.css">
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
     <toolBar @clickedAction="changeMouseState($event)"/>
     <div id="graph"></div>
@@ -16,9 +17,12 @@ import networkViz from 'networkvizjs';
 import nodeList from './components/nodeList';
 import toolBar from './components/toolBar';
 
+require('./liga.js');
+
 const DELETE = 'DELETE';
 const CREATEEDGE = 'CREATEEDGE';
 const POINTER = 'POINTER';
+const SAVE = 'SAVE';
 
 export default {
   props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram'],
@@ -29,18 +33,51 @@ export default {
       graph: undefined,
       nodesOutsideDiagram: [],
       mouseState: POINTER,
+      currentNode: undefined,
+      dragToNode: undefined,
+      dragging: false,
     };
   },
   mounted() {
     this.graph = networkViz('graph', {
-      databaseName: this.hypothesisId.toString(),
+      layoutType: 'jaccardLinkLengths',
+      edgeLength: 200,
+      jaccardModifier: 0.9,
       mouseOverNode: (node) => {
         this.$emit('mouseovernode', node.hash);
+        // Change the node based on whether or not dragging.
+        if (!this.dragging) {
+          this.currentNode = node;
+        } else {
+          this.dragToNode = node;
+        }
       },
       mouseOutNode: () => {
         this.$emit('mouseoutnode');
       },
       canDrag: () => this.mouseState === POINTER,
+    });
+
+    this.graph.nodeOptions.setMouseDown((node) => {
+      if (this.mouseState === CREATEEDGE) {
+        this.dragging = true;
+        this.currentNode = node;
+      }
+    });
+    // This is to help with edge creation.
+    this.graph.getSVGElement().node().addEventListener('mouseup', () => {
+      if (this.dragging) {
+        if (this.currentNode.hash !== this.dragToNode.hash) {
+          this.graph.addTriplet({
+            subject: this.currentNode,
+            predicate: { type: 'arrow' },
+            object: this.dragToNode,
+          });
+        }
+        // do the work.
+      } else {
+        console.log('Do nothing');
+      }
     });
 
     this.graph.nodeOptions.setClickNode((node) => {
@@ -50,7 +87,7 @@ export default {
       }
     });
 
-    // TODO: create from savedDiagram.
+    // Create initial diagram from createDiagram.
     if (this.savedDiagram) {
       // Create from saved.
       const savedGraph = JSON.parse(this.savedDiagram);
@@ -58,6 +95,21 @@ export default {
       nodes.forEach((v) => {
         // Append x and y co-ordinates to the nodes passed in.
         this.addNodeHelper(parseInt(v.hash, 10), v.x, v.y);
+      });
+      const triplets = savedGraph.triplets;
+      triplets.forEach((x) => {
+        // Create the triplets between the nodes.
+        const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(parseInt(x.subject, 10));
+        const indexOfObject = this.nodes.map(v => v && v.id).indexOf(parseInt(x.object, 10));
+        if (indexOfSubject === -1 || indexOfObject === -1) {
+          return;
+        }
+        // Create the triplet
+        this.graph.addTriplet({
+          subject: this.toNode(this.nodes[indexOfSubject]),
+          object: this.toNode(this.nodes[indexOfObject]),
+          predicate: { type: 'arrow' },
+        });
       });
     }
   },
@@ -93,7 +145,7 @@ export default {
       // Adds nodes, and ignores the node if it can't be found.
       // This lets us optimistically create the diagram.
       const indexOfNode = this.nodes.map(v => v.id).indexOf(nodeId);
-      if (indexOfNode !== undefined) {
+      if (indexOfNode !== -1) {
         let node = this.toNode(this.nodes[indexOfNode]);
         if (x && y) {
           node = { x, y, ...node };
@@ -112,10 +164,16 @@ export default {
       });
     },
     changeMouseState(state) {
-      if (!(state === DELETE || state === CREATEEDGE || state === POINTER)) {
+      if (!(state === DELETE || state === CREATEEDGE || state === POINTER || state === SAVE)) {
         console.error('Not sure what state', state, 'is');
       } else {
         this.mouseState = state;
+      }
+      if (state === SAVE) {
+        this.mouseState = POINTER;
+        this.graph.saveGraph((savedData) => {
+          this.$emit('save', savedData);
+        });
       }
     },
   },

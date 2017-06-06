@@ -12,12 +12,12 @@ new Vue({
     interval: undefined,
     id: 3,
     arrayOfNodes: [
-      { id: 0, text: 'randomText1' },
-      { id: 1, text: 'randomText2' },
-      { id: 2, text: 'randomText3' },
+      { id: 0, text: 'click me!' },
+      { id: 1, text: 'text in node' },
+      { id: 2, text: 'id must be unique' },
       { id: 3, text: 'randomText4' },
     ],
-    savedDiagram: '{"triplets":[{"subject":"10","predicate":"arrow","object":"2"}],"nodes":[{"hash":"1","x":645.9672679901261,"y":204.8057758227204},{"hash":"3","x":449.0095259474512,"y":356.4779992207068},{"hash":"2","x":446.7203845977645,"y":187.46566456498223}]}',
+    savedDiagram: '{"triplets":[{"subject":"1","predicate":"arrow","object":"2"}],"nodes":[{"hash":"1","x":645.9672679901261,"y":204.8057758227204},{"hash":"3","x":449.0095259474512,"y":356.4779992207068},{"hash":"2","x":446.7203845977645,"y":187.46566456498223}]}',
   },
   mounted() {
     this.start();

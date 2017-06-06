@@ -75,8 +75,6 @@ export default {
           });
         }
         // do the work.
-      } else {
-        console.log('Do nothing');
       }
     });
 
@@ -115,8 +113,6 @@ export default {
   },
   watch: {
     nodes(current, old) {
-      // this.addNodes();
-      this.graph.saveGraph((s) => { console.log(s); });
       // Remove any nodes that have been removed.
       const newIds = new Set(current.map(v => v.id));
       old.forEach((v) => {
@@ -124,7 +120,6 @@ export default {
           this.graph.removeNode(v.id.toString());
         }
       });
-
       // Nodes that are passed in but aren't drawn go in the list.
       this.recalculateNodesOutside();
     },

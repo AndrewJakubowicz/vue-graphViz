@@ -167,7 +167,7 @@ export default {
       if (state === SAVE) {
         this.mouseState = POINTER;
         this.graph.saveGraph((savedData) => {
-          this.$emit('save', savedData);
+          this.$emit('save', savedData, this.graph.getSVGElement().node());
         });
       }
     },

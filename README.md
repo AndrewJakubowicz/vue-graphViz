@@ -2,6 +2,17 @@
 
 > networkVizJs component
 
+## Very quick rough prototype of structure mapper.
+
+I haven't isolated the component, and have instead left it in an example.
+
+The component has dependencies which are in the static folder (images).
+
+Otherwise the component reacts to the nodes passed in.
+If the user clicks save, an event is emitted with the structure saved as a string.
+The SVG node is also passed in that event.
+
+
 ## Build Setup
 
 ``` bash

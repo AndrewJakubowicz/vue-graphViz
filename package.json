@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "networkvizjs": "file:///Users/Spyr1014/Projects/repos/networkVizJS",
+    "rxjs": "5.4.0",
     "vue": "^2.3.3"
   },
   "devDependencies": {

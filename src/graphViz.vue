@@ -28,7 +28,7 @@ export default {
     return {
       graph: undefined,
       nodesOutsideDiagram: [],
-      mouseState: '',
+      mouseState: POINTER,
     };
   },
   mounted() {
@@ -53,6 +53,12 @@ export default {
     // TODO: create from savedDiagram.
     if (this.savedDiagram) {
       // Create from saved.
+      const savedGraph = JSON.parse(this.savedDiagram);
+      const nodes = savedGraph.nodes;
+      nodes.forEach((v) => {
+        // Append x and y co-ordinates to the nodes passed in.
+        this.addNodeHelper(parseInt(v.hash, 10), v.x, v.y);
+      });
     }
   },
   watch: {
@@ -73,18 +79,31 @@ export default {
   },
   methods: {
     toNode(nodeProtocolObject) {
-      return { hash: nodeProtocolObject.id.toString(), shortname: nodeProtocolObject.text };
+      return {
+        hash: nodeProtocolObject.id.toString(),
+        shortname: nodeProtocolObject.text,
+        ...nodeProtocolObject,
+      };
     },
     addNodes() {
       // Adds all the prop nodes.
       this.nodes.forEach(v => this.graph.addNode(this.toNode(v)));
     },
-    addNode(nodeId) {
+    addNodeHelper(nodeId, x, y) {
+      // Adds nodes, and ignores the node if it can't be found.
+      // This lets us optimistically create the diagram.
       const indexOfNode = this.nodes.map(v => v.id).indexOf(nodeId);
       if (indexOfNode !== undefined) {
-        this.graph.addNode(this.toNode(this.nodes[indexOfNode]));
+        let node = this.toNode(this.nodes[indexOfNode]);
+        if (x && y) {
+          node = { x, y, ...node };
+        }
+        this.graph.addNode(node);
       }
       this.recalculateNodesOutside();
+    },
+    addNode(nodeId) {
+      this.addNodeHelper(nodeId);
     },
     recalculateNodesOutside() {
       this.nodesOutsideDiagram = this.nodes.filter((v) => {

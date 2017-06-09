@@ -32,6 +32,11 @@ new Vue({
     tick() {
       this.id += 1;
       this.arrayOfNodes = [...this.arrayOfNodes, { id: this.id, text: `randomText${this.id + 1}` }];
+      // Remove a node for fun.
+      // When id = 6, delete node 2.
+      if (this.id === 6) {
+        this.arrayOfNodes = this.arrayOfNodes.filter(v => v.id !== 2);
+      }
       if (this.id > 20) {
         clearInterval(this.interval);
       }

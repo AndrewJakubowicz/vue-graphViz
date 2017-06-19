@@ -64,7 +64,7 @@ ul {
     top: 10px;
     list-style-type: none;
     font-size: 1.6em;
-    color: #222;
+    color: grey;
     border: 2px solid #eeeeee;
     text-align: center;
 }
@@ -73,12 +73,13 @@ ul {
 .icon-alone {
   padding: 5px;
   display: inline-block; /* Fix for clickability issue in WebKit */
+
 }
 .icon-alone:active {
-  background-color: #ddd;
+  color: #20a0ff;
 }
 .active {
-  background-color: #ddd;
+  color: #20a0ff;
 }
 .screen-reader-text { /* Reusable, toolbox kind of class */
   position: absolute;

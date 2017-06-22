@@ -14,7 +14,9 @@
     "lint": "eslint --ext .js,.vue src test/unit/specs test/e2e/specs"
   },
   "dependencies": {
+    "d3": "4.9.1",
     "networkvizjs": "0.0.5-alpha.2",
+    "rxjs": "5.4.1",
     "vue": "^2.3.3"
   },
   "devDependencies": {

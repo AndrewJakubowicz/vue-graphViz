@@ -9,7 +9,7 @@
   font-style: normal;
 }
 
-i, .icomoon-liga {
+.icomoon-liga {
   /* use !important to prevent issues with browser extensions that change fonts */
   font-family: 'icomoon' !important;
   speak: none;
@@ -18,7 +18,7 @@ i, .icomoon-liga {
   font-variant: normal;
   text-transform: none;
   line-height: 1;
-  
+
   /* Enable Ligatures ================ */
   letter-spacing: 0;
   -webkit-font-feature-settings: "liga";

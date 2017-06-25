@@ -1,6 +1,8 @@
 <template>
   <div id="graph-viz">
-    <link v-once rel="stylesheet" href="./static/style.css">
+    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css" />
+    <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
+
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
     <toolBar @clickedAction="changeMouseState($event)"/>
     <div id="graph"></div>
@@ -21,7 +23,7 @@ import linkTool from './behaviours/link-tool';
 const Rx = require('rxjs');
 
 // This is for the fonts currently used (not font awesome)
-require('./liga.js');
+// require('./liga.js');
 
 const DELETE = 'DELETE';
 const CREATEEDGE = 'CREATEEDGE';

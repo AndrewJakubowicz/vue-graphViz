@@ -1,6 +1,6 @@
 <template>
 <ul>
-    <li v-for="item in tools" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }">
+    <li v-for="item in tools" :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }">
         <span class="icon-alone">
           <i :class="item.icon"></i>
           <span class="screen-reader-text">{{ item.action }}</span>

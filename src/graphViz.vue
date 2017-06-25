@@ -16,7 +16,11 @@ Event emitters:
 import networkViz from 'networkvizjs';
 import nodeList from './components/nodeList';
 import toolBar from './components/toolBar';
+import linkTool from './behaviours/link-tool';
 
+const Rx = require('rxjs');
+
+// This is for the fonts currently used (not font awesome)
 require('./liga.js');
 
 const DELETE = 'DELETE';
@@ -33,18 +37,20 @@ export default {
       graph: undefined,
       nodesOutsideDiagram: [],
       mouseState: POINTER,
-      currentNode: undefined,
-      dragToNode: undefined,
-      dragging: false,
+      linkTool: undefined,
+      linkToolDispose: undefined, // Subscription disposing.
     };
   },
   mounted() {
+    const $mouseOverNode = new Rx.Subject();
     this.graph = networkViz('graph', {
       layoutType: 'jaccardLinkLengths',
       edgeLength: 200,
       jaccardModifier: 0.9,
       mouseOverNode: (node) => {
         this.$emit('mouseovernode', node.hash);
+        const tempNode = { ...node, mouseOverNode: true };
+        $mouseOverNode.next(tempNode);
         // Change the node based on whether or not dragging.
         if (!this.dragging) {
           this.currentNode = node;
@@ -52,30 +58,12 @@ export default {
           this.dragToNode = node;
         }
       },
-      mouseOutNode: () => {
+      mouseOutNode: (node) => {
         this.$emit('mouseoutnode');
+        const tempNode = { ...node, mouseOverNode: false };
+        $mouseOverNode.next(tempNode);
       },
       canDrag: () => this.mouseState === POINTER,
-    });
-
-    this.graph.nodeOptions.setMouseDown((node) => {
-      if (this.mouseState === CREATEEDGE) {
-        this.dragging = true;
-        this.currentNode = node;
-      }
-    });
-    // This is to help with edge creation.
-    this.graph.getSVGElement().node().addEventListener('mouseup', () => {
-      if (this.dragging) {
-        if (this.currentNode.hash !== this.dragToNode.hash) {
-          this.graph.addTriplet({
-            subject: this.currentNode,
-            predicate: { type: 'arrow' },
-            object: this.dragToNode,
-          });
-        }
-        // do the work.
-      }
     });
 
     this.graph.nodeOptions.setClickNode((node) => {
@@ -84,6 +72,19 @@ export default {
         this.graph.removeNode(node.hash, this.recalculateNodesOutside);
       }
     });
+
+    /**
+    Edge link tool
+    */
+    const $mousedown = new Rx.Subject();
+    this.graph.nodeOptions.setMouseDown((node, selection) => {
+      if (this.mouseState === CREATEEDGE) {
+        this.currentNode = node;
+        $mousedown.next({ type: 'CREATEEDGE', clickedNode: node, selection });
+      }
+    });
+    this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
+    this.linkToolDispose = this.linkTool(this.nodes);
 
     // Create initial diagram from createDiagram.
     if (this.savedDiagram) {
@@ -148,6 +149,10 @@ export default {
         this.graph.addNode(node);
       }
       this.recalculateNodesOutside();
+
+      // Update linkTool with new nodes.
+      this.linkToolDispose();
+      this.linkToolDispose = this.linkTool(this.nodes);
     },
     addNode(nodeId) {
       this.addNodeHelper(nodeId);
@@ -176,5 +181,14 @@ export default {
 </script>
 
 <style>
-
+/** This prevents the dirty highlighting of the svg text */
+svg text {
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+}
+svg text::selection {
+    background: none;
+}
 </style>

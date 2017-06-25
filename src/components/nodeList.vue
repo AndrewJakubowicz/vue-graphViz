@@ -1,6 +1,6 @@
 <template>
 <ul>
-    <li v-for="item in nodesOutside" @click="clicked(item.id)">
+    <li v-for="item in nodesOutside" :key="item.hash" @click="clicked(item.id)">
         {{ item.text }}
     </li>
 </ul>

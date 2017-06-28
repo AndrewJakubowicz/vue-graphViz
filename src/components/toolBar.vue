@@ -23,8 +23,13 @@ export default {
       tools: [
         {
           action: 'POINTER',
-          icon: ['plus-square-o'],
+          icon: ['mouse-pointer'],
           toggled: true,
+        },
+        {
+          action: 'ADDNOTE',
+          icon: ['plus-square-o'],
+          toggled: false,
         },
         {
           action: 'CREATEEDGE',
@@ -63,7 +68,7 @@ export default {
     clicked(action) {
       this.$emit('clickedAction', action);
       let newAction = action;
-      if (action === 'SAVE') {
+      if (action === 'SAVE' || action === 'ADDNOTE') {
         newAction = 'POINTER';
       }
       this.tools = this.tools.map(v => ({

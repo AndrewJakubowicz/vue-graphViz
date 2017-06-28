@@ -4,7 +4,7 @@
     <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
 
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
-    <toolBar @clickedAction="changeMouseState($event)"/>
+    <toolBar @clickedAction="changeMouseState($event)" />
     <div id="graph"></div>
   </div>
 </template>
@@ -29,6 +29,7 @@ const DELETE = 'DELETE';
 const CREATEEDGE = 'CREATEEDGE';
 const POINTER = 'POINTER';
 const SAVE = 'SAVE';
+const ADDNOTE = 'ADDNOTE';
 
 export default {
   props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram'],
@@ -41,6 +42,8 @@ export default {
       mouseState: POINTER,
       linkTool: undefined,
       linkToolDispose: undefined, // Subscription disposing.
+      notes: 0,
+      noteObjs: [],
     };
   },
   mounted() {
@@ -95,13 +98,13 @@ export default {
       const nodes = savedGraph.nodes;
       nodes.forEach((v) => {
         // Append x and y co-ordinates to the nodes passed in.
-        this.addNodeHelper(parseInt(v.hash, 10), v.x, v.y);
+        this.addNodeHelper(v.hash, v.x, v.y);
       });
       const triplets = savedGraph.triplets;
       triplets.forEach((x) => {
         // Create the triplets between the nodes.
-        const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(parseInt(x.subject, 10));
-        const indexOfObject = this.nodes.map(v => v && v.id).indexOf(parseInt(x.object, 10));
+        const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
+        const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
         if (indexOfSubject === -1 || indexOfObject === -1) {
           return;
         }
@@ -130,7 +133,7 @@ export default {
   methods: {
     toNode(nodeProtocolObject) {
       return {
-        hash: `${nodeProtocolObject.id}`,
+        hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
         shortname: nodeProtocolObject.text,
         ...nodeProtocolObject,
       };
@@ -152,12 +155,15 @@ export default {
       }
       this.recalculateNodesOutside();
 
-      // Update linkTool with new nodes.
-      this.linkToolDispose();
-      this.linkToolDispose = this.linkTool(this.nodes);
+      // Update tools with new nodes.
+      this.resetTools();
     },
     addNode(nodeId) {
       this.addNodeHelper(nodeId);
+    },
+    resetTools() {
+      this.linkToolDispose();
+      this.linkToolDispose = this.linkTool([...this.nodes, ...this.noteObjs]);
     },
     recalculateNodesOutside() {
       this.nodesOutsideDiagram = this.nodes.filter((v) => {
@@ -166,16 +172,37 @@ export default {
       });
     },
     changeMouseState(state) {
-      if (!(state === DELETE || state === CREATEEDGE || state === POINTER || state === SAVE)) {
+      if (!(state === DELETE
+      || state === CREATEEDGE
+      || state === POINTER
+      || state === SAVE
+      || state === ADDNOTE)) {
         console.error('Not sure what state', state, 'is');
       } else {
         this.mouseState = state;
       }
-      if (state === SAVE) {
-        this.mouseState = POINTER;
-        this.graph.saveGraph((savedData) => {
-          this.$emit('save', savedData, this.graph.getSVGElement().node());
-        });
+      switch (state) {
+        case SAVE: {
+          this.mouseState = POINTER;
+          this.graph.saveGraph((savedData) => {
+            this.$emit('save', savedData, this.graph.getSVGElement().node());
+          });
+          break;
+        }
+        case ADDNOTE: {
+          this.mouseState = POINTER;
+          const node = {
+            hash: `note-${this.notes}`,
+            shortname: ['Text'],
+          };
+          this.graph.addNode(node);
+          this.notes += 1;
+          this.noteObjs = [...this.noteObjs, node];
+          this.resetTools();
+          break;
+        }
+        default:
+          break;
       }
     },
   },

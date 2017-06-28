@@ -99,11 +99,11 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
                     if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash){
                         console.log(currentState.startedDragAt);
                         console.log(nodesList)
-                        let subjectTemp = nodesList.filter(d => d.id.toString() === currentState.startedDragAt)[0];
+                        let subjectTemp = nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0];
                         console.log({subjectTemp});
-                        graph.addTriplet({subject: toNode(nodesList.filter(d => d.id.toString() === currentState.startedDragAt)[0]),
+                        graph.addTriplet({subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
                             predicate: {type: " "},
-                            object: toNode(nodesList.filter(d => d.id.toString() === currentState.currentNode.hash)[0])
+                            object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
                         });
                     }
                 });
@@ -131,7 +131,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
         // Return the subscribed observables so it's possible to unsubscribe
         // when modifying the function.
         return () => {
-            console.log("DIspose")
+            console.log("Dispose");
             sub.unsubscribe();
             currentNodeSub.unsubscribe();
         }

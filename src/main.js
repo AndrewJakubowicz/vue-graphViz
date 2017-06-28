@@ -12,12 +12,12 @@ new Vue({
     interval: undefined,
     id: 3,
     arrayOfNodes: [
-      { id: 0, text: 'click me!' },
-      { id: 1, text: 'text in node' },
-      { id: 2, text: 'id must be unique' },
-      { id: 3, text: 'randomText4' },
+      { id: '0', text: 'click me!' },
+      { id: '1', text: 'text in node' },
+      { id: '2', text: 'id must be unique' },
+      { id: '3', text: 'randomText4' },
     ],
-    savedDiagram: '{"triplets":[{"subject":"1","predicate":"arrow","object":"2"}],"nodes":[{"hash":"1","x":645.9672679901261,"y":204.8057758227204},{"hash":"3","x":449.0095259474512,"y":356.4779992207068},{"hash":"2","x":446.7203845977645,"y":187.46566456498223}]}',
+    savedDiagram: '{"triplets":[{"subject":"0","predicate":"arrow","object":"1"}],"nodes":[{"hash":"0","x":223.3129297153952,"y":46.94835315445652},{"hash":"1","x":414.12654824652196,"y":106.86632193726514},{"hash":"2","x":393.53570556640625,"y":182.36602783203125}]}',
   },
   mounted() {
     this.start();
@@ -31,11 +31,11 @@ new Vue({
     },
     tick() {
       this.id += 1;
-      this.arrayOfNodes = [...this.arrayOfNodes, { id: this.id, text: `randomText${this.id + 1}` }];
+      this.arrayOfNodes = [...this.arrayOfNodes, { id: `${this.id}`, text: `randomText${this.id + 1}` }];
       // Remove a node for fun.
       // When id = 6, delete node 2.
       if (this.id === 6) {
-        this.arrayOfNodes = this.arrayOfNodes.filter(v => v.id !== 2);
+        this.arrayOfNodes = this.arrayOfNodes.filter(v => v.id !== '2');
       }
       if (this.id > 20) {
         clearInterval(this.interval);

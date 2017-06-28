@@ -68,7 +68,7 @@ export default {
     clicked(action) {
       this.$emit('clickedAction', action);
       let newAction = action;
-      if (action === 'SAVE' || action === 'ADDNOTE') {
+      if (action === 'SAVE' || action === 'ADDNOTE' || action === 'CLEARSCREEN') {
         newAction = 'POINTER';
       }
       this.tools = this.tools.map(v => ({

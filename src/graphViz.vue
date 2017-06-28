@@ -30,6 +30,7 @@ const CREATEEDGE = 'CREATEEDGE';
 const POINTER = 'POINTER';
 const SAVE = 'SAVE';
 const ADDNOTE = 'ADDNOTE';
+const CLEARSCREEN = 'CLEARSCREEN';
 
 export default {
   props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram'],
@@ -47,49 +48,7 @@ export default {
     };
   },
   mounted() {
-    const $mouseOverNode = new Rx.Subject();
-    this.graph = networkViz('graph', {
-      layoutType: 'jaccardLinkLengths',
-      edgeLength: 200,
-      jaccardModifier: 0.9,
-      mouseOverNode: (node) => {
-        this.$emit('mouseovernode', node.hash);
-        const tempNode = { ...node, mouseOverNode: true };
-        $mouseOverNode.next(tempNode);
-        // Change the node based on whether or not dragging.
-        if (!this.dragging) {
-          this.currentNode = node;
-        } else {
-          this.dragToNode = node;
-        }
-      },
-      mouseOutNode: (node) => {
-        this.$emit('mouseoutnode');
-        const tempNode = { ...node, mouseOverNode: false };
-        $mouseOverNode.next(tempNode);
-      },
-      canDrag: () => this.mouseState === POINTER,
-    });
-
-    this.graph.nodeOptions.setClickNode((node) => {
-      if (this.mouseState === DELETE) {
-        // Recalculate the nodes after deleting the node.
-        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
-      }
-    });
-
-    /**
-    Edge link tool
-    */
-    const $mousedown = new Rx.Subject();
-    this.graph.nodeOptions.setMouseDown((node, selection) => {
-      if (this.mouseState === CREATEEDGE) {
-        this.currentNode = node;
-        $mousedown.next({ type: 'CREATEEDGE', clickedNode: node, selection });
-      }
-    });
-    this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
-    this.linkToolDispose = this.linkTool(this.nodes);
+    this.createGraph();
 
     // Create initial diagram from createDiagram.
     if (this.savedDiagram) {
@@ -131,6 +90,51 @@ export default {
     },
   },
   methods: {
+    createGraph() {
+      const $mouseOverNode = new Rx.Subject();
+      this.graph = networkViz('graph', {
+        layoutType: 'jaccardLinkLengths',
+        edgeLength: 200,
+        jaccardModifier: 0.9,
+        mouseOverNode: (node) => {
+          this.$emit('mouseovernode', node.hash);
+          const tempNode = { ...node, mouseOverNode: true };
+          $mouseOverNode.next(tempNode);
+          // Change the node based on whether or not dragging.
+          if (!this.dragging) {
+            this.currentNode = node;
+          } else {
+            this.dragToNode = node;
+          }
+        },
+        mouseOutNode: (node) => {
+          this.$emit('mouseoutnode');
+          const tempNode = { ...node, mouseOverNode: false };
+          $mouseOverNode.next(tempNode);
+        },
+        canDrag: () => this.mouseState === POINTER,
+      });
+
+      this.graph.nodeOptions.setClickNode((node) => {
+        if (this.mouseState === DELETE) {
+          // Recalculate the nodes after deleting the node.
+          this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+        }
+      });
+
+      /**
+      Edge link tool
+      */
+      const $mousedown = new Rx.Subject();
+      this.graph.nodeOptions.setMouseDown((node, selection) => {
+        if (this.mouseState === CREATEEDGE) {
+          this.currentNode = node;
+          $mousedown.next({ type: 'CREATEEDGE', clickedNode: node, selection });
+        }
+      });
+      this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
+      this.linkToolDispose = this.linkTool(this.nodes);
+    },
     toNode(nodeProtocolObject) {
       return {
         hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
@@ -176,7 +180,8 @@ export default {
       || state === CREATEEDGE
       || state === POINTER
       || state === SAVE
-      || state === ADDNOTE)) {
+      || state === ADDNOTE
+      || state === CLEARSCREEN)) {
         console.error('Not sure what state', state, 'is');
       } else {
         this.mouseState = state;
@@ -199,6 +204,20 @@ export default {
           this.notes += 1;
           this.noteObjs = [...this.noteObjs, node];
           this.resetTools();
+          break;
+        }
+        case CLEARSCREEN: {
+          this.mouseState = POINTER;
+          /**
+           * Delete the graph and start a new one.
+           * Removing nodes from: https://stackoverflow.com/a/3955238/6421793
+           */
+          const myNode = document.getElementById('graph');
+          while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+          }
+          this.createGraph();
+          this.recalculateNodesOutside();
           break;
         }
         default:

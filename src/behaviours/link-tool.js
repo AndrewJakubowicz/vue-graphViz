@@ -55,6 +55,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
         
         // Mousedown subscription with handlers.
         var mousedrag = mousedown.flatMap(function (obj) {
+            console.warn("MOUSE DOWN TRIGGER FOR DRAWING")
             // Set current selection to the start dragged node.
             currentState.startedDragAt = obj.clickedNode.hash;
             var bbox = obj.selection.node().getBBox(),

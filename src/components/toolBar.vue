@@ -68,7 +68,11 @@ export default {
     clicked(action) {
       this.$emit('clickedAction', action);
       let newAction = action;
-      if (action === 'SAVE' || action === 'ADDNOTE' || action === 'CLEARSCREEN') {
+      if (action === 'SAVE'
+      || action === 'ADDNOTE'
+      || action === 'CLEARSCREEN'
+      || action === 'REMOVEARROWS') {
+        // For the above actions, default to mouse pointer state.
         newAction = 'POINTER';
       }
       this.tools = this.tools.map(v => ({

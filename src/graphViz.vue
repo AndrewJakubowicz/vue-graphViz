@@ -22,15 +22,13 @@ import linkTool from './behaviours/link-tool';
 
 const Rx = require('rxjs');
 
-// This is for the fonts currently used (not font awesome)
-// require('./liga.js');
-
 const DELETE = 'DELETE';
 const CREATEEDGE = 'CREATEEDGE';
 const POINTER = 'POINTER';
 const SAVE = 'SAVE';
 const ADDNOTE = 'ADDNOTE';
 const CLEARSCREEN = 'CLEARSCREEN';
+const REMOVEARROWS = 'REMOVEARROWS';
 
 export default {
   props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram'],
@@ -48,33 +46,33 @@ export default {
     };
   },
   mounted() {
-    this.createGraph();
-
-    // Create initial diagram from createDiagram.
-    if (this.savedDiagram) {
-      // Create from saved.
-      const savedGraph = JSON.parse(this.savedDiagram);
-      const nodes = savedGraph.nodes;
-      nodes.forEach((v) => {
-        // Append x and y co-ordinates to the nodes passed in.
-        this.addNodeHelper(v.hash, v.x, v.y);
-      });
-      const triplets = savedGraph.triplets;
-      triplets.forEach((x) => {
-        // Create the triplets between the nodes.
-        const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
-        const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
-        if (indexOfSubject === -1 || indexOfObject === -1) {
-          return;
-        }
-        // Create the triplet
-        this.graph.addTriplet({
-          subject: this.toNode(this.nodes[indexOfSubject]),
-          object: this.toNode(this.nodes[indexOfObject]),
-          predicate: { type: 'arrow' },
+    this.createGraph(() => {
+      // Create initial diagram from createDiagram.
+      if (this.savedDiagram) {
+        // Create from saved.
+        const savedGraph = JSON.parse(this.savedDiagram);
+        const nodes = savedGraph.nodes;
+        nodes.forEach((v) => {
+          // Append x and y co-ordinates to the nodes passed in.
+          this.addNodeHelper(v.hash, v.x, v.y);
         });
-      });
-    }
+        const triplets = savedGraph.triplets;
+        triplets.forEach((x) => {
+          // Create the triplets between the nodes.
+          const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
+          const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
+          if (indexOfSubject === -1 || indexOfObject === -1) {
+            return;
+          }
+          // Create the triplet
+          this.graph.addTriplet({
+            subject: this.toNode(this.nodes[indexOfSubject]),
+            object: this.toNode(this.nodes[indexOfObject]),
+            predicate: { type: 'arrow' },
+          });
+        });
+      }
+    });
   },
   watch: {
     nodes(current, old) {
@@ -90,7 +88,7 @@ export default {
     },
   },
   methods: {
-    createGraph() {
+    createGraph(callback) {
       const $mouseOverNode = new Rx.Subject();
       this.graph = networkViz('graph', {
         layoutType: 'jaccardLinkLengths',
@@ -112,7 +110,9 @@ export default {
           const tempNode = { ...node, mouseOverNode: false };
           $mouseOverNode.next(tempNode);
         },
-        canDrag: () => this.mouseState === POINTER,
+        canDrag: () =>
+          this.$data.mouseState === POINTER
+        ,
       });
 
       this.graph.nodeOptions.setClickNode((node) => {
@@ -127,6 +127,7 @@ export default {
       */
       const $mousedown = new Rx.Subject();
       this.graph.nodeOptions.setMouseDown((node, selection) => {
+        console.warn('MOUSE DOWN');
         if (this.mouseState === CREATEEDGE) {
           this.currentNode = node;
           $mousedown.next({ type: 'CREATEEDGE', clickedNode: node, selection });
@@ -134,6 +135,8 @@ export default {
       });
       this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
       this.linkToolDispose = this.linkTool(this.nodes);
+
+      if (callback !== undefined) callback();
     },
     toNode(nodeProtocolObject) {
       return {
@@ -181,7 +184,8 @@ export default {
       || state === POINTER
       || state === SAVE
       || state === ADDNOTE
-      || state === CLEARSCREEN)) {
+      || state === CLEARSCREEN
+      || state === REMOVEARROWS)) {
         console.error('Not sure what state', state, 'is');
       } else {
         this.mouseState = state;
@@ -218,6 +222,27 @@ export default {
           }
           this.createGraph();
           this.recalculateNodesOutside();
+          break;
+        }
+        case REMOVEARROWS: {
+          this.mouseState = POINTER;
+          const db = this.graph.getDB();
+          db.get({}, (err, l) => {
+            console.log('LOOKING IN DB');
+            if (err) {
+              console.error(err);
+            }
+            console.log(l);
+            l.forEach((triplet) => {
+              console.log(this.graph);
+              const node = {
+                object: { hash: triplet.object },
+                predicate: { type: triplet.predicate },
+                subject: { hash: triplet.subject },
+              };
+              this.graph.removeTriplet(node);
+            });
+          });
           break;
         }
         default:

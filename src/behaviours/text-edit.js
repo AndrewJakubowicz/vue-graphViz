@@ -83,8 +83,7 @@ export default ($action) => {
         // Exit on "esc" keypress
         let $exit = Rx.Observable.concat(
             Rx.Observable.fromEvent(document, "keyup")
-                    .filter(e => e.keyCode == 27),
-            $action.filter(action => action.type !== 'EDITNODE')
+                    .filter(e => e.keyCode == 27)
         );
 
         // Backspace
@@ -139,7 +138,9 @@ export default ($action) => {
                 restart();
             })
         return $typingControls
-    }).switch().subscribe(
+    })
+    .switch()
+    .subscribe(
         console.log,
         console.error,
         () => console.log("FINISH")

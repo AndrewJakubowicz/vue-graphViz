@@ -139,7 +139,6 @@ export default {
       // Set the action of clicking the node:
       this.graph.nodeOptions.setClickNode((node) => {
         // If the mouse is a pointer and a note is clicked on set edit mode.
-        console.log(node.hash.slice(0, 5), 'note-');
         if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
           this.currentNode = node;
           $mousedown.next({ type: 'EDITNODE', clickedNode: node, restart: this.graph.restart.layout });

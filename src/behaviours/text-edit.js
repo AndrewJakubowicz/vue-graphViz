@@ -75,6 +75,7 @@ export default ($action) => {
       })
       .map(action => {
         let restart = action.restart;
+        let fullRestart = action.fullRestart;
         let node = action.clickedNode;
         let text = Text(node.shortname, node, restart);
         let previousColor = node.color;
@@ -135,7 +136,7 @@ export default ($action) => {
             .finally(_ => {
                 node.color = previousColor;
                 node.shortname = text.getText();
-                restart();
+                fullRestart();
             })
         return $typingControls
     })

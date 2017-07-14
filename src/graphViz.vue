@@ -32,7 +32,7 @@ const CLEARSCREEN = 'CLEARSCREEN';
 const REMOVEARROWS = 'REMOVEARROWS';
 
 export default {
-  props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram'],
+  props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height'],
   name: 'graph-viz',
   components: { nodeList, toolBar },
   data() {
@@ -166,7 +166,7 @@ export default {
         // If the mouse is a pointer and a note is clicked on set edit mode.
         if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
           this.currentNode = node;
-          $mousedown.next({ type: 'EDITNODE', clickedNode: node, restart: this.graph.restart.layout });
+          $mousedown.next({ type: 'EDITNODE', clickedNode: node, restart: this.graph.restart.styles, fullRestart: this.graph.restart.layout });
         }
       });
       // Initiate the text edit function

@@ -30,6 +30,7 @@ const SAVE = 'SAVE';
 const ADDNOTE = 'ADDNOTE';
 const CLEARSCREEN = 'CLEARSCREEN';
 const REMOVEARROWS = 'REMOVEARROWS';
+const PIN = 'PIN';
 
 export default {
   props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height'],
@@ -206,6 +207,13 @@ export default {
           // Recalculate the nodes after deleting the node.
           this.graph.removeNode(node.hash, this.recalculateNodesOutside);
         }
+        if (this.mouseState === PIN) {
+          if (node.fixed === undefined) {
+            node.fixed = true; // eslint-disable-line no-param-reassign
+          } else {
+            node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
+          }
+        }
       });
       // Initiate the text edit function
       textEdit($mousedown);
@@ -259,7 +267,8 @@ export default {
       || state === SAVE
       || state === ADDNOTE
       || state === CLEARSCREEN
-      || state === REMOVEARROWS)) {
+      || state === REMOVEARROWS
+      || state === PIN)) {
         console.error('Not sure what state', state, 'is');
       } else {
         this.mouseState = state;

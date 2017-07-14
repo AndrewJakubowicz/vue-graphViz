@@ -27,18 +27,23 @@ export default {
           toggled: true,
         },
         {
-          action: 'ADDNOTE',
-          icon: ['plus-square-o'],
-          toggled: false,
-        },
-        {
           action: 'CREATEEDGE',
           icon: ['arrow-right'],
           toggled: false,
         },
         {
+          action: 'DELETE',
+          icon: ['trash'],
+          toggled: false,
+        },
+        {
           action: 'PIN', /* to pin down nodes to the screen */
           icon: ['thumb-tack'],
+          toggled: false,
+        },
+        {
+          action: 'ADDNOTE',
+          icon: ['plus-square-o'],
           toggled: false,
         },
         {
@@ -49,11 +54,6 @@ export default {
         {
           action: 'CLEARSCREEN', /* to remove all nodes and arrows from the screen */
           icon: ['fa fa-share-alt fa-rotate-90 fa-stack-1x', 'fa fa-ban fa-stack-2x text-danger'],
-          toggled: false,
-        },
-        {
-          action: 'DELETE',
-          icon: ['trash'],
           toggled: false,
         },
         {

@@ -95,6 +95,31 @@ export default {
         layoutType: 'jaccardLinkLengths',
         edgeLength: 200,
         jaccardModifier: 0.9,
+        // Shapes defined: rect, circle, capsule
+        nodeShape: (d) => {
+          switch (d.nodeShape) {
+            case 'rect': {
+              return 'M16 48 L48 48 L48 16 L16 16 Z';
+            }
+            case 'circle': {
+              return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
+            }
+            case 'capsule': {
+              const X = 37;
+              const Y = -13;
+              const p1x = 25 + X;
+              const p1y = 25 + Y;
+              const p2x = 75 + X;
+              const p3x = 100 + X;
+              const p4y = 50 + Y;
+              return `M ${p1x} ${p1y} L ${p2x} ${p1y} C ${p3x} ${p1y} ${p3x} ${p4y} ${p2x} ${p4y} L ${p1x} ${p4y} C ${X} ${p4y} ${X} ${p1y} ${p1x} ${p1y} `;
+            }
+            default : {
+              // Return rect by default
+              return 'M16 48 L48 48 L48 16 L16 16 Z';
+            }
+          }
+        },
         mouseOverNode: (node) => {
           this.$emit('mouseovernode', node.hash);
           const tempNode = { ...node, mouseOverNode: true };

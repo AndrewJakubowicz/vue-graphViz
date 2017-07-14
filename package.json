@@ -15,9 +15,12 @@
   },
   "dependencies": {
     "d3": "4.9.1",
-    "networkvizjs": "0.0.5-alpha.7",
+    "level-browserify": "1.1.1",
+    "levelgraph": "2.1.1",
+    "networkvizjs": "file:../../../repos/networkVizJS",
     "rxjs": "5.4.1",
-    "vue": "^2.3.3"
+    "vue": "^2.3.3",
+    "webcola": "3.3.6"
   },
   "devDependencies": {
     "autoprefixer": "^6.7.2",

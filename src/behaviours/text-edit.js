@@ -90,7 +90,8 @@ export default ($action) => {
         // Backspace
         let $backspace = Rx.Observable.fromEvent(document, "keydown")
             .filter(e => e.keyCode === 8 && e.keyCode !== 13)
-            .do(_ => text.deleteText());
+            .do(_ => text.deleteText())
+            .do(fullRestart);
         
         // Letters
         let $letters = Rx.Observable.fromEvent(document, "keypress")
@@ -102,7 +103,8 @@ export default ($action) => {
                 let event = e || window.event;
                 let char = String.fromCharCode(e.keyCode || e.which)
                 text.addLetter(char);
-            });
+            })
+            .do(fullRestart);
 
         let $newLine = Rx.Observable.fromEvent(document, "keypress")
             .filter(e => e.keyCode === 13)
@@ -113,6 +115,7 @@ export default ($action) => {
                 }
                 text.newLine();
             })
+            .do(fullRestart)
         
         let $interval = Rx.Observable
             .interval(500 /* ms */)

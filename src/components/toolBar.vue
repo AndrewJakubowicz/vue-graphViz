@@ -1,5 +1,5 @@
 <template>
-<ul>
+<ul class="graph-unorderedList">
     <li v-for="item in tools" :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }">
         <span v-if="item.icon.length === 1" class="icon-alone">
           <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>

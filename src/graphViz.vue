@@ -179,13 +179,7 @@ export default {
         canDrag: () =>
           this.$data.mouseState === POINTER
         ,
-      });
 
-      this.graph.nodeOptions.setClickNode((node) => {
-        if (this.mouseState === DELETE) {
-          // Recalculate the nodes after deleting the node.
-          this.graph.removeNode(node.hash, this.recalculateNodesOutside);
-        }
       });
 
       /**
@@ -207,6 +201,10 @@ export default {
         if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
           this.currentNode = node;
           $mousedown.next({ type: 'EDITNODE', clickedNode: node, restart: this.graph.restart.styles, fullRestart: this.graph.restart.layout });
+        }
+        if (this.mouseState === DELETE) {
+          // Recalculate the nodes after deleting the node.
+          this.graph.removeNode(node.hash, this.recalculateNodesOutside);
         }
       });
       // Initiate the text edit function

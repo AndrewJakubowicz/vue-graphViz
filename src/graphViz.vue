@@ -87,8 +87,48 @@ export default {
       // Nodes that are passed in but aren't drawn go in the list.
       this.recalculateNodesOutside();
     },
+    savedDiagram(current, old) {
+      if (current === old) {
+        return;
+      }
+      this.clearScreen();
+      // Create from saved.
+      const savedGraph = JSON.parse(current);
+      const nodes = savedGraph.nodes;
+      nodes.forEach((v) => {
+        // Append x and y co-ordinates to the nodes passed in.
+        this.addNodeHelper(v.hash, v.x, v.y);
+      });
+      const triplets = savedGraph.triplets;
+      triplets.forEach((x) => {
+        // Create the triplets between the nodes.
+        const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
+        const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
+        if (indexOfSubject === -1 || indexOfObject === -1) {
+          return;
+        }
+        // Create the triplet
+        this.graph.addTriplet({
+          subject: this.toNode(this.nodes[indexOfSubject]),
+          object: this.toNode(this.nodes[indexOfObject]),
+          predicate: { type: 'arrow' },
+        });
+      });
+    },
   },
   methods: {
+    clearScreen() {
+      /**
+       * Delete the graph and start a new one.
+       * Removing nodes from: https://stackoverflow.com/a/3955238/6421793
+       */
+      const myNode = document.getElementById('graph');
+      while (myNode.firstChild) {
+        myNode.removeChild(myNode.firstChild);
+      }
+      this.createGraph();
+      this.recalculateNodesOutside();
+    },
     createGraph(callback) {
       const $mouseOverNode = new Rx.Subject();
       this.graph = networkViz('graph', {
@@ -248,16 +288,7 @@ export default {
         }
         case CLEARSCREEN: {
           this.mouseState = POINTER;
-          /**
-           * Delete the graph and start a new one.
-           * Removing nodes from: https://stackoverflow.com/a/3955238/6421793
-           */
-          const myNode = document.getElementById('graph');
-          while (myNode.firstChild) {
-            myNode.removeChild(myNode.firstChild);
-          }
-          this.createGraph();
-          this.recalculateNodesOutside();
+          this.clearScreen();
           break;
         }
         case REMOVEARROWS: {

@@ -213,6 +213,7 @@ export default {
           } else {
             node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
           }
+          this.graph.restart.styles();
         }
       });
       // Initiate the text edit function

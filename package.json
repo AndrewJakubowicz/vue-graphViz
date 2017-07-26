@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "d3": "4.9.1",
-    "networkvizjs": "0.0.6-alpha.1",
+    "networkvizjs": "file:../networkvizjs",
     "rxjs": "5.4.1",
     "vue": "^2.3.3"
   },

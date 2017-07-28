@@ -77,6 +77,16 @@ export default {
     });
   },
   watch: {
+    width(current, old) {
+      if (current !== old) {
+        this.graph.canvasOptions.setWidth(current);
+      }
+    },
+    height(current, old) {
+      if (current !== old) {
+        this.graph.canvasOptions.setHeight(current);
+      }
+    },
     nodes(current, old) {
       // Remove any nodes that have been removed.
       const newIds = new Set(current.map(v => v.id));

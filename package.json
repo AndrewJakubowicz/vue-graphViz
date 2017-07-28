@@ -1,6 +1,6 @@
 {
   "name": "vue-graphviz",
-  "version": "0.0.3",
+  "version": "0.0.3-alpha.1",
   "description": "networkVizJs Vue component",
   "author": "SpyR1014 <spyr1014@gmail.com>",
   "private": false,

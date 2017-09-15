@@ -232,9 +232,12 @@ export default {
       if (callback !== undefined) callback();
     },
     toNode(nodeProtocolObject) {
+      const className = `.${nodeProtocolObject.class}`;
+      const backgroundColor = $(className).css('backgroundColor');
       return {
         hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
         shortname: nodeProtocolObject.text,
+        color: backgroundColor,
         ...nodeProtocolObject,
       };
     },

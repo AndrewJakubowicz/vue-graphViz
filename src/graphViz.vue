@@ -9,10 +9,10 @@
     <!--Ghazal Start-->
     <div id="graph" v-on:dblclick="dblClickOnPage"></div>
 
-    <div id="radial-menu" style="display:none;" @mouseleave="radialMenuLeave">
-      <span class="fa fa-trash fa-2x" @click="removeNode"></span>
-      <span class="fa fa-arrow-circle-right fa-2x"></span>
-    </div>
+    <!--<div id="radial-menu" style="display:none;" @mouseleave="radialMenuLeave">-->
+    <!--<span class="fa fa-trash fa-2x" @click="removeNode"></span>-->
+    <!--<span class="fa fa-arrow-circle-right fa-2x"></span>-->
+    <!--</div>-->
     <!--Ghazal End-->
 
   </div>
@@ -64,7 +64,7 @@
     mounted() {
 
       //Ghazal Start
-      this.radialMenu = document.getElementById("radial-menu");
+//      this.radialMenu = document.getElementById("radial-menu");
       //Ghazal End
 
       this.createGraph(() => {
@@ -178,16 +178,16 @@
         const $mouseOverNode = new Rx.Subject();
 
         //Ghazal Start
-        let me = this;
-        const currentState = {
-          currentNode: {
-            data: {},
-            selection: {},
-            mouseOverNode: false
-          },
-          startedDragAt: "",
-          nodeMap: new Map()
-        }
+//        let me = this;
+//        const currentState = {
+//          currentNode: {
+//            data: {},
+//            selection: {},
+//            mouseOverNode: false
+//          },
+//          startedDragAt: "",
+//          nodeMap: new Map()
+//        }
 //        this.$on('mouseovernode', function () {
 //          console.log("mouseovernode")
 //        })
@@ -245,25 +245,25 @@
             currentState.currentNode.mouseOverNode = true;
 
             //Ghazal Start
-            if (me.radialMenu.style.display === "block") return;
-            var bbox = selection.node().getBBox(),
-              middleX = bbox.x,
-              middleY = bbox.y,
-              width = 40,
-              height = bbox.height * 2;
-
-            // generate a conversion function
-            var convert = makeAbsoluteContext(selection.node(), document.body);
-
-            // use it to calculate the absolute center of the element
-            var absoluteCenter = convert(middleX, middleY);
-
-            me.radialMenu.style.display = "block";
-            me.radialMenu.style.position = 'fixed';
-            me.radialMenu.style.top = (absoluteCenter.y + 5) + 'px';
-            me.radialMenu.style.left = (absoluteCenter.x - 20) + 'px';
-            me.radialMenu.style.width = width + 'px';
-            me.radialMenu.style.height = height + 'px';
+//            if (me.radialMenu.style.display === "block") return;
+//            var bbox = selection.node().getBBox(),
+//              middleX = bbox.x,
+//              middleY = bbox.y,
+//              width = 40,
+//              height = bbox.height * 2;
+//
+//            // generate a conversion function
+//            var convert = makeAbsoluteContext(selection.node(), document.body);
+//
+//            // use it to calculate the absolute center of the element
+//            var absoluteCenter = convert(middleX, middleY);
+//
+//            me.radialMenu.style.display = "block";
+//            me.radialMenu.style.position = 'fixed';
+//            me.radialMenu.style.top = (absoluteCenter.y + 5) + 'px';
+//            me.radialMenu.style.left = (absoluteCenter.x - 20) + 'px';
+//            me.radialMenu.style.width = width + 'px';
+//            me.radialMenu.style.height = height + 'px';
             //Ghazal End
 
             // Set the current state for which node the menu is
@@ -283,14 +283,14 @@
             //Ghazal Start
             //This is to hide the radial menu when
             //mouseout offset from the node
-            var cursorX = e.pageX, cursorY = e.pageY;
-            if (cursorX < me.radialMenu.offsetLeft ||
-              cursorX > me.radialMenu.offsetLeft + node.width ||
-              cursorY < me.radialMenu.offsetTop + 5 ||
-              cursorY > me.radialMenu.offsetTop + node.height
-            ) {
-              me.radialMenu.style.display = "none";
-            }
+//            var cursorX = e.pageX, cursorY = e.pageY;
+//            if (cursorX < me.radialMenu.offsetLeft ||
+//              cursorX > me.radialMenu.offsetLeft + node.width ||
+//              cursorY < me.radialMenu.offsetTop + 5 ||
+//              cursorY > me.radialMenu.offsetTop + node.height
+//            ) {
+//              me.radialMenu.style.display = "none";
+//            }
             //Ghazal End
 
             this.$emit('mouseoutnode');
@@ -298,7 +298,7 @@
           },
           //Ghazal Start
           nodeDragStart: (node, selection) => {
-            me.radialMenu.style.display = 'none';
+//            me.radialMenu.style.display = 'none';
           },
 
 //          dblClickNode: (node, selection) => {

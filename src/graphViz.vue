@@ -26,10 +26,10 @@
    */
   import networkViz from 'networkvizjs';
   //  Ghazal Start
-  import makeAbsoluteContext from './helpers/makeAbsoluteContext';
-  import linkContext from './radialMenu/link-tool';
-  import groupContext from './radialMenu/group-tool';
-  import trashContext from './radialMenu/trash-tool';
+//  import makeAbsoluteContext from './helpers/makeAbsoluteContext';
+//  import linkContext from './radialMenu/link-tool';
+//  import groupContext from './radialMenu/group-tool';
+//  import trashContext from './radialMenu/trash-tool';
   //  Ghazal end
   import nodeList from './components/nodeList';
   import toolBar from './components/toolBar';

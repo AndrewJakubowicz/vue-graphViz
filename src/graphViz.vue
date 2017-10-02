@@ -178,19 +178,19 @@
         const $mouseOverNode = new Rx.Subject();
 
         //Ghazal Start
-//        let me = this;
-//        const currentState = {
-//          currentNode: {
-//            data: {},
-//            selection: {},
-//            mouseOverNode: false
-//          },
-//          startedDragAt: "",
-//          nodeMap: new Map()
-//        }
-//        this.$on('mouseovernode', function () {
-//          console.log("mouseovernode")
-//        })
+        let me = this;
+        const currentState = {
+          currentNode: {
+            data: {},
+            selection: {},
+            mouseOverNode: false
+          },
+          startedDragAt: "",
+          nodeMap: new Map()
+        }
+        this.$on('mouseovernode', function () {
+          console.log("mouseovernode")
+        })
         //Ghazal End
 
 

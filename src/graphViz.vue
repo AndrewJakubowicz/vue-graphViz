@@ -6,14 +6,7 @@
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
     <toolBar @clickedAction="changeMouseState($event)"/>
 
-    <!--Ghazal Start-->
     <div id="graph" v-on:dblclick="dblClickOnPage"></div>
-
-    <!--<div id="radial-menu" style="display:none;" @mouseleave="radialMenuLeave">-->
-    <!--<span class="fa fa-trash fa-2x" @click="removeNode"></span>-->
-    <!--<span class="fa fa-arrow-circle-right fa-2x"></span>-->
-    <!--</div>-->
-    <!--Ghazal End-->
 
   </div>
 </template>
@@ -25,12 +18,6 @@
    - mouseoutnode, void
    */
   import networkViz from 'networkvizjs';
-  //  Ghazal Start
-//  import makeAbsoluteContext from './helpers/makeAbsoluteContext';
-//  import linkContext from './radialMenu/link-tool';
-//  import groupContext from './radialMenu/group-tool';
-//  import trashContext from './radialMenu/trash-tool';
-  //  Ghazal end
   import nodeList from './components/nodeList';
   import toolBar from './components/toolBar';
   import linkTool from './behaviours/link-tool';
@@ -62,10 +49,6 @@
       };
     },
     mounted() {
-
-      //Ghazal Start
-//      this.radialMenu = document.getElementById("radial-menu");
-      //Ghazal End
 
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
@@ -150,16 +133,10 @@
     methods: {
 
       //Ghazal Start
-      radialMenuLeave() {
-        this.radialMenu.style.display = "none";
-      },
-
       removeNode() {
         var node = this.currentNode;
         this.graph.removeNode(node.hash, this.recalculateNodesOutside);
-        this.radialMenu.style.display = "none";
       },
-      //Ghazal End
 
       clearScreen() {
         /**
@@ -244,34 +221,11 @@
             }
             currentState.currentNode.mouseOverNode = true;
 
-            //Ghazal Start
-//            if (me.radialMenu.style.display === "block") return;
-//            var bbox = selection.node().getBBox(),
-//              middleX = bbox.x,
-//              middleY = bbox.y,
-//              width = 40,
-//              height = bbox.height * 2;
-//
-//            // generate a conversion function
-//            var convert = makeAbsoluteContext(selection.node(), document.body);
-//
-//            // use it to calculate the absolute center of the element
-//            var absoluteCenter = convert(middleX, middleY);
-//
-//            me.radialMenu.style.display = "block";
-//            me.radialMenu.style.position = 'fixed';
-//            me.radialMenu.style.top = (absoluteCenter.y + 5) + 'px';
-//            me.radialMenu.style.left = (absoluteCenter.x - 20) + 'px';
-//            me.radialMenu.style.width = width + 'px';
-//            me.radialMenu.style.height = height + 'px';
-            //Ghazal End
-
             // Set the current state for which node the menu is
             // hovering over.
             currentState.currentNode.data = node;
             currentState.currentNode.selection = selection;
             this.$emit('mouseovernode', node.hash);
-
           },
 
           mouseOutNode: (node, selection, e) => {
@@ -279,26 +233,12 @@
             const tempNode = {...node, mouseOverNode: false};
             $mouseOverNode.next(tempNode);
             currentState.currentNode.mouseOverNode = false;
-
-            //Ghazal Start
-            //This is to hide the radial menu when
-            //mouseout offset from the node
-//            var cursorX = e.pageX, cursorY = e.pageY;
-//            if (cursorX < me.radialMenu.offsetLeft ||
-//              cursorX > me.radialMenu.offsetLeft + node.width ||
-//              cursorY < me.radialMenu.offsetTop + 5 ||
-//              cursorY > me.radialMenu.offsetTop + node.height
-//            ) {
-//              me.radialMenu.style.display = "none";
-//            }
-            //Ghazal End
-
             this.$emit('mouseoutnode');
 
           },
-          //Ghazal Start
-          nodeDragStart: (node, selection) => {
-//            me.radialMenu.style.display = 'none';
+
+          nodeRemove: (node) => {
+            this.removeNode(node);
           },
 
 //          dblClickNode: (node, selection) => {
@@ -480,7 +420,47 @@
 
 <style>
 
-  /* This prevents the dirty highlighting of the svg text*/
+  tooltip {
+    /*position: absolute;*/
+    text-align: left;
+    width: 100px;
+    height: 80px;
+    padding: 8px;
+    font: 10px sans-serif;
+    background: red;
+    border: solid 1px #aaa;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
+  .node-context-menu {
+    /*pointer-events: none;*/
+    cursor: pointer; cursor: hand;
+  }
+
+  .node-context-menu .tools {
+    padding-left: 4px;
+    color: #575959;
+  }
+
+  .node-context-menu .tools .fa {
+    font-size: 20px !important;
+  }
+
+  .node-context-menu i
+  {
+    display: inline-block;
+    border-radius: 50%;
+    box-shadow: 0px 0px 2px #82d2d2;
+    background-color: #edfdfd;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+  }
+
+  /*This prevents the dirty highlighting of the svg text*/
   svg text {
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -508,10 +488,6 @@
   /*.node:hover .b-snip-source {*/
   /*fill: rgba(230, 230, 230, 0.7) !important;*/
   /*}*/
-
-  #radial-menu {
-    color: grey;
-  }
 
   /*Ghazal End*/
 

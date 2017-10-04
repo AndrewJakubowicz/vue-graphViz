@@ -241,11 +241,6 @@
             this.removeNode(node);
           },
 
-//          dblClickNode: (node, selection) => {
-//            var node1 = node;
-//          },
-          //Ghazal End
-
           canDrag: () =>
             this.$data.mouseState === POINTER
 
@@ -255,6 +250,7 @@
         /**
          Edge link tool
          */
+        const radialMenuArrowTool = document.getElementById("menu-line-btn");
         const $mousedown = new Rx.Subject();
         this.graph.nodeOptions.setMouseDown((node, selection) => {
           if (this.mouseState === CREATEEDGE) {
@@ -277,18 +273,19 @@
               fullRestart: this.graph.restart.layout
             });
           }
-          if (this.mouseState === DELETE) {
-            // Recalculate the nodes after deleting the node.
-            this.graph.removeNode(node.hash, this.recalculateNodesOutside);
-          }
-          if (this.mouseState === PIN) {
-            if (node.fixed === undefined) {
-              node.fixed = true; // eslint-disable-line no-param-reassign
-            } else {
-              node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
-            }
-            this.graph.restart.styles();
-          }
+//          if (this.mouseState === DELETE) {
+//            // Recalculate the nodes after deleting the node.
+//            this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+//          }
+//          if (this.mouseState === PIN) {
+//            if (node.fixed === undefined) {
+//              node.fixed = true; // eslint-disable-line no-param-reassign
+//            } else {
+//              node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
+//            }
+//            this.graph.showPinOnNode(node);
+//            this.graph.restart.styles();
+//          }
         });
         // Initiate the text edit function
         textEdit($mousedown);
@@ -433,21 +430,25 @@
     pointer-events: none;
   }
 
-  .node-context-menu {
+  .node-status-icons .fa{
+    font-size: 12px !important;
+  }
+
+  .radial-menu {
     /*pointer-events: none;*/
     cursor: pointer; cursor: hand;
   }
 
-  .node-context-menu .tools {
+  .radial-menu .tools {
     padding-left: 4px;
     color: #575959;
   }
 
-  .node-context-menu .tools .fa {
+  .radial-menu .tools .fa {
     font-size: 20px !important;
   }
 
-  .node-context-menu i
+  .radial-menu i
   {
     display: inline-block;
     border-radius: 50%;

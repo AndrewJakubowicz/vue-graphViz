@@ -37,18 +37,18 @@
             toggled: false,
             tip: "Create Edge"
           },
-          {
-            action: 'DELETE',
-            icon: ['trash'],
-            toggled: false,
-            tip: "Delete"
-          },
-          {
-            action: 'PIN', /* to pin down nodes to the screen */
-            icon: ['thumb-tack'],
-            toggled: false,
-            tip: "Pin"
-          },
+//          {
+//            action: 'DELETE',
+//            icon: ['trash'],
+//            toggled: false,
+//            tip: "Delete"
+//          },
+//          {
+//            action: 'PIN', /* to pin down nodes to the screen */
+//            icon: ['thumb-tack'],
+//            toggled: false,
+//            tip: "Pin"
+//          },
           {
             action: 'ADDNOTE',
             icon: ['plus-square-o'],

@@ -32,9 +32,10 @@
   const CLEARSCREEN = 'CLEARSCREEN';
   const REMOVEARROWS = 'REMOVEARROWS';
   const PIN = 'PIN';
+  import uuid from 'uuid'
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
     name: 'graph-viz',
     components: {nodeList, toolBar},
     data() {
@@ -56,6 +57,7 @@
           // Create from saved.
           const savedGraph = JSON.parse(this.savedDiagram);
           const nodes = savedGraph.nodes;
+
           nodes.forEach((v) => {
             // Append x and y co-ordinates to the nodes passed in.
             this.addNodeHelper(v.hash, v.x, v.y);
@@ -63,15 +65,15 @@
           const triplets = savedGraph.triplets;
           triplets.forEach((x) => {
             // Create the triplets between the nodes.
-            const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
-            const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
+            const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+            const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
             if (indexOfSubject === -1 || indexOfObject === -1) {
               return;
             }
             // Create the triplet
             this.graph.addTriplet({
-              subject: this.toNode(this.nodes[indexOfSubject]),
-              object: this.toNode(this.nodes[indexOfObject]),
+              subject: this.toNode(this.textNodes[indexOfSubject]),
+              object: this.toNode(this.textNodes[indexOfObject]),
               predicate: {type: 'arrow'},
             });
           });
@@ -115,15 +117,15 @@
         const triplets = savedGraph.triplets;
         triplets.forEach((x) => {
           // Create the triplets between the nodes.
-          const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
-          const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
+          const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+          const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
           if (indexOfSubject === -1 || indexOfObject === -1) {
             return;
           }
           // Create the triplet
           this.graph.addTriplet({
-            subject: this.toNode(this.nodes[indexOfSubject]),
-            object: this.toNode(this.nodes[indexOfObject]),
+            subject: this.toNode(this.textNodes[indexOfSubject]),
+            object: this.toNode(this.textNodes[indexOfObject]),
             predicate: {type: 'arrow'},
           });
         });
@@ -259,7 +261,7 @@
           }
         });
         this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
-        this.linkToolDispose = this.linkTool(this.nodes);
+        this.linkToolDispose = this.linkTool(this.textNodes);
 
         // Set the action of clicking the node:
         this.graph.nodeOptions.setClickNode((node) => {
@@ -283,7 +285,6 @@
 //            } else {
 //              node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
 //            }
-//            this.graph.showPinOnNode(node);
 //            this.graph.restart.styles();
 //          }
         });
@@ -291,6 +292,22 @@
         textEdit($mousedown);
 
         if (callback !== undefined) callback();
+      },
+
+      createNewNode() {
+        var textNode = {
+          id: 'snip-' + uuid.v4(),
+          class: 'b-no-snip',
+          nodeShape: 'rectangle',
+          text: 'New',
+          isSnip: false
+        }
+        this.addNode(textNode.id);
+        const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
+        if (indexOfNode === -1) this.textNodes.push(textNode);
+        this.notes += 1;
+        this.noteObjs = [...this.noteObjs, textNode];
+        this.resetTools();
       },
       toNode(nodeProtocolObject) {
         const className = `.${nodeProtocolObject.class}`;
@@ -304,14 +321,14 @@
       },
       addNodes() {
         // Adds all the prop nodes.
-        this.nodes.forEach(v => this.graph.addNode(this.toNode(v)));
+        this.textNodes.forEach(v => this.graph.addNode(this.toNode(v)));
       },
       addNodeHelper(nodeId, x, y) {
         // Adds nodes, and ignores the node if it can't be found.
         // This lets us optimistically create the diagram.
-        const indexOfNode = this.nodes.map(v => v.id).indexOf(nodeId);
+        const indexOfNode = this.textNodes.map(v => v.id).indexOf(nodeId);
         if (indexOfNode !== -1) {
-          let node = this.toNode(this.nodes[indexOfNode]);
+          let node = this.toNode(this.textNodes[indexOfNode]);
           if (x && y) {
             node = {x, y, ...node};
           }
@@ -328,22 +345,15 @@
 
       dblClickOnPage() {
         if (!this.dbClickCreateNode) return;
-        const node = {
-          hash: `note-${this.notes}`,
-          shortname: ['Text'],
-        };
-        this.graph.addNode(node);
-        this.notes += 1;
-        this.noteObjs = [...this.noteObjs, node];
-        this.resetTools();
+        this.createNewNode()
       },
 
       resetTools() {
         this.linkToolDispose();
-        this.linkToolDispose = this.linkTool([...this.nodes, ...this.noteObjs]);
+        this.linkToolDispose = this.linkTool([...this.textNodes, ...this.noteObjs]);
       },
       recalculateNodesOutside() {
-        this.nodesOutsideDiagram = this.nodes.filter((v) => {
+        this.nodesOutsideDiagram = this.textNodes.filter((v) => {
           const result = !this.graph.hasNode(`${v.id}`);
           return result;
         });
@@ -365,20 +375,36 @@
           case SAVE: {
             this.mouseState = POINTER;
             this.graph.saveGraph((savedData) => {
-              this.$emit('save', savedData, this.graph.getSVGElement().node());
+              this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
             });
             break;
           }
           case ADDNOTE: {
             this.mouseState = POINTER;
-            const node = {
-              hash: `note-${this.notes}`,
-              shortname: ['Text'],
-            };
-            this.graph.addNode(node);
-            this.notes += 1;
-            this.noteObjs = [...this.noteObjs, node];
-            this.resetTools();
+            this.createNewNode()
+//            var textNode = {
+//              id: 'snip-' + uuid.v4(),
+//              class: 'b-no-snip',
+//              nodeShape: 'rectangle',
+//              text: 'New',
+//              isSnip: false
+//            }
+//            this.addNode(textNode.id);
+//            const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
+//            if (indexOfNode === -1)
+//              this.textNodes.push(textNode);
+//
+//            this.notes += 1;
+//            this.noteObjs = [...this.noteObjs, textNode];
+//            this.resetTools();
+//            const node = {
+//              hash: `note-${this.notes}`,
+//              shortname: ['Text'],
+//            };
+//            this.graph.addNode(node);
+//            this.notes += 1;
+//            this.noteObjs = [...this.noteObjs, node];
+//            this.resetTools();
             break;
           }
           case CLEARSCREEN: {
@@ -432,6 +458,7 @@
 
   .node-status-icons .fa{
     font-size: 12px !important;
+    color: #575959;
   }
 
   .radial-menu {

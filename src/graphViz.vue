@@ -134,7 +134,6 @@
 
     methods: {
 
-      //Ghazal Start
       removeNode() {
         var node = this.currentNode;
         this.graph.removeNode(node.hash, this.recalculateNodesOutside);
@@ -173,12 +172,12 @@
           layoutType: 'jaccardLinkLengths',
           edgeLength: 140,
           jaccardModifier: 0.9,
+          height: document.getElementById(this.$el.id).clientHeight,
+          width: document.getElementById(this.$el.id).clientWidth,
 
-          //Ghazal Start
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : "white";
           },
-          //Ghazal End
 
           // Shapes defined: rect, circle, capsule
           nodeShape: (d) => {

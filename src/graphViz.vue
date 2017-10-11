@@ -156,8 +156,6 @@
       createGraph(callback) {
         const $mouseOverNode = new Rx.Subject();
 
-        //Ghazal Start
-        let me = this;
         const currentState = {
           currentNode: {
             data: {},
@@ -170,12 +168,10 @@
         this.$on('mouseovernode', function () {
           console.log("mouseovernode")
         })
-        //Ghazal End
-
 
         this.graph = networkViz('graph', {
           layoutType: 'jaccardLinkLengths',
-          edgeLength: 200,
+          edgeLength: 140,
           jaccardModifier: 0.9,
 
           //Ghazal Start

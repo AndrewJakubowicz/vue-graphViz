@@ -91,7 +91,7 @@
           this.graph.canvasOptions.setHeight(current);
         }
       },
-      nodes(current, old) {
+      textNodes(current, old) {
         // Remove any nodes that have been removed.
         const newIds = new Set(current.map(v => v.id));
         old.forEach((v) => {

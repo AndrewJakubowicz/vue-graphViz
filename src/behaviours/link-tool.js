@@ -54,7 +54,11 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
             mouseUpOnNodeObservable = Rx.Observable.fromEvent(document, 'mouseup');
         
         // Mousedown subscription with handlers.
-        var mousedrag = mousedown.flatMap(function (obj) {
+        var mousedrag = mousedown
+            .filter(action => {
+                return action.type === 'CREATEEDGE';
+            })
+            .flatMap(function (obj) {
             // Set current selection to the start dragged node.
             currentState.startedDragAt = obj.clickedNode.hash;
             var bbox = obj.selection.node().getBBox(),
@@ -94,16 +98,12 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
                     tempDrawingArrow.start = {x:0,y:0};
                     updateLine();
                         
-                    console.log("ENDING AT ", currentState.currentNode);
                     // Create the triplet
                     if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash){
-                        console.log(currentState.startedDragAt);
-                        console.log(nodesList)
-                        let subjectTemp = nodesList.filter(d => d.id.toString() === currentState.startedDragAt)[0];
-                        console.log({subjectTemp});
-                        graph.addTriplet({subject: toNode(nodesList.filter(d => d.id.toString() === currentState.startedDragAt)[0]),
+                        let subjectTemp = nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0];
+                        graph.addTriplet({subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
                             predicate: {type: " "},
-                            object: toNode(nodesList.filter(d => d.id.toString() === currentState.currentNode.hash)[0])
+                            object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
                         });
                     }
                 });
@@ -111,7 +111,6 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
 
         var sub = mousedrag.subscribe(function (d) {
             tempDrawingArrow.end = {x: d.x, y: d.y};
-            
             updateLine();
         },
         function (error) {
@@ -131,7 +130,6 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
         // Return the subscribed observables so it's possible to unsubscribe
         // when modifying the function.
         return () => {
-            console.log("DIspose")
             sub.unsubscribe();
             currentNodeSub.unsubscribe();
         }

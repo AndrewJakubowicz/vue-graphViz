@@ -12,12 +12,12 @@ new Vue({
     interval: undefined,
     id: 3,
     arrayOfNodes: [
-      { id: 0, text: 'click me!' },
-      { id: 1, text: 'text in node' },
-      { id: 2, text: 'id must be unique' },
-      { id: 3, text: 'randomText4' },
+      { id: '0', text: 'click me!', class: 'argFor', nodeShape: 'capsule' },
+      { id: '1', text: 'text in node', nodeShape: 'rectagle' },
+      { id: '2', text: 'id must be unique', nodeShape: 'circle' },
+      { id: '3', text: 'randomText4' },
     ],
-    savedDiagram: '{"triplets":[{"subject":"1","predicate":"arrow","object":"2"}],"nodes":[{"hash":"1","x":645.9672679901261,"y":204.8057758227204},{"hash":"3","x":449.0095259474512,"y":356.4779992207068},{"hash":"2","x":446.7203845977645,"y":187.46566456498223}]}',
+    savedDiagram: '{"triplets":[{"subject":"0","predicate":"arrow","object":"1"}],"nodes":[{"hash":"0","x":223.3129297153952,"y":46.94835315445652},{"hash":"1","x":414.12654824652196,"y":106.86632193726514},{"hash":"2","x":393.53570556640625,"y":182.36602783203125}]}',
   },
   mounted() {
     this.start();
@@ -31,11 +31,15 @@ new Vue({
     },
     tick() {
       this.id += 1;
-      this.arrayOfNodes = [...this.arrayOfNodes, { id: this.id, text: `randomText${this.id + 1}` }];
+      this.arrayOfNodes = [...this.arrayOfNodes, { id: `${this.id}`, text: `randomText${this.id + 1}` }];
       // Remove a node for fun.
       // When id = 6, delete node 2.
       if (this.id === 6) {
-        this.arrayOfNodes = this.arrayOfNodes.filter(v => v.id !== 2);
+        this.arrayOfNodes = this.arrayOfNodes.filter(v => v.id !== '2');
+      }
+      // Checking that save will reset diagram.
+      if (this.id === 10) {
+        this.savedDiagram = '{"triplets":[{"subject":"0","predicate":"arrow","object":"1"},{"subject":"0","predicate":" ","object":"7"}],"nodes":[{"hash":"0","x":501.098217929378,"y":295.42518949486606},{"hash":"1","x":411.71045105367415,"y":475.0982557363864},{"hash":"7","x":637.9142720001979,"y":148.61255056978771}]}';
       }
       if (this.id > 20) {
         clearInterval(this.interval);

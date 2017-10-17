@@ -1,6 +1,6 @@
 <template>
-<ul>
-    <li v-for="item in nodesOutside" :key="item.hash" @click="clicked(item.id)">
+<ul class="listOfNodes">
+    <li v-for="item in nodesOutside" :key="item.hash" @click="clicked(item.id)" :class="classObject(item.class)">
         {{ item.text }}
     </li>
 </ul>
@@ -18,6 +18,18 @@ export default {
   methods: {
     clicked(id) {
       this.$emit('clickedNodeInList', id);
+    },
+    classObject(spaceSeparatedClasses) {
+      // This is hackey
+      if (!spaceSeparatedClasses) {
+        return 'nodeList-noClass';
+      }
+      const classes = spaceSeparatedClasses.split(' ');
+      const classObj = {};
+      for (let i = 0; i < classes.length; i += 1) {
+        classObj[classes[i]] = true;
+      }
+      return classObj;
     },
   },
 };

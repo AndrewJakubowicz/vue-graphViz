@@ -6,6 +6,10 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
+  'globals': {
+    "$": true,
+    "jQuery": true
+  },
   env: {
     browser: true,
   },
@@ -29,11 +33,13 @@ module.exports = {
       'js': 'never',
       'vue': 'never'
     }],
+    'linebreak-style': 'off',
     // allow optionalDependencies
     'import/no-extraneous-dependencies': ['error', {
       'optionalDependencies': ['test/unit/index.js']
     }],
     // allow debugger during development
-    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0
+    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0,
+    "no-console":0
   }
 }

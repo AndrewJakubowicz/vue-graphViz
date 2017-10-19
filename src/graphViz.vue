@@ -154,7 +154,7 @@
 
       createGraph(callback) {
         const $mouseOverNode = new Rx.Subject();
-
+        let me = this
         const currentState = {
           currentNode: {
             data: {},
@@ -177,6 +177,10 @@
 
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : "white";
+          },
+
+          nodeToPin: function nodeToPin(d) {
+            return d.fixed ? d.fixed : false;
           },
 
           // Shapes defined: rect, circle, capsule
@@ -232,6 +236,12 @@
             currentState.currentNode.mouseOverNode = false;
             this.$emit('mouseoutnode');
 
+          },
+
+          clickPin: (node, element) => {
+            console.log(node)
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].fixed = node.fixed;
           },
 
           nodeRemove: (node) => {

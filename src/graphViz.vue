@@ -277,7 +277,8 @@
               type: 'EDITNODE',
               clickedNode: node,
               restart: this.graph.restart.styles,
-              fullRestart: this.graph.restart.layout
+              fullRestart: this.graph.restart.layout,
+              textNodes: this.textNodes
             });
           }
 //          if (this.mouseState === DELETE) {

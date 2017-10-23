@@ -77,6 +77,7 @@ export default ($action) => {
         let restart = action.restart;
         let fullRestart = action.fullRestart;
         let node = action.clickedNode;
+        let textNodes = action.textNodes;
         let text = Text(node.shortname, node, restart);
         let previousColor = node.color;
         node.color = "white";
@@ -92,7 +93,7 @@ export default ($action) => {
             .filter(e => e.keyCode === 8 && e.keyCode !== 13)
             .do(_ => text.deleteText())
             .do(fullRestart);
-        
+
         // Letters
         let $letters = Rx.Observable.fromEvent(document, "keypress")
             .filter(e => e.keyCode !== 8 && e.keyCode !== 13)
@@ -116,14 +117,14 @@ export default ($action) => {
                 text.newLine();
             })
             .do(fullRestart)
-        
+
         let $interval = Rx.Observable
             .interval(500 /* ms */)
             .timeInterval()
             .do(_ => {
                 text.toggleCursor();
             })
-        
+
         // Return the typing observables merged together.
         let $typingControls = Rx.Observable.merge(
                 $backspace,
@@ -139,6 +140,8 @@ export default ($action) => {
             .finally(_ => {
                 node.color = previousColor;
                 node.shortname = text.getText();
+                let foundIndex = textNodes.findIndex(x => x.id == node.id);
+                textNodes[foundIndex]['text'] = node.shortname;
                 fullRestart();
             })
         return $typingControls

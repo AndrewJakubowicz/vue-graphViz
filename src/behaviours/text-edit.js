@@ -134,14 +134,14 @@ export default ($action) => {
             )
             .do(_ => {
                 node.shortname = text.getWithCursor();
+                let foundIndex = textNodes.findIndex(x => x.id == node.id);
+                textNodes[foundIndex]['text'] = node.shortname;
                 restart();
             })
             .takeUntil($exit)
             .finally(_ => {
                 node.color = previousColor;
                 node.shortname = text.getText();
-                let foundIndex = textNodes.findIndex(x => x.id == node.id);
-                textNodes[foundIndex]['text'] = node.shortname;
                 fullRestart();
             })
         return $typingControls

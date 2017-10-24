@@ -302,7 +302,7 @@
 
       createNewNode() {
         var textNode = {
-          id: 'snip-' + uuid.v4(),
+          id: 'note-' + uuid.v4(),
           class: 'b-no-snip',
           nodeShape: 'rectangle',
           text: 'New',

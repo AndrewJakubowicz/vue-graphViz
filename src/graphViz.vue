@@ -22,6 +22,8 @@
   import toolBar from './components/toolBar';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
+  import uuid from 'uuid';
+  import jscolor from './behaviours/jscolor';
 
   const Rx = require('rxjs');
   const DELETE = 'DELETE';
@@ -32,7 +34,7 @@
   const CLEARSCREEN = 'CLEARSCREEN';
   const REMOVEARROWS = 'REMOVEARROWS';
   const PIN = 'PIN';
-  import uuid from 'uuid'
+
 
   export default {
     props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
@@ -47,7 +49,6 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
-        textNodes: [],
       };
     },
     mounted() {
@@ -184,6 +185,11 @@
             return d.fixed ? d.fixed : false;
           },
 
+          updateNodeColor: function updateNodeColor(node) {
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].color = node.color;
+          },
+
           // Shapes defined: rect, circle, capsule
           nodeShape: (d) => {
             switch (d.nodeShape) {
@@ -208,6 +214,10 @@
                 return 'M16 48 L48 48 L48 16 L16 16 Z';
               }
             }
+          },
+
+          mouseOverRadial: (node) => {
+            this.dbClickCreateNode = false;
           },
 
           mouseOverNode: (node, selection) => {
@@ -523,6 +533,487 @@
   /*.node:hover .b-snip-source {*/
   /*fill: rgba(230, 230, 230, 0.7) !important;*/
   /*}*/
+
+
+  #svgcontainer #controls {
+    display: inline-block;
+    height: 42px;
+  }
+
+  #controls {
+    /*margin-left: 2px;*/
+    vertical-align: 16px;
+  }
+
+  #controls div {
+    margin: 0px 0px 5px 0px;
+  }
+
+  #controls span[data-type='color'] {
+    display: inline-block;
+    /* background-color: #F00; */
+    border: 1px solid #AFAFAF;
+    box-shadow: 1px 1px 4px black;
+    border-radius: 40px;
+    padding: 0px;
+    margin: 0px;
+    width: 22px;
+    height: 22px;
+    vertical-align: bottom;
+  }
+
+  .colpick {
+    position: absolute;
+    width: 346px;
+    height: 170px;
+    overflow: hidden;
+    display: none;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #EBEBEB;
+    border: 1px solid #BBB;
+    border-radius: 5px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+
+  .colpick_color {
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 156px;
+    height: 156px;
+    overflow: hidden;
+    outline: 1px solid #AAA;
+    cursor: crosshair;
+  }
+
+  .colpick_color_overlay1,
+  .colpick_color_overlay2 {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 156px;
+    height: 156px;
+  }
+
+  .colpick_color_overlay1 {
+    background: linear-gradient(to right, white 0%, rgba(255, 255, 255, 0) 100%);
+  }
+
+  .colpick_color_overlay2 {
+    background: linear-gradient(to bottom, transparent 0%, black 100%);
+  }
+
+  .colpick_selector_outer {
+    background: none;
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    margin: -6px 0 0 -6px;
+    border: 1px solid #000;
+    border-radius: 50%;
+  }
+
+  .colpick_selector_inner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border: 1px solid #FFF;
+    border-radius: 50%;
+  }
+
+  .colpick_hue {
+    position: absolute;
+    top: 6px;
+    left: 175px;
+    width: 19px;
+    height: 156px;
+    border: 1px solid #AAA;
+    cursor: n-resize;
+  }
+
+  .colpick_hue_arrs {
+    position: absolute;
+    left: -8px;
+    width: 35px;
+    height: 7px;
+    margin: -7px 0 0 0;
+  }
+
+  .colpick_hue_larr,
+  .colpick_hue_rarr {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+  }
+
+  .colpick_hue_larr {
+    border-left: 7px solid #858585;
+  }
+
+  .colpick_hue_rarr {
+    right: 0;
+    border-right: 7px solid #858585;
+  }
+
+  .colpick_new_color,
+  .colpick_current_color {
+    position: absolute;
+    top: 6px;
+    width: 60px;
+    height: 27px;
+    background: #F00;
+    border: 1px solid #8F8F8F;
+  }
+
+  .colpick_new_color {
+    left: 207px;
+  }
+
+  .colpick_current_color {
+    left: 277px;
+  }
+
+  .colpick_field,
+  .colpick_hex_field {
+    position: absolute;
+    height: 20px;
+    width: 60px;
+    overflow: hidden;
+    background: #F3F3F3;
+    color: #B8B8B8;
+    font-size: 12px;
+    border: 1px solid #BDBDBD;
+    border-radius: 3px;
+  }
+
+  .colpick_rgb_r,
+  .colpick_rgb_g,
+  .colpick_rgb_b,
+  .colpick_hex_field {
+    left: 207px;
+  }
+
+  .colpick_hsb_h,
+  .colpick_hsb_s,
+  .colpick_hsb_b {
+    left: 277px;
+  }
+
+  .colpick_rgb_r,
+  .colpick_hsb_h {
+    top: 40px;
+  }
+
+  .colpick_rgb_g,
+  .colpick_hsb_s {
+    top: 67px;
+  }
+
+  .colpick_rgb_b,
+  .colpick_hsb_b {
+    top: 94px;
+  }
+
+  .colpick_hex_field {
+    width: 68px;
+    top: 121px;
+  }
+
+  .colpick_focus {
+    border-color: #999;
+  }
+
+  .colpick_field_letter {
+    position: absolute;
+    width: 12px;
+    height: 20px;
+    line-height: 20px;
+    padding-left: 4px;
+    background: #EFEFEF;
+    border-right: 1px solid #BDBDBD;
+    font-weight: bold;
+    color: #777;
+  }
+
+  .colpick_field input,
+  .colpick_hex_field input {
+    position: absolute;
+    right: 11px;
+    margin: 0;
+    padding: 0;
+    height: 20px;
+    line-height: 20px;
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #555;
+    text-align: right;
+    outline: none;
+  }
+
+  .colpick_hex_field input {
+    outline: none;
+    right: 4px;
+  }
+
+  .colpick_field_arrs,
+  .colpick_field_uarr,
+  .colpick_field_darr {
+    position: absolute;
+  }
+
+  .colpick_field_arrs {
+    top: 0;
+    right: 0;
+    width: 9px;
+    height: 21px;
+    cursor: n-resize;
+  }
+
+  .colpick_field_uarr {
+    top: 5px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid #959595;
+  }
+
+  .colpick_field_darr {
+    bottom: 5px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #959595;
+  }
+
+  .colpick_submit {
+    position: absolute;
+    left: 207px;
+    top: 146px;
+    width: 130px;
+    height: 18px;
+    line-height: 18px;
+    background: #EFEFEF;
+    text-align: center;
+    color: #555;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #BDBDBD;
+    border-radius: 3px;
+  }
+
+  .colpick_submit:hover {
+    background: #F3F3F3;
+    border-color: #999;
+    cursor: pointer;
+  }
+
+  .colpick_full_ns .colpick_submit,
+  .colpick_full_ns .colpick_current_color {
+    display: none;
+  }
+
+  .colpick_full_ns .colpick_new_color {
+    width: 130px;
+    height: 25px;
+  }
+
+  .colpick_full_ns .colpick_rgb_r,
+  .colpick_full_ns .colpick_hsb_h {
+    top: 42px;
+  }
+
+  .colpick_full_ns .colpick_rgb_g,
+  .colpick_full_ns .colpick_hsb_s {
+    top: 73px;
+  }
+
+  .colpick_full_ns .colpick_rgb_b,
+  .colpick_full_ns .colpick_hsb_b {
+    top: 104px;
+  }
+
+  .colpick_full_ns .colpick_hex_field {
+    top: 135px;
+  }
+
+  .colpick_rgbhex {
+    width: 282px;
+  }
+
+  .colpick_rgbhex .colpick_hsb_h,
+  .colpick_rgbhex .colpick_hsb_s,
+  .colpick_rgbhex .colpick_hsb_b {
+    display: none;
+  }
+
+  .colpick_rgbhex .colpick_field,
+  .colpick_rgbhex .colpick_submit {
+    width: 68px;
+  }
+
+  .colpick_rgbhex .colpick_new_color {
+    width: 34px;
+    border-right: none;
+  }
+
+  .colpick_rgbhex .colpick_current_color {
+    width: 34px;
+    left: 240px;
+    border-left: none;
+  }
+
+  .colpick_rgbhex_ns .colpick_submit,
+  .colpick_rgbhex_ns .colpick_current_color {
+    display: none;
+  }
+
+  .colpick_rgbhex_ns .colpick_new_color {
+    width: 68px;
+    border: 1px solid #8F8F8F;
+  }
+
+  .colpick_rgbhex_ns .colpick_rgb_r {
+    top: 42px;
+  }
+
+  .colpick_rgbhex_ns .colpick_rgb_g {
+    top: 73px;
+  }
+
+  .colpick_rgbhex_ns .colpick_rgb_b {
+    top: 104px;
+  }
+
+  .colpick_rgbhex_ns .colpick_hex_field {
+    top: 135px;
+  }
+
+  .colpick_hex {
+    width: 206px;
+    height: 201px;
+  }
+
+  .colpick_hex .colpick_hsb_h,
+  .colpick_hex .colpick_hsb_s,
+  .colpick_hex .colpick_hsb_b,
+  .colpick_hex .colpick_rgb_r,
+  .colpick_hex .colpick_rgb_g,
+  .colpick_hex .colpick_rgb_b {
+    display: none;
+  }
+
+  .colpick_hex .colpick_hex_field {
+    width: 72px;
+    height: 25px;
+    top: 168px;
+    left: 80px;
+  }
+
+  .colpick_hex .colpick_hex_field div,
+  .colpick_hex .colpick_hex_field input {
+    height: 25px;
+    line-height: 25px;
+  }
+
+  .colpick_hex .colpick_new_color,
+  .colpick_hex .colpick_current_color,
+  .colpick_hex .colpick_submit {
+    top: 168px;
+    width: 30px;
+  }
+
+  .colpick_hex .colpick_new_color {
+    left: 9px;
+    border-right: none;
+  }
+
+  .colpick_hex .colpick_current_color {
+    left: 39px;
+    border-left: none;
+  }
+
+  .colpick_hex .colpick_submit {
+    left: 164px;
+    height: 25px;
+    line-height: 25px;
+  }
+
+  .colpick_hex_ns .colpick_submit,
+  .colpick_hex_ns .colpick_current_color {
+    display: none;
+  }
+
+  .colpick_hex_ns .colpick_hex_field {
+    width: 80px;
+  }
+
+  .colpick_hex_ns .colpick_new_color {
+    width: 60px;
+    border: 1px solid #8F8F8F;
+  }
+
+  .colpick_dark {
+    background: #161616;
+    border-color: #2A2A2A;
+  }
+
+  .colpick_dark .colpick_color {
+    outline-color: #333;
+  }
+
+  .colpick_dark .colpick_hue {
+    border-color: #555;
+  }
+
+  .colpick_dark .colpick_field,
+  .colpick_dark .colpick_hex_field {
+    background: #101010;
+    border-color: #2D2D2D;
+  }
+
+  .colpick_dark .colpick_field_letter {
+    background: #131313;
+    border-color: #2D2D2D;
+    color: #696969;
+  }
+
+  .colpick_dark .colpick_field input,
+  .colpick_dark .colpick_hex_field input {
+    color: #7A7A7A;
+  }
+
+  .colpick_dark .colpick_field_uarr {
+    border-bottom-color: #696969;
+  }
+
+  .colpick_dark .colpick_field_darr {
+    border-top-color: #696969;
+  }
+
+  .colpick_dark .colpick_focus {
+    border-color: #444;
+  }
+
+  .colpick_dark .colpick_submit {
+    background: #131313;
+    border-color: #2D2D2D;
+    color: #7A7A7A;
+  }
+
+  .colpick_dark .colpick_submit:hover {
+    background-color: #101010;
+    border-color: #444;
+  }
 
   /*Ghazal End*/
 

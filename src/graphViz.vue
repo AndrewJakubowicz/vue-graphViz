@@ -47,6 +47,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
+        textNodes: [],
       };
     },
     mounted() {

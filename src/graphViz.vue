@@ -47,6 +47,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
+        textNodes: [],
       };
     },
     mounted() {
@@ -154,7 +155,7 @@
 
       createGraph(callback) {
         const $mouseOverNode = new Rx.Subject();
-
+        let me = this
         const currentState = {
           currentNode: {
             data: {},
@@ -177,6 +178,10 @@
 
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : "white";
+          },
+
+          nodeToPin: function nodeToPin(d) {
+            return d.fixed ? d.fixed : false;
           },
 
           // Shapes defined: rect, circle, capsule
@@ -234,6 +239,12 @@
 
           },
 
+          clickPin: (node, element) => {
+            console.log(node)
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].fixed = node.fixed;
+          },
+
           nodeRemove: (node) => {
             this.removeNode(node);
           },
@@ -267,7 +278,8 @@
               type: 'EDITNODE',
               clickedNode: node,
               restart: this.graph.restart.styles,
-              fullRestart: this.graph.restart.layout
+              fullRestart: this.graph.restart.layout,
+              textNodes: this.textNodes
             });
           }
 //          if (this.mouseState === DELETE) {
@@ -291,7 +303,7 @@
 
       createNewNode() {
         var textNode = {
-          id: 'snip-' + uuid.v4(),
+          id: 'note-' + uuid.v4(),
           class: 'b-no-snip',
           nodeShape: 'rectangle',
           text: 'New',

@@ -23,7 +23,6 @@
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
   import uuid from 'uuid';
-  import jscolor from './behaviours/jscolor';
 
   const Rx = require('rxjs');
   const DELETE = 'DELETE';
@@ -508,10 +507,10 @@
     border-radius: 50%;
     box-shadow: 0px 0px 2px #82d2d2;
     background-color: #edfdfd;
-    padding-left: 4px;
-    padding-right: 4px;
-    padding-top: 3px;
-    padding-bottom: 3px;
+    padding: 4px;
+    /*padding-right: 4px;*/
+    /*padding-top: 4px;*/
+    /*padding-bottom: 3px;*/
     margin-bottom: 4px;
   }
 

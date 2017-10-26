@@ -136,6 +136,15 @@
 
     methods: {
 
+      updateTextNodes() {
+        var node = this.currentNode;
+        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+      },
+
+      deleteRadial() {
+        $('.radial-menu').remove()
+      },
+
       removeNode() {
         var node = this.currentNode;
         this.graph.removeNode(node.hash, this.recalculateNodesOutside);
@@ -289,7 +298,8 @@
               clickedNode: node,
               restart: this.graph.restart.styles,
               fullRestart: this.graph.restart.layout,
-              textNodes: this.textNodes
+              textNodes: this.textNodes,
+              deleteRadial: this.deleteRadial
             });
           }
 //          if (this.mouseState === DELETE) {

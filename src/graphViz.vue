@@ -244,6 +244,10 @@ export default {
       });
 
       if (callback !== undefined) callback();
+
+      this.graph.getSVGElement().node().addEventListener('click', () => {
+        $close.next('STOP - click on svg background');
+      });
     },
     toNode(nodeProtocolObject) {
       return {

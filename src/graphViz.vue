@@ -482,14 +482,15 @@
     pointer-events: none;
   }
 
-  .node-status-icons .fa{
+  .node-status-icons .fa {
     font-size: 12px !important;
     color: #575959;
   }
 
   .radial-menu {
     /*pointer-events: none;*/
-    cursor: pointer; cursor: hand;
+    cursor: pointer;
+    cursor: hand;
   }
 
   .radial-menu .tools {
@@ -499,18 +500,19 @@
 
   .radial-menu .tools .fa {
     font-size: 20px !important;
+    padding-left: 4px;
+    padding-right: 5px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    width: 14px;
+    margin: 2px;
   }
 
-  .radial-menu i
-  {
+  .radial-menu i {
     display: inline-block;
     border-radius: 50%;
     box-shadow: 0px 0px 2px #82d2d2;
     background-color: #edfdfd;
-    padding: 4px;
-    /*padding-right: 4px;*/
-    /*padding-top: 4px;*/
-    /*padding-bottom: 3px;*/
     margin-bottom: 4px;
   }
 
@@ -542,7 +544,6 @@
   /*.node:hover .b-snip-source {*/
   /*fill: rgba(230, 230, 230, 0.7) !important;*/
   /*}*/
-
 
   #svgcontainer #controls {
     display: inline-block;

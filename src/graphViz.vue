@@ -45,9 +45,15 @@ export default {
       linkToolDispose: undefined, // Subscription disposing.
       notes: 0,
       noteObjs: [],
+      // stopObservable makes sure that observables are cleaned up.
+      // To stop all current actions use:
+      //  stopObservable.next("Closed by ___")
+      // Text edit uses this to maintain exclusivity.
+      stopObservable: new Rx.Subject(), // This observable will be used to cancel events.
     };
   },
   mounted() {
+    this.stopObservable.subscribe(console.log);
     this.createGraph(() => {
       // Create initial diagram from createDiagram.
       if (this.savedDiagram) {
@@ -101,6 +107,9 @@ export default {
     savedDiagram(current, old) {
       if (current === old) {
         return;
+      }
+      if (this.stopObservable) {
+        this.stopObservable.next('CLOSE - Called by loading saved diagram.');
       }
       this.clearScreen();
       // Create from saved.
@@ -196,6 +205,10 @@ export default {
       /**
       Edge link tool
       */
+
+      // make a reference to the stopObservable to use.
+      const $close = this.stopObservable;
+
       const $mousedown = new Rx.Subject();
       this.graph.nodeOptions.setMouseDown((node, selection) => {
         if (this.mouseState === CREATEEDGE) {
@@ -211,6 +224,9 @@ export default {
         // If the mouse is a pointer and a note is clicked on set edit mode.
         if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
           this.currentNode = node;
+          // $close stop
+          $close.next('STOP - FROM CLICKING EDIT NODE');
+          textEdit($mousedown, $close);
           $mousedown.next({ type: 'EDITNODE', clickedNode: node, restart: this.graph.restart.styles, fullRestart: this.graph.restart.layout });
         }
         if (this.mouseState === DELETE) {
@@ -226,10 +242,12 @@ export default {
           this.graph.restart.styles();
         }
       });
-      // Initiate the text edit function
-      textEdit($mousedown);
 
       if (callback !== undefined) callback();
+
+      this.graph.getSVGElement().node().addEventListener('click', () => {
+        $close.next('STOP - click on svg background');
+      });
     },
     toNode(nodeProtocolObject) {
       return {
@@ -282,6 +300,7 @@ export default {
       || state === PIN)) {
         console.error('Not sure what state', state, 'is');
       } else {
+        this.stopObservable.next('STOP - from changeMouseState');
         this.mouseState = state;
       }
       switch (state) {

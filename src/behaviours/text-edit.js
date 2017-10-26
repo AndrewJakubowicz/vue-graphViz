@@ -5,7 +5,7 @@
  */
 const Rx = require('rxjs');
 
-// Modal of the text
+// Model of the text
 function Text(startingText, node, restart) {
     let text = [],
         cursor = true;
@@ -67,9 +67,18 @@ function Text(startingText, node, restart) {
 
 /**
  * Takes an action observable.
+ * 
+ * $close is a Subject.
+ *  - If you push something into it will cancel eveything
+ *    listening to it.
+ *    Currently used to make sure only a single node is being
+ *    edited at a time.
+ *    If any action takes place that hinders node editing, you
+ *    should send a message on $close. I.e. $close.next("CLOSING FROM....")
  */
-export default ($action) => {
+export default ($action, $close) => {
     $action
+      .takeUntil($close)
       .filter(action => {
         return action.type === 'EDITNODE';
       })
@@ -81,11 +90,15 @@ export default ($action) => {
         let previousColor = node.color;
         node.color = "white";
         restart();
-        // Exit on "esc" keypress
-        let $exit = Rx.Observable.concat(
-            Rx.Observable.fromEvent(document, "keyup")
-                    .filter(e => e.keyCode == 27)
-        );
+
+        // Any call to $close will close all other actions.
+        // This allows for clean up.
+        document.addEventListener("keyup", e => {
+            if (e.keyCode == 27) {
+                $close.next("CLOSE - CALLED FROM INSIDE TEXT NODE");
+            }
+        });
+
 
         // Backspace
         let $backspace = Rx.Observable.fromEvent(document, "keydown")
@@ -135,7 +148,7 @@ export default ($action) => {
                 node.shortname = text.getWithCursor();
                 restart();
             })
-            .takeUntil($exit)
+            .takeUntil($close)
             .finally(_ => {
                 node.color = previousColor;
                 node.shortname = text.getText();
@@ -147,7 +160,7 @@ export default ($action) => {
     .subscribe(
         console.log,
         console.error,
-        () => console.log("FINISH")
+        () => console.log("Text - edit finished")
     )
 }
 

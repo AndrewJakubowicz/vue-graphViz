@@ -89,6 +89,7 @@ export default ($action) => {
       let deleteRadial = action.deleteRadial;
       let oldText = node.shortname
       text.clearText()
+      deleteRadial()
       restart();
       // Exit on "esc" keypress
       let $exit = Rx.Observable.concat(
@@ -146,7 +147,6 @@ export default ($action) => {
       )
         .do(_ => {
           node.shortname = text.getWithCursor();
-          deleteRadial()
           restart();
         })
         .takeUntil($mouseClick)

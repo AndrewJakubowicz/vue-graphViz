@@ -499,12 +499,13 @@
   }
 
   .radial-menu .tools .fa {
-    font-size: 20px !important;
+    font-size: 19px !important;
     padding-left: 4px;
-    padding-right: 5px;
-    padding-top: 1px;
-    padding-bottom: 1px;
-    width: 14px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    width: 23px;
+    height: 23px;
     margin: 2px;
   }
 

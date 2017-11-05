@@ -287,6 +287,19 @@
         this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
         this.linkToolDispose = this.linkTool(this.textNodes);
 
+        this.graph.edgeOptions.setClickEdge((edge) => {
+//          console.log(edge);
+//          console.log(this)
+          let txt = prompt("text");
+          edge.edgeData["text"] = txt; //TODO update the list in networkviz instead
+          this.graph.updateEdge({
+            subject: edge.source.hash,
+            predicate: edge.edgeData.type,
+            object: edge.target.hash,
+            edgeData: edge.edgeData
+          });
+        })
+
         // Set the action of clicking the node:
         this.graph.nodeOptions.setClickNode((node) => {
           // If the mouse is a pointer and a note is clicked on set edit mode.

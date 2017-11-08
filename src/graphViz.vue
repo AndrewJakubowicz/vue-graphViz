@@ -141,7 +141,9 @@
       },
 
       deleteRadial() {
-        $('.radial-menu').remove()
+        $('.menu-color').remove()
+        $('.menu-shape').remove()
+        $('.menu-action').remove()
       },
 
       removeNode() {

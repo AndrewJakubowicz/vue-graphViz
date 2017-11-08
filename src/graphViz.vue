@@ -51,7 +51,7 @@
       };
     },
     mounted() {
-
+      document.addEventListener('paste', this.onPaste)
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
         if (this.savedDiagram) {
@@ -134,6 +134,10 @@
     },
 
     methods: {
+      onPaste (e) {
+        console.log('on paste',e)
+        this.createNewNode(e.clipboardData.getData('text/plain'))
+      },
 
       updateTextNodes() {
         var node = this.currentNode;
@@ -322,12 +326,12 @@
         if (callback !== undefined) callback();
       },
 
-      createNewNode() {
+      createNewNode(text) {
         var textNode = {
           id: 'note-' + uuid.v4(),
           class: 'b-no-snip',
           nodeShape: 'rect',
-          text: 'New',
+          text: text ? text : 'New',
           isSnip: false
         }
         this.addNode(textNode.id);

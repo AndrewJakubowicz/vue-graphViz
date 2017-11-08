@@ -1,58 +1,115 @@
 <template>
   <div id="graph-viz">
-    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css" />
+    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css"/>
     <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
 
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
-    <toolBar @clickedAction="changeMouseState($event)" />
-    <div id="graph"></div>
+    <toolBar @clickedAction="changeMouseState($event)"/>
+
+    <div id="graph" v-on:dblclick="dblClickOnPage"></div>
+
   </div>
 </template>
 
 <script>
-/**
-Event emitters:
- - mouseovernode, nodeId - String
- - mouseoutnode, void
- */
-import networkViz from 'networkvizjs';
-import nodeList from './components/nodeList';
-import toolBar from './components/toolBar';
-import linkTool from './behaviours/link-tool';
-import textEdit from './behaviours/text-edit';
+  /**
+   Event emitters:
+   - mouseovernode, nodeId - String
+   - mouseoutnode, void
+   */
+  import networkViz from 'networkvizjs';
+  import nodeList from './components/nodeList';
+  import toolBar from './components/toolBar';
+  import linkTool from './behaviours/link-tool';
+  import textEdit from './behaviours/text-edit';
+  import uuid from 'uuid';
 
-const Rx = require('rxjs');
+  const Rx = require('rxjs');
+  const DELETE = 'DELETE';
+  const CREATEEDGE = 'CREATEEDGE';
+  const POINTER = 'POINTER';
+  const SAVE = 'SAVE';
+  const ADDNOTE = 'ADDNOTE';
+  const CLEARSCREEN = 'CLEARSCREEN';
+  const REMOVEARROWS = 'REMOVEARROWS';
+  const PIN = 'PIN';
 
-const DELETE = 'DELETE';
-const CREATEEDGE = 'CREATEEDGE';
-const POINTER = 'POINTER';
-const SAVE = 'SAVE';
-const ADDNOTE = 'ADDNOTE';
-const CLEARSCREEN = 'CLEARSCREEN';
-const REMOVEARROWS = 'REMOVEARROWS';
-const PIN = 'PIN';
 
-export default {
-  props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height'],
-  name: 'graph-viz',
-  components: { nodeList, toolBar },
-  data() {
-    return {
-      graph: undefined,
-      nodesOutsideDiagram: [],
-      mouseState: POINTER,
-      linkTool: undefined,
-      linkToolDispose: undefined, // Subscription disposing.
-      notes: 0,
-      noteObjs: [],
-    };
-  },
-  mounted() {
-    this.createGraph(() => {
-      // Create initial diagram from createDiagram.
-      if (this.savedDiagram) {
+  export default {
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
+    name: 'graph-viz',
+    components: {nodeList, toolBar},
+    data() {
+      return {
+        graph: undefined,
+        nodesOutsideDiagram: [],
+        mouseState: POINTER,
+        linkTool: undefined,
+        linkToolDispose: undefined, // Subscription disposing.
+        notes: 0,
+        noteObjs: [],
+      };
+    },
+    mounted() {
+      document.addEventListener('paste', this.onPaste)
+      this.createGraph(() => {
+        // Create initial diagram from createDiagram.
+        if (this.savedDiagram) {
+          // Create from saved.
+          const savedGraph = JSON.parse(this.savedDiagram);
+          const nodes = savedGraph.nodes;
+
+          nodes.forEach((v) => {
+            // Append x and y co-ordinates to the nodes passed in.
+            this.addNodeHelper(v.hash, v.x, v.y);
+          });
+          const triplets = savedGraph.triplets;
+          triplets.forEach((x) => {
+            // Create the triplets between the nodes.
+            const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+            const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+            if (indexOfSubject === -1 || indexOfObject === -1) {
+              return;
+            }
+            // Create the triplet
+            this.graph.addTriplet({
+              subject: this.toNode(this.textNodes[indexOfSubject]),
+              object: this.toNode(this.textNodes[indexOfObject]),
+              predicate: {type: 'arrow'},
+            });
+          });
+        }
+      });
+    },
+    watch: {
+      width(current, old) {
+        if (current !== old) {
+          this.graph.canvasOptions.setWidth(current);
+        }
+      },
+      height(current, old) {
+        if (current !== old) {
+          this.graph.canvasOptions.setHeight(current);
+        }
+      },
+      textNodes(current, old) {
+        // Remove any nodes that have been removed.
+        const newIds = new Set(current.map(v => v.id));
+        old.forEach((v) => {
+          if (!newIds.has(v.id)) {
+            this.graph.removeNode(`${v.id}`);
+          }
+        });
+        // Nodes that are passed in but aren't drawn go in the list.
+        this.recalculateNodesOutside();
+      },
+      savedDiagram(current, old) {
+        if (current === old) {
+          return;
+        }
+        this.clearScreen();
         // Create from saved.
-        const savedGraph = JSON.parse(this.savedDiagram);
+        const savedGraph = JSON.parse(current);
         const nodes = savedGraph.nodes;
         nodes.forEach((v) => {
           // Append x and y co-ordinates to the nodes passed in.
@@ -61,295 +118,923 @@ export default {
         const triplets = savedGraph.triplets;
         triplets.forEach((x) => {
           // Create the triplets between the nodes.
-          const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
-          const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
+          const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+          const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
           if (indexOfSubject === -1 || indexOfObject === -1) {
             return;
           }
           // Create the triplet
           this.graph.addTriplet({
-            subject: this.toNode(this.nodes[indexOfSubject]),
-            object: this.toNode(this.nodes[indexOfObject]),
-            predicate: { type: 'arrow' },
+            subject: this.toNode(this.textNodes[indexOfSubject]),
+            object: this.toNode(this.textNodes[indexOfObject]),
+            predicate: {type: 'arrow'},
           });
         });
-      }
-    });
-  },
-  watch: {
-    width(current, old) {
-      if (current !== old) {
-        this.graph.canvasOptions.setWidth(current);
-      }
+      },
     },
-    height(current, old) {
-      if (current !== old) {
-        this.graph.canvasOptions.setHeight(current);
-      }
-    },
-    nodes(current, old) {
-      // Remove any nodes that have been removed.
-      const newIds = new Set(current.map(v => v.id));
-      old.forEach((v) => {
-        if (!newIds.has(v.id)) {
-          this.graph.removeNode(`${v.id}`);
+
+    methods: {
+      onPaste (e) {
+        console.log('on paste',e)
+        this.createNewNode(e.clipboardData.getData('text/plain'))
+      },
+
+      updateTextNodes() {
+        var node = this.currentNode;
+        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+      },
+
+      deleteRadial() {
+        $('.menu-color').remove()
+        $('.menu-shape').remove()
+        $('.menu-action').remove()
+      },
+
+      removeNode() {
+        var node = this.currentNode;
+        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+      },
+
+      clearScreen() {
+        /**
+         * Delete the graph and start a new one.
+         * Removing nodes from: https://stackoverflow.com/a/3955238/6421793
+         */
+        const myNode = document.getElementById('graph');
+        while (myNode.firstChild) {
+          myNode.removeChild(myNode.firstChild);
         }
-      });
-      // Nodes that are passed in but aren't drawn go in the list.
-      this.recalculateNodesOutside();
-    },
-    savedDiagram(current, old) {
-      if (current === old) {
-        return;
-      }
-      this.clearScreen();
-      // Create from saved.
-      const savedGraph = JSON.parse(current);
-      const nodes = savedGraph.nodes;
-      nodes.forEach((v) => {
-        // Append x and y co-ordinates to the nodes passed in.
-        this.addNodeHelper(v.hash, v.x, v.y);
-      });
-      const triplets = savedGraph.triplets;
-      triplets.forEach((x) => {
-        // Create the triplets between the nodes.
-        const indexOfSubject = this.nodes.map(v => v && v.id).indexOf(x.subject);
-        const indexOfObject = this.nodes.map(v => v && v.id).indexOf(x.object);
-        if (indexOfSubject === -1 || indexOfObject === -1) {
-          return;
+        this.createGraph();
+        this.recalculateNodesOutside();
+      },
+
+      createGraph(callback) {
+        const $mouseOverNode = new Rx.Subject();
+        let me = this
+        const currentState = {
+          currentNode: {
+            data: {},
+            selection: {},
+            mouseOverNode: false
+          },
+          startedDragAt: "",
+          nodeMap: new Map()
         }
-        // Create the triplet
-        this.graph.addTriplet({
-          subject: this.toNode(this.nodes[indexOfSubject]),
-          object: this.toNode(this.nodes[indexOfObject]),
-          predicate: { type: 'arrow' },
+        this.$on('mouseovernode', function () {
+          console.log("mouseovernode")
+        })
+
+        this.graph = networkViz('graph', {
+          layoutType: 'jaccardLinkLengths',
+          edgeLength: 140,
+          jaccardModifier: 0.9,
+          height: document.getElementById(this.$el.id).clientHeight,
+          width: document.getElementById(this.$el.id).clientWidth,
+
+          nodeToColor: function nodeToColor(d) {
+            return d.color ? d.color : "red";
+          },
+
+          nodeToPin: function nodeToPin(d) {
+            return d.fixed ? d.fixed : false;
+          },
+
+          updateNodeColor: function updateNodeColor(node) {
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].color = node.color;
+          },
+
+          // Shapes defined: rect, circle, capsule
+          nodeShape: (d) => {
+            switch (d.nodeShape) {
+              case 'rect': {
+                return 'M16 48 L48 48 L48 16 L16 16 Z';
+              }
+              case 'circle': {
+                return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
+              }
+              case 'capsule': {
+                const X = 37;
+                const Y = -13;
+                const p1x = 25 + X;
+                const p1y = 25 + Y;
+                const p2x = 75 + X;
+                const p3x = 100 + X;
+                const p4y = 50 + Y;
+                return `M ${p1x} ${p1y} L ${p2x} ${p1y} C ${p3x} ${p1y} ${p3x} ${p4y} ${p2x} ${p4y} L ${p1x} ${p4y} C ${X} ${p4y} ${X} ${p1y} ${p1x} ${p1y} `;
+              }
+              default : {
+                // Return rect by default
+                return 'M16 48 L48 48 L48 16 L16 16 Z';
+              }
+            }
+          },
+
+          mouseOverRadial: (node) => {
+            this.dbClickCreateNode = false;
+          },
+
+          mouseOverNode: (node, selection) => {
+            this.dbClickCreateNode = false;
+            if (currentState.currentNode.mouseOverNode) return;
+            const tempNode = {...node, mouseOverNode: true};
+            $mouseOverNode.next(tempNode);
+            // Change the node based on whether or not dragging.
+            if (!this.dragging) {
+              this.currentNode = node;
+            } else {
+              this.dragToNode = node;
+            }
+            currentState.currentNode.mouseOverNode = true;
+
+            // Set the current state for which node the menu is
+            // hovering over.
+            currentState.currentNode.data = node;
+            currentState.currentNode.selection = selection;
+            this.$emit('mouseovernode', node.hash);
+          },
+
+          mouseOutNode: (node, selection, e) => {
+            this.dbClickCreateNode = true;
+            const tempNode = {...node, mouseOverNode: false};
+            $mouseOverNode.next(tempNode);
+            currentState.currentNode.mouseOverNode = false;
+            this.$emit('mouseoutnode');
+
+          },
+
+          clickPin: (node, element) => {
+            console.log(node)
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].fixed = node.fixed;
+          },
+
+          nodeRemove: (node) => {
+            this.removeNode(node);
+          },
+
+          canDrag: () =>
+            this.$data.mouseState === POINTER
+
         });
-      });
-    },
-  },
-  methods: {
-    clearScreen() {
-      /**
-       * Delete the graph and start a new one.
-       * Removing nodes from: https://stackoverflow.com/a/3955238/6421793
-       */
-      const myNode = document.getElementById('graph');
-      while (myNode.firstChild) {
-        myNode.removeChild(myNode.firstChild);
-      }
-      this.createGraph();
-      this.recalculateNodesOutside();
-    },
-    createGraph(callback) {
-      const $mouseOverNode = new Rx.Subject();
-      this.graph = networkViz('graph', {
-        layoutType: 'jaccardLinkLengths',
-        edgeLength: 200,
-        jaccardModifier: 0.9,
-        // Shapes defined: rect, circle, capsule
-        nodeShape: (d) => {
-          switch (d.nodeShape) {
-            case 'rect': {
-              return 'M16 48 L48 48 L48 16 L16 16 Z';
-            }
-            case 'circle': {
-              return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
-            }
-            case 'capsule': {
-              const X = 37;
-              const Y = -13;
-              const p1x = 25 + X;
-              const p1y = 25 + Y;
-              const p2x = 75 + X;
-              const p3x = 100 + X;
-              const p4y = 50 + Y;
-              return `M ${p1x} ${p1y} L ${p2x} ${p1y} C ${p3x} ${p1y} ${p3x} ${p4y} ${p2x} ${p4y} L ${p1x} ${p4y} C ${X} ${p4y} ${X} ${p1y} ${p1x} ${p1y} `;
-            }
-            default : {
-              // Return rect by default
-              return 'M16 48 L48 48 L48 16 L16 16 Z';
-            }
-          }
-        },
-        mouseOverNode: (node) => {
-          this.$emit('mouseovernode', node.hash);
-          const tempNode = { ...node, mouseOverNode: true };
-          $mouseOverNode.next(tempNode);
-          // Change the node based on whether or not dragging.
-          if (!this.dragging) {
+
+
+        /**
+         Edge link tool
+         */
+        const radialMenuArrowTool = document.getElementById("menu-line-btn");
+        const $mousedown = new Rx.Subject();
+        this.graph.nodeOptions.setMouseDown((node, selection) => {
+          if (this.mouseState === CREATEEDGE) {
             this.currentNode = node;
-          } else {
-            this.dragToNode = node;
+            $mousedown.next({type: 'CREATEEDGE', clickedNode: node, selection});
           }
-        },
-        mouseOutNode: (node) => {
-          this.$emit('mouseoutnode');
-          const tempNode = { ...node, mouseOverNode: false };
-          $mouseOverNode.next(tempNode);
-        },
-        canDrag: () =>
-          this.$data.mouseState === POINTER
-        ,
+        });
+        this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
+        this.linkToolDispose = this.linkTool(this.textNodes);
 
-      });
-
-      /**
-      Edge link tool
-      */
-      const $mousedown = new Rx.Subject();
-      this.graph.nodeOptions.setMouseDown((node, selection) => {
-        if (this.mouseState === CREATEEDGE) {
-          this.currentNode = node;
-          $mousedown.next({ type: 'CREATEEDGE', clickedNode: node, selection });
-        }
-      });
-      this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
-      this.linkToolDispose = this.linkTool(this.nodes);
-
-      // Set the action of clicking the node:
-      this.graph.nodeOptions.setClickNode((node) => {
-        // If the mouse is a pointer and a note is clicked on set edit mode.
-        if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
-          this.currentNode = node;
-          $mousedown.next({ type: 'EDITNODE', clickedNode: node, restart: this.graph.restart.styles, fullRestart: this.graph.restart.layout });
-        }
-        if (this.mouseState === DELETE) {
-          // Recalculate the nodes after deleting the node.
-          this.graph.removeNode(node.hash, this.recalculateNodesOutside);
-        }
-        if (this.mouseState === PIN) {
-          if (node.fixed === undefined) {
-            node.fixed = true; // eslint-disable-line no-param-reassign
-          } else {
-            node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
-          }
-          this.graph.restart.styles();
-        }
-      });
-      // Initiate the text edit function
-      textEdit($mousedown);
-
-      if (callback !== undefined) callback();
-    },
-    toNode(nodeProtocolObject) {
-      const className = `.${nodeProtocolObject.class}`;
-      const backgroundColor = $(className).css('backgroundColor');
-      return {
-        hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
-        shortname: nodeProtocolObject.text,
-        color: backgroundColor,
-        ...nodeProtocolObject,
-      };
-    },
-    addNodes() {
-      // Adds all the prop nodes.
-      this.nodes.forEach(v => this.graph.addNode(this.toNode(v)));
-    },
-    addNodeHelper(nodeId, x, y) {
-      // Adds nodes, and ignores the node if it can't be found.
-      // This lets us optimistically create the diagram.
-      const indexOfNode = this.nodes.map(v => v.id).indexOf(nodeId);
-      if (indexOfNode !== -1) {
-        let node = this.toNode(this.nodes[indexOfNode]);
-        if (x && y) {
-          node = { x, y, ...node };
-        }
-        this.graph.addNode(node);
-      }
-      this.recalculateNodesOutside();
-
-      // Update tools with new nodes.
-      this.resetTools();
-    },
-    addNode(nodeId) {
-      this.addNodeHelper(nodeId);
-    },
-    resetTools() {
-      this.linkToolDispose();
-      this.linkToolDispose = this.linkTool([...this.nodes, ...this.noteObjs]);
-    },
-    recalculateNodesOutside() {
-      this.nodesOutsideDiagram = this.nodes.filter((v) => {
-        const result = !this.graph.hasNode(`${v.id}`);
-        return result;
-      });
-    },
-    changeMouseState(state) {
-      if (!(state === DELETE
-      || state === CREATEEDGE
-      || state === POINTER
-      || state === SAVE
-      || state === ADDNOTE
-      || state === CLEARSCREEN
-      || state === REMOVEARROWS
-      || state === PIN)) {
-        console.error('Not sure what state', state, 'is');
-      } else {
-        this.mouseState = state;
-      }
-      switch (state) {
-        case SAVE: {
-          this.mouseState = POINTER;
-          this.graph.saveGraph((savedData) => {
-            this.$emit('save', savedData, this.graph.getSVGElement().node());
-          });
-          break;
-        }
-        case ADDNOTE: {
-          this.mouseState = POINTER;
-          const node = {
-            hash: `note-${this.notes}`,
-            shortname: ['Text'],
-          };
-          this.graph.addNode(node);
-          this.notes += 1;
-          this.noteObjs = [...this.noteObjs, node];
-          this.resetTools();
-          break;
-        }
-        case CLEARSCREEN: {
-          this.mouseState = POINTER;
-          this.clearScreen();
-          break;
-        }
-        case REMOVEARROWS: {
-          this.mouseState = POINTER;
-          const db = this.graph.getDB();
-          db.get({}, (err, l) => {
-            console.log('LOOKING IN DB');
-            if (err) {
-              console.error(err);
-            }
-            console.log(l);
-            l.forEach((triplet) => {
-              console.log(this.graph);
-              const node = {
-                object: { hash: triplet.object },
-                predicate: { type: triplet.predicate },
-                subject: { hash: triplet.subject },
-              };
-              this.graph.removeTriplet(node);
+        // Set the action of clicking the node:
+        this.graph.nodeOptions.setClickNode((node) => {
+          // If the mouse is a pointer and a note is clicked on set edit mode.
+          if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
+            this.currentNode = node;
+            $mousedown.next({
+              type: 'EDITNODE',
+              clickedNode: node,
+              restart: this.graph.restart.styles,
+              fullRestart: this.graph.restart.layout,
+              textNodes: this.textNodes,
+              deleteRadial: this.deleteRadial
             });
-          });
-          break;
+          }
+//          if (this.mouseState === DELETE) {
+//            // Recalculate the nodes after deleting the node.
+//            this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+//          }
+//          if (this.mouseState === PIN) {
+//            if (node.fixed === undefined) {
+//              node.fixed = true; // eslint-disable-line no-param-reassign
+//            } else {
+//              node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
+//            }
+//            this.graph.restart.styles();
+//          }
+        });
+        // Initiate the text edit function
+        textEdit($mousedown);
+
+        if (callback !== undefined) callback();
+      },
+
+      createNewNode(text) {
+        var textNode = {
+          id: 'note-' + uuid.v4(),
+          class: 'b-no-snip',
+          nodeShape: 'rect',
+          text: text ? text : 'New',
+          isSnip: false
         }
-        default:
-          break;
-      }
+        this.addNode(textNode.id);
+        const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
+        if (indexOfNode === -1) this.textNodes.push(textNode);
+        this.notes += 1;
+        this.noteObjs = [...this.noteObjs, textNode];
+        this.resetTools();
+      },
+      toNode(nodeProtocolObject) {
+        const className = `.${nodeProtocolObject.class}`;
+        const backgroundColor = $(className).css('backgroundColor');
+        return {
+          hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
+          shortname: nodeProtocolObject.text,
+          color: backgroundColor,
+          ...nodeProtocolObject,
+        };
+      },
+      addNodes() {
+        // Adds all the prop nodes.
+        this.textNodes.forEach(v => this.graph.addNode(this.toNode(v)));
+      },
+      addNodeHelper(nodeId, x, y) {
+        // Adds nodes, and ignores the node if it can't be found.
+        // This lets us optimistically create the diagram.
+        const indexOfNode = this.textNodes.map(v => v.id).indexOf(nodeId);
+        if (indexOfNode !== -1) {
+          let node = this.toNode(this.textNodes[indexOfNode]);
+          if (x && y) {
+            node = {x, y, ...node};
+          }
+          this.graph.addNode(node);
+        }
+        this.recalculateNodesOutside();
+
+        // Update tools with new nodes.
+        this.resetTools();
+      },
+      addNode(nodeId) {
+        this.addNodeHelper(nodeId);
+      },
+
+      dblClickOnPage() {
+        if (!this.dbClickCreateNode) return;
+        this.createNewNode()
+      },
+
+      resetTools() {
+        this.linkToolDispose();
+        this.linkToolDispose = this.linkTool([...this.textNodes, ...this.noteObjs]);
+      },
+      recalculateNodesOutside() {
+        this.nodesOutsideDiagram = this.textNodes.filter((v) => {
+          const result = !this.graph.hasNode(`${v.id}`);
+          return result;
+        });
+      },
+      changeMouseState(state) {
+        if (!(state === DELETE
+            || state === CREATEEDGE
+            || state === POINTER
+            || state === SAVE
+            || state === ADDNOTE
+            || state === CLEARSCREEN
+            || state === REMOVEARROWS
+            || state === PIN)) {
+          console.error('Not sure what state', state, 'is');
+        } else {
+          this.mouseState = state;
+        }
+        switch (state) {
+          case SAVE: {
+            this.mouseState = POINTER;
+            this.graph.saveGraph((savedData) => {
+              this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
+            });
+            break;
+          }
+          case ADDNOTE: {
+            this.mouseState = POINTER;
+            this.createNewNode()
+//            var textNode = {
+//              id: 'snip-' + uuid.v4(),
+//              class: 'b-no-snip',
+//              nodeShape: 'rectangle',
+//              text: 'New',
+//              isSnip: false
+//            }
+//            this.addNode(textNode.id);
+//            const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
+//            if (indexOfNode === -1)
+//              this.textNodes.push(textNode);
+//
+//            this.notes += 1;
+//            this.noteObjs = [...this.noteObjs, textNode];
+//            this.resetTools();
+//            const node = {
+//              hash: `note-${this.notes}`,
+//              shortname: ['Text'],
+//            };
+//            this.graph.addNode(node);
+//            this.notes += 1;
+//            this.noteObjs = [...this.noteObjs, node];
+//            this.resetTools();
+            break;
+          }
+          case CLEARSCREEN: {
+            this.mouseState = POINTER;
+            this.clearScreen();
+            break;
+          }
+          case REMOVEARROWS: {
+            this.mouseState = POINTER;
+            const db = this.graph.getDB();
+            db.get({}, (err, l) => {
+              console.log('LOOKING IN DB');
+              if (err) {
+                console.error(err);
+              }
+              console.log(l);
+              l.forEach((triplet) => {
+                console.log(this.graph);
+                const node = {
+                  object: {hash: triplet.object},
+                  predicate: {type: triplet.predicate},
+                  subject: {hash: triplet.subject},
+                };
+                this.graph.removeTriplet(node);
+              });
+            });
+            break;
+          }
+          default:
+            break;
+        }
+      },
     },
-  },
-};
+  };
 </script>
 
 <style>
-/** This prevents the dirty highlighting of the svg text */
-svg text {
+
+  tooltip {
+    /*position: absolute;*/
+    text-align: left;
+    width: 100px;
+    height: 80px;
+    padding: 8px;
+    font: 10px sans-serif;
+    background: red;
+    border: solid 1px #aaa;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+
+  .node-status-icons .fa {
+    font-size: 12px !important;
+    color: #575959;
+  }
+
+  .menu-shape, .menu-color, .menu-action {
+    cursor: pointer;
+    cursor: hand;
+  }
+
+  .custom-icon {
+    background: rgba(182, 239, 239, 0.6);
+    border-radius: 100%;
+    border: 1px solid #fff;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
+    color: #575959;
+    display: table-cell;
+    font-size: 15px;
+    height: 18px;
+    padding: 2px;
+    text-align: center;
+    transition: 2s;
+    vertical-align: middle;
+    width: 18px;
+    margin-top: 2px;
+    margin-left: 1px;
+  }
+
+  .custom-icon:hover {
+    background: rgba(182, 239, 239, 1);
+  }
+  .fix-editor {
+    display: none;
+  }
+  .icon-wrapper {
+    display: inline-block;
+  }
+
+  /*This prevents the dirty highlighting of the svg text*/
+  svg text {
     -webkit-user-select: none;
-       -moz-user-select: none;
-        -ms-user-select: none;
-            user-select: none;
-}
-svg text::selection {
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  svg text::selection {
     background: none;
-}
+  }
+
+  /*Ghazal Start*/
+  /*.node:hover .b-snip-arg-for {*/
+  /*fill: rgba(227, 246, 205, 0.7) !important;*/
+  /*}*/
+
+  /*.node:hover .b-snip-arg-against {*/
+  /*fill: rgba(252, 224, 238, 0.7) !important;*/
+  /*}*/
+
+  /*.node:hover .b-snip-evidence {*/
+  /*fill: rgba(246, 231, 204, 0.7) !important;*/
+  /*}*/
+
+  /*.node:hover .b-snip-source {*/
+  /*fill: rgba(230, 230, 230, 0.7) !important;*/
+  /*}*/
+
+  #svgcontainer #controls {
+    display: inline-block;
+    height: 42px;
+  }
+
+  #controls {
+    /*margin-left: 2px;*/
+    vertical-align: 16px;
+  }
+
+  #controls div {
+    margin: 0px 0px 5px 0px;
+  }
+
+  #controls span[data-type='color'] {
+    display: inline-block;
+    /* background-color: #F00; */
+    border: 1px solid #AFAFAF;
+    box-shadow: 1px 1px 4px black;
+    border-radius: 40px;
+    padding: 0px;
+    margin: 0px;
+    width: 22px;
+    height: 22px;
+    vertical-align: bottom;
+  }
+
+  .colpick {
+    position: absolute;
+    width: 346px;
+    height: 170px;
+    overflow: hidden;
+    display: none;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #EBEBEB;
+    border: 1px solid #BBB;
+    border-radius: 5px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+  }
+
+  .colpick_color {
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 156px;
+    height: 156px;
+    overflow: hidden;
+    outline: 1px solid #AAA;
+    cursor: crosshair;
+  }
+
+  .colpick_color_overlay1,
+  .colpick_color_overlay2 {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 156px;
+    height: 156px;
+  }
+
+  .colpick_color_overlay1 {
+    background: linear-gradient(to right, white 0%, rgba(255, 255, 255, 0) 100%);
+  }
+
+  .colpick_color_overlay2 {
+    background: linear-gradient(to bottom, transparent 0%, black 100%);
+  }
+
+  .colpick_selector_outer {
+    background: none;
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    margin: -6px 0 0 -6px;
+    border: 1px solid #000;
+    border-radius: 50%;
+  }
+
+  .colpick_selector_inner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border: 1px solid #FFF;
+    border-radius: 50%;
+  }
+
+  .colpick_hue {
+    position: absolute;
+    top: 6px;
+    left: 175px;
+    width: 19px;
+    height: 156px;
+    border: 1px solid #AAA;
+    cursor: n-resize;
+  }
+
+  .colpick_hue_arrs {
+    position: absolute;
+    left: -8px;
+    width: 35px;
+    height: 7px;
+    margin: -7px 0 0 0;
+  }
+
+  .colpick_hue_larr,
+  .colpick_hue_rarr {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+  }
+
+  .colpick_hue_larr {
+    border-left: 7px solid #858585;
+  }
+
+  .colpick_hue_rarr {
+    right: 0;
+    border-right: 7px solid #858585;
+  }
+
+  .colpick_new_color,
+  .colpick_current_color {
+    position: absolute;
+    top: 6px;
+    width: 60px;
+    height: 27px;
+    background: #F00;
+    border: 1px solid #8F8F8F;
+  }
+
+  .colpick_new_color {
+    left: 207px;
+  }
+
+  .colpick_current_color {
+    left: 277px;
+  }
+
+  .colpick_field,
+  .colpick_hex_field {
+    position: absolute;
+    height: 20px;
+    width: 60px;
+    overflow: hidden;
+    background: #F3F3F3;
+    color: #B8B8B8;
+    font-size: 12px;
+    border: 1px solid #BDBDBD;
+    border-radius: 3px;
+  }
+
+  .colpick_rgb_r,
+  .colpick_rgb_g,
+  .colpick_rgb_b,
+  .colpick_hex_field {
+    left: 207px;
+  }
+
+  .colpick_hsb_h,
+  .colpick_hsb_s,
+  .colpick_hsb_b {
+    left: 277px;
+  }
+
+  .colpick_rgb_r,
+  .colpick_hsb_h {
+    top: 40px;
+  }
+
+  .colpick_rgb_g,
+  .colpick_hsb_s {
+    top: 67px;
+  }
+
+  .colpick_rgb_b,
+  .colpick_hsb_b {
+    top: 94px;
+  }
+
+  .colpick_hex_field {
+    width: 68px;
+    top: 121px;
+  }
+
+  .colpick_focus {
+    border-color: #999;
+  }
+
+  .colpick_field_letter {
+    position: absolute;
+    width: 12px;
+    height: 20px;
+    line-height: 20px;
+    padding-left: 4px;
+    background: #EFEFEF;
+    border-right: 1px solid #BDBDBD;
+    font-weight: bold;
+    color: #777;
+  }
+
+  .colpick_field input,
+  .colpick_hex_field input {
+    position: absolute;
+    right: 11px;
+    margin: 0;
+    padding: 0;
+    height: 20px;
+    line-height: 20px;
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #555;
+    text-align: right;
+    outline: none;
+  }
+
+  .colpick_hex_field input {
+    outline: none;
+    right: 4px;
+  }
+
+  .colpick_field_arrs,
+  .colpick_field_uarr,
+  .colpick_field_darr {
+    position: absolute;
+  }
+
+  .colpick_field_arrs {
+    top: 0;
+    right: 0;
+    width: 9px;
+    height: 21px;
+    cursor: n-resize;
+  }
+
+  .colpick_field_uarr {
+    top: 5px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 4px solid #959595;
+  }
+
+  .colpick_field_darr {
+    bottom: 5px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #959595;
+  }
+
+  .colpick_submit {
+    position: absolute;
+    left: 207px;
+    top: 146px;
+    width: 130px;
+    height: 18px;
+    line-height: 18px;
+    background: #EFEFEF;
+    text-align: center;
+    color: #555;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #BDBDBD;
+    border-radius: 3px;
+  }
+
+  .colpick_submit:hover {
+    background: #F3F3F3;
+    border-color: #999;
+    cursor: pointer;
+  }
+
+  .colpick_full_ns .colpick_submit,
+  .colpick_full_ns .colpick_current_color {
+    display: none;
+  }
+
+  .colpick_full_ns .colpick_new_color {
+    width: 130px;
+    height: 25px;
+  }
+
+  .colpick_full_ns .colpick_rgb_r,
+  .colpick_full_ns .colpick_hsb_h {
+    top: 42px;
+  }
+
+  .colpick_full_ns .colpick_rgb_g,
+  .colpick_full_ns .colpick_hsb_s {
+    top: 73px;
+  }
+
+  .colpick_full_ns .colpick_rgb_b,
+  .colpick_full_ns .colpick_hsb_b {
+    top: 104px;
+  }
+
+  .colpick_full_ns .colpick_hex_field {
+    top: 135px;
+  }
+
+  .colpick_rgbhex {
+    width: 282px;
+  }
+
+  .colpick_rgbhex .colpick_hsb_h,
+  .colpick_rgbhex .colpick_hsb_s,
+  .colpick_rgbhex .colpick_hsb_b {
+    display: none;
+  }
+
+  .colpick_rgbhex .colpick_field,
+  .colpick_rgbhex .colpick_submit {
+    width: 68px;
+  }
+
+  .colpick_rgbhex .colpick_new_color {
+    width: 34px;
+    border-right: none;
+  }
+
+  .colpick_rgbhex .colpick_current_color {
+    width: 34px;
+    left: 240px;
+    border-left: none;
+  }
+
+  .colpick_rgbhex_ns .colpick_submit,
+  .colpick_rgbhex_ns .colpick_current_color {
+    display: none;
+  }
+
+  .colpick_rgbhex_ns .colpick_new_color {
+    width: 68px;
+    border: 1px solid #8F8F8F;
+  }
+
+  .colpick_rgbhex_ns .colpick_rgb_r {
+    top: 42px;
+  }
+
+  .colpick_rgbhex_ns .colpick_rgb_g {
+    top: 73px;
+  }
+
+  .colpick_rgbhex_ns .colpick_rgb_b {
+    top: 104px;
+  }
+
+  .colpick_rgbhex_ns .colpick_hex_field {
+    top: 135px;
+  }
+
+  .colpick_hex {
+    width: 206px;
+    height: 201px;
+  }
+
+  .colpick_hex .colpick_hsb_h,
+  .colpick_hex .colpick_hsb_s,
+  .colpick_hex .colpick_hsb_b,
+  .colpick_hex .colpick_rgb_r,
+  .colpick_hex .colpick_rgb_g,
+  .colpick_hex .colpick_rgb_b {
+    display: none;
+  }
+
+  .colpick_hex .colpick_hex_field {
+    width: 72px;
+    height: 25px;
+    top: 168px;
+    left: 80px;
+  }
+
+  .colpick_hex .colpick_hex_field div,
+  .colpick_hex .colpick_hex_field input {
+    height: 25px;
+    line-height: 25px;
+  }
+
+  .colpick_hex .colpick_new_color,
+  .colpick_hex .colpick_current_color,
+  .colpick_hex .colpick_submit {
+    top: 168px;
+    width: 30px;
+  }
+
+  .colpick_hex .colpick_new_color {
+    left: 9px;
+    border-right: none;
+  }
+
+  .colpick_hex .colpick_current_color {
+    left: 39px;
+    border-left: none;
+  }
+
+  .colpick_hex .colpick_submit {
+    left: 164px;
+    height: 25px;
+    line-height: 25px;
+  }
+
+  .colpick_hex_ns .colpick_submit,
+  .colpick_hex_ns .colpick_current_color {
+    display: none;
+  }
+
+  .colpick_hex_ns .colpick_hex_field {
+    width: 80px;
+  }
+
+  .colpick_hex_ns .colpick_new_color {
+    width: 60px;
+    border: 1px solid #8F8F8F;
+  }
+
+  .colpick_dark {
+    background: #161616;
+    border-color: #2A2A2A;
+  }
+
+  .colpick_dark .colpick_color {
+    outline-color: #333;
+  }
+
+  .colpick_dark .colpick_hue {
+    border-color: #555;
+  }
+
+  .colpick_dark .colpick_field,
+  .colpick_dark .colpick_hex_field {
+    background: #101010;
+    border-color: #2D2D2D;
+  }
+
+  .colpick_dark .colpick_field_letter {
+    background: #131313;
+    border-color: #2D2D2D;
+    color: #696969;
+  }
+
+  .colpick_dark .colpick_field input,
+  .colpick_dark .colpick_hex_field input {
+    color: #7A7A7A;
+  }
+
+  .colpick_dark .colpick_field_uarr {
+    border-bottom-color: #696969;
+  }
+
+  .colpick_dark .colpick_field_darr {
+    border-top-color: #696969;
+  }
+
+  .colpick_dark .colpick_focus {
+    border-color: #444;
+  }
+
+  .colpick_dark .colpick_submit {
+    background: #131313;
+    border-color: #2D2D2D;
+    color: #7A7A7A;
+  }
+
+  .colpick_dark .colpick_submit:hover {
+    background-color: #101010;
+    border-color: #444;
+  }
+
+  /*Ghazal End*/
+
 </style>

@@ -204,6 +204,11 @@
             me.textNodes[foundIndex].color = node.color;
           },
 
+          updateNodeShape: function updateNodeShape(node) {
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].nodeShape = node.nodeShape;
+          },
+
           // Shapes defined: rect, circle, capsule
           nodeShape: (d) => {
             switch (d.nodeShape) {

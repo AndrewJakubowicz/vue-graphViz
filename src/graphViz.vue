@@ -337,7 +337,8 @@
           class: 'b-no-snip',
           nodeShape: 'rect',
           text: text ? text : 'New',
-          isSnip: false
+          isSnip: false,
+          fixed : true
         }
         this.addNode(textNode.id);
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
@@ -411,6 +412,7 @@
         switch (state) {
           case SAVE: {
             this.mouseState = POINTER;
+            this.deleteRadial()
             this.graph.saveGraph((savedData) => {
               this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
             });
@@ -419,29 +421,6 @@
           case ADDNOTE: {
             this.mouseState = POINTER;
             this.createNewNode()
-//            var textNode = {
-//              id: 'snip-' + uuid.v4(),
-//              class: 'b-no-snip',
-//              nodeShape: 'rectangle',
-//              text: 'New',
-//              isSnip: false
-//            }
-//            this.addNode(textNode.id);
-//            const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
-//            if (indexOfNode === -1)
-//              this.textNodes.push(textNode);
-//
-//            this.notes += 1;
-//            this.noteObjs = [...this.noteObjs, textNode];
-//            this.resetTools();
-//            const node = {
-//              hash: `note-${this.notes}`,
-//              shortname: ['Text'],
-//            };
-//            this.graph.addNode(node);
-//            this.notes += 1;
-//            this.noteObjs = [...this.noteObjs, node];
-//            this.resetTools();
             break;
           }
           case CLEARSCREEN: {

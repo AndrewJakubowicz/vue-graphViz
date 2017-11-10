@@ -192,7 +192,7 @@
           width: document.getElementById(this.$el.id).clientWidth,
 
           nodeToColor: function nodeToColor(d) {
-            return d.color ? d.color : "red";
+            return d.color ? d.color : "white";
           },
 
           nodeToPin: function nodeToPin(d) {

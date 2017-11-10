@@ -340,9 +340,9 @@
           isSnip: false,
           fixed : true
         }
-        this.addNode(textNode.id);
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
         if (indexOfNode === -1) this.textNodes.push(textNode);
+        this.addNode(textNode.id);
         this.notes += 1;
         this.noteObjs = [...this.noteObjs, textNode];
         this.resetTools();

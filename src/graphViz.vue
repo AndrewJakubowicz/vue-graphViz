@@ -48,6 +48,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
+        dbClickCreateNode: true,
       };
     },
     mounted() {
@@ -288,10 +289,8 @@
         this.linkToolDispose = this.linkTool(this.textNodes);
 
         this.graph.edgeOptions.setClickEdge((edge) => {
-//          console.log(edge);
-//          console.log(this)
           let txt = prompt("text");
-          edge.edgeData["text"] = txt; //TODO update the list in networkviz instead
+          edge.edgeData["text"] = txt; //TODO update the list in networkviz instead ?? or not?
           this.graph.updateEdge({
             subject: edge.source.hash,
             predicate: edge.edgeData.type,
@@ -348,6 +347,7 @@
         this.noteObjs = [...this.noteObjs, textNode];
         this.resetTools();
       },
+
       toNode(nodeProtocolObject) {
         const className = `.${nodeProtocolObject.class}`;
         const backgroundColor = $(className).css('backgroundColor');
@@ -358,10 +358,12 @@
           ...nodeProtocolObject,
         };
       },
+
       addNodes() {
         // Adds all the prop nodes.
         this.textNodes.forEach(v => this.graph.addNode(this.toNode(v)));
       },
+
       addNodeHelper(nodeId, x, y) {
         // Adds nodes, and ignores the node if it can't be found.
         // This lets us optimistically create the diagram.
@@ -378,6 +380,7 @@
         // Update tools with new nodes.
         this.resetTools();
       },
+
       addNode(nodeId) {
         this.addNodeHelper(nodeId);
       },
@@ -391,12 +394,14 @@
         this.linkToolDispose();
         this.linkToolDispose = this.linkTool([...this.textNodes, ...this.noteObjs]);
       },
+
       recalculateNodesOutside() {
         this.nodesOutsideDiagram = this.textNodes.filter((v) => {
           const result = !this.graph.hasNode(`${v.id}`);
           return result;
         });
       },
+
       changeMouseState(state) {
         if (!(state === DELETE
             || state === CREATEEDGE

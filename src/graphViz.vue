@@ -22,6 +22,7 @@
   import toolBar from './components/toolBar';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
+  import edgeEdit from './behaviours/edge-edit';
   import uuid from 'uuid';
 
   const Rx = require('rxjs');
@@ -48,7 +49,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
-        dbClickCreateNode: true,
+        dbClickCreateNode: true, //TODO leave here or move somewhere safe?
       };
     },
     mounted() {
@@ -289,15 +290,24 @@
         this.linkToolDispose = this.linkTool(this.textNodes);
 
         this.graph.edgeOptions.setClickEdge((edge) => {
-          let txt = prompt("text");
-          edge.edgeData["text"] = txt; //TODO update the list in networkviz instead ?? or not?
-          this.graph.updateEdge({
-            subject: edge.source.hash,
-            predicate: edge.edgeData.type,
-            object: edge.target.hash,
-            edgeData: edge.edgeData
-          });
-        })
+          if (this.mouseState === POINTER || this.mouseState=== CREATEEDGE) {
+            $mousedown.next({
+              type: "EDITEDGE",
+              edge : edge,
+              restart: this.graph.restart.styles,
+              update: newText => {
+                edge.edgeData.text = newText;
+                this.graph.updateEdge({
+                subject: edge.source.hash,
+                predicate: edge.edgeData.type,
+                object: edge.target.hash,
+                edgeData: edge.edgeData
+              })}
+            });
+          }
+        });
+        //Initiate the edge edit function
+        edgeEdit($mousedown);
 
         // Set the action of clicking the node:
         this.graph.nodeOptions.setClickNode((node) => {

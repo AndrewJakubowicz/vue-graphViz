@@ -177,7 +177,7 @@
           nodeMap: new Map()
         }
         this.$on('mouseovernode', function () {
-          console.log("mouseovernode")
+          console.log("mouseovernode") //TODO remove when done
         })
 
         this.graph = networkViz('graph', {
@@ -288,21 +288,24 @@
         });
         this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
         this.linkToolDispose = this.linkTool(this.textNodes);
-
-        this.graph.edgeOptions.setClickEdge((edge) => {
-          if (this.mouseState === POINTER || this.mouseState=== CREATEEDGE) {
+        this.graph.edgeOptions.setClickEdge((edge, e) => {
+          if (this.mouseState === POINTER || this.mouseState === CREATEEDGE) {
             $mousedown.next({
               type: "EDITEDGE",
-              edge : edge,
+              edge: edge,
               restart: this.graph.restart.styles,
+              save: newText => {
+                edge.edgeData.text = newText;
+                this.graph.updateTriplet({
+                  subject: edge.source.hash,
+                  predicate: edge.edgeData.type,
+                  object: edge.target.hash,
+                  edgeData: edge.edgeData
+                })
+              },
               update: newText => {
                 edge.edgeData.text = newText;
-                this.graph.updateEdge({
-                subject: edge.source.hash,
-                predicate: edge.edgeData.type,
-                object: edge.target.hash,
-                edgeData: edge.edgeData
-              })}
+              }
             });
           }
         });

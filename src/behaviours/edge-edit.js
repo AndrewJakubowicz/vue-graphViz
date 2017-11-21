@@ -21,12 +21,14 @@ function Text(startingText) {
       lastLine += char;
       text[text.length - 1] = lastLine;
     },
+
     newLine: () => {
       if (text[text.length - 1] === "") {
         return;
       }
       text.push("");
     },
+
     deleteText: () => {
       /**
        * Delete a single character of text.
@@ -55,6 +57,7 @@ function Text(startingText) {
     toggleCursor: () => {
       cursor = !cursor;
     },
+
     getWithCursor: () => {
       let t = JSON.parse(JSON.stringify(text));
       if (cursor) {
@@ -64,9 +67,11 @@ function Text(startingText) {
         return t
       }
     },
+
     getText: () => {
       return JSON.parse(JSON.stringify(text));
     }
+
   }
 }
 
@@ -81,8 +86,14 @@ export default ($action) => {
     .map(action => {
       let edge = action.edge;
       let text = Text(edge.edgeData.text);
-      let update = () => {action.update(text.getText())};
-      let restart = ()=>{update();action.restart()}; // TODO more elegant solution
+      let update = () => {
+        action.update(text.getText());
+        action.restart();
+      };
+      let save = () => {
+        action.save(text.getText());
+        action.restart()
+      };
       text.clearText(); // needed here if text is null.
 
       // Exit on "esc" keypress
@@ -99,7 +110,7 @@ export default ($action) => {
       let $backspace = Rx.Observable.fromEvent(document, "keydown")
         .filter(e => e.keyCode === 8 && e.keyCode !== 13)
         .do(_ => text.deleteText())
-        .do(restart);
+        .do(update);
 
       // Letters
       let $letters = Rx.Observable.fromEvent(document, "keypress")
@@ -112,7 +123,7 @@ export default ($action) => {
           let char = String.fromCharCode(e.keyCode || e.which);
           text.addLetter(char);
         })
-        .do(restart);
+        .do(update);
 
       let $newLine = Rx.Observable.fromEvent(document, "keypress")
         .filter(e => e.keyCode === 13)
@@ -123,7 +134,7 @@ export default ($action) => {
           }
           text.newLine();
         })
-        .do(restart);
+        .do(update);
 
       let $interval = Rx.Observable
         .interval(500 /* ms */)
@@ -140,8 +151,7 @@ export default ($action) => {
         $interval
       )
         .do(() => {
-          action.update(text.getWithCursor()); // TODO problem putting cursor in triplets DB as opposed to just cosmetic
-          action.restart();
+          update()
         })
         .takeUntil($mouseClick)
         .takeUntil($exit)
@@ -151,7 +161,7 @@ export default ($action) => {
             edge.edgeData.text.length === 0 || edge.edgeData.text[0] === '') {
             edge.edgeData.text = ''
           }
-          restart();
+          save();
         });
       return $typingControls
     })

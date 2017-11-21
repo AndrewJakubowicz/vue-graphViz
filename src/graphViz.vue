@@ -53,7 +53,7 @@
       };
     },
     mounted() {
-
+      document.addEventListener('paste', this.onPaste)
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
         if (this.savedDiagram) {
@@ -136,6 +136,10 @@
     },
 
     methods: {
+      onPaste (e) {
+        console.log('on paste',e)
+        this.createNewNode(e.clipboardData.getData('text/plain'))
+      },
 
       updateTextNodes() {
         var node = this.currentNode;
@@ -143,7 +147,9 @@
       },
 
       deleteRadial() {
-        $('.radial-menu').remove()
+        $('.menu-color').remove()
+        $('.menu-shape').remove()
+        $('.menu-action').remove()
       },
 
       removeNode() {
@@ -198,6 +204,11 @@
           updateNodeColor: function updateNodeColor(node) {
             var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].color = node.color;
+          },
+
+          updateNodeShape: function updateNodeShape(node) {
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].nodeShape = node.nodeShape;
           },
 
           // Shapes defined: rect, circle, capsule
@@ -345,17 +356,18 @@
         if (callback !== undefined) callback();
       },
 
-      createNewNode() {
+      createNewNode(text) {
         var textNode = {
           id: 'note-' + uuid.v4(),
           class: 'b-no-snip',
-          nodeShape: 'rectangle',
-          text: 'New',
-          isSnip: false
+          nodeShape: 'rect',
+          text: text ? text : 'New',
+          isSnip: false,
+          fixed : true
         }
-        this.addNode(textNode.id);
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
         if (indexOfNode === -1) this.textNodes.push(textNode);
+        this.addNode(textNode.id);
         this.notes += 1;
         this.noteObjs = [...this.noteObjs, textNode];
         this.resetTools();
@@ -431,6 +443,7 @@
         switch (state) {
           case SAVE: {
             this.mouseState = POINTER;
+            this.deleteRadial()
             this.graph.saveGraph((savedData) => {
               this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
             });
@@ -439,29 +452,6 @@
           case ADDNOTE: {
             this.mouseState = POINTER;
             this.createNewNode()
-//            var textNode = {
-//              id: 'snip-' + uuid.v4(),
-//              class: 'b-no-snip',
-//              nodeShape: 'rectangle',
-//              text: 'New',
-//              isSnip: false
-//            }
-//            this.addNode(textNode.id);
-//            const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
-//            if (indexOfNode === -1)
-//              this.textNodes.push(textNode);
-//
-//            this.notes += 1;
-//            this.noteObjs = [...this.noteObjs, textNode];
-//            this.resetTools();
-//            const node = {
-//              hash: `note-${this.notes}`,
-//              shortname: ['Text'],
-//            };
-//            this.graph.addNode(node);
-//            this.notes += 1;
-//            this.noteObjs = [...this.noteObjs, node];
-//            this.resetTools();
             break;
           }
           case CLEARSCREEN: {
@@ -518,34 +508,37 @@
     color: #575959;
   }
 
-  .radial-menu {
-    /*pointer-events: none;*/
+  .menu-shape, .menu-color, .menu-action {
     cursor: pointer;
     cursor: hand;
   }
 
-  .radial-menu .tools {
-    padding-left: 4px;
+  .custom-icon {
+    background: rgba(182, 239, 239, 0.6);
+    border-radius: 100%;
+    border: 1px solid #fff;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     color: #575959;
+    display: table-cell;
+    font-size: 15px;
+    height: 18px;
+    padding: 2px;
+    text-align: center;
+    transition: 2s;
+    vertical-align: middle;
+    width: 18px;
+    margin-top: 2px;
+    margin-left: 1px;
   }
 
-  .radial-menu .tools .fa {
-    font-size: 19px !important;
-    padding-left: 4px;
-    padding-right: 4px;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    width: 23px;
-    height: 23px;
-    margin: 2px;
+  .custom-icon:hover {
+    background: rgba(182, 239, 239, 1);
   }
-
-  .radial-menu i {
+  .fix-editor {
+    display: none;
+  }
+  .icon-wrapper {
     display: inline-block;
-    border-radius: 50%;
-    box-shadow: 0px 0px 2px #82d2d2;
-    background-color: #edfdfd;
-    margin-bottom: 4px;
   }
 
   /*This prevents the dirty highlighting of the svg text*/

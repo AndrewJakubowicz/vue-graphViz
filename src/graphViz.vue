@@ -148,6 +148,7 @@
         $('.menu-color').remove()
         $('.menu-shape').remove()
         $('.menu-action').remove()
+        $('.menu-arrow').remove()
       },
 
       removeNode() {
@@ -170,6 +171,7 @@
 
       createGraph(callback) {
         const $mouseOverNode = new Rx.Subject();
+        const $mousedown = new Rx.Subject();
         let me = this
         const currentState = {
           currentNode: {
@@ -268,8 +270,16 @@
 
           },
 
+          startArrow: (node, selection) => {
+            // console.log("startArrow", node, selection, this.toNode);
+            // console.log(this.$data.mouseState);
+            this.mouseState = CREATEEDGE;
+            this.currentNode = node;
+            $mousedown.next({type: 'CREATEEDGE', clickedNode: node, selection});
+          },
+
           clickPin: (node, element) => {
-            console.log(node)
+            console.log(node);
             var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].fixed = node.fixed;
           },
@@ -286,16 +296,16 @@
 
         /**
          Edge link tool
-         */
-        const radialMenuArrowTool = document.getElementById("menu-line-btn");
-        const $mousedown = new Rx.Subject();
-        this.graph.nodeOptions.setMouseDown((node, selection) => {
-          if (this.mouseState === CREATEEDGE) {
-            this.currentNode = node;
-            $mousedown.next({type: 'CREATEEDGE', clickedNode: node, selection});
-          }
-        });
-        this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
+         **/
+        // commented out: drawing arrows via the side panel
+        // this.graph.nodeOptions.setMouseDown((node, selection) => {
+        //   if (this.mouseState === CREATEEDGE) {
+        //     console.log("setMouseDown",this,node,selection);
+        //     this.currentNode = node;
+        //     $mousedown.next({type: 'CREATEEDGE', clickedNode: node, selection});
+        //   }
+        // });
+        this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode, () => { this.mouseState = POINTER });
         this.linkToolDispose = this.linkTool(this.textNodes);
 
         // Set the action of clicking the node:
@@ -477,7 +487,7 @@
     color: #575959;
   }
 
-  .menu-shape, .menu-color, .menu-action {
+  .menu-shape, .menu-color, .menu-action, .menu-arrow {
     cursor: pointer;
     cursor: hand;
   }
@@ -503,6 +513,7 @@
   .custom-icon:hover {
     background: rgba(182, 239, 239, 1);
   }
+
   .fix-editor {
     display: none;
   }

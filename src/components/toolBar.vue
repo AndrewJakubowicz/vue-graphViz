@@ -31,12 +31,12 @@
             toggled: true,
             tip: "Pointer"
           },
-          {
-            action: 'CREATEEDGE',
-            icon: ['arrow-right'],
-            toggled: false,
-            tip: "Create Edge"
-          },
+          // {
+          //   action: 'CREATEEDGE',
+          //   icon: ['arrow-right'],
+          //   toggled: false,
+          //   tip: "Create Edge"
+          // },
 //          {
 //            action: 'DELETE',
 //            icon: ['trash'],

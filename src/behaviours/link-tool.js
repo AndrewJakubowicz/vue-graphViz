@@ -1,7 +1,7 @@
 /*eslint-disable */
 /**
  * Author: Andrew Jakubowicz
- * 
+ *
  * Edge link tool.
  * Connects nodes together.
  */
@@ -19,7 +19,7 @@ const makeAbsoluteContext = (element, documentNode) => {
   };
 }
 
-module.exports = function (graph, mousedown, $lastNode, toNode) {
+module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
     return (nodesList) => {
         let tempDrawingArrow = {
             start: { x: 0, y:0 },
@@ -33,10 +33,10 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
         function updateLine() {
             var line = graph.getSVGElement().selectAll("#menu-line-overlay")
                 .data(d3Data);
-            
+
             var lineEnter = line.enter().append('line')
                 .attr("id", "menu-line-overlay");
-            
+
             line = line.merge(lineEnter);
 
             line.attr("x1", d => d.start.x)
@@ -52,7 +52,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
 
         var mousemove = Rx.Observable.fromEvent(document, 'mousemove'),
             mouseUpOnNodeObservable = Rx.Observable.fromEvent(document, 'mouseup');
-        
+
         // Mousedown subscription with handlers.
         var mousedrag = mousedown
             .filter(action => {
@@ -97,7 +97,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
                     tempDrawingArrow.end = {x: 0, y:0};
                     tempDrawingArrow.start = {x:0,y:0};
                     updateLine();
-                        
+
                     // Create the triplet
                     if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash){
                         let subjectTemp = nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0];
@@ -106,6 +106,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
                             object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
                         });
                     }
+                    finishDrag();
                 });
         });
 
@@ -122,7 +123,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
             tempDrawingArrow.start = {x:0,y:0};
             updateLine();
         });
-        
+
         var currentNodeSub = $lastNode.subscribe(function (node) {
             currentState.currentNode = node;
         });

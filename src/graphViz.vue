@@ -49,7 +49,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
-        dbClickCreateNode: true, //TODO leave here or move somewhere safe?
+        dbClickCreateNode: true,
       };
     },
     mounted() {
@@ -84,7 +84,7 @@
       });
     },
     watch: {
-      width(current, old) {
+      width(current, old) { //TODO is this even working correctly?
         if (current !== old) {
           this.graph.canvasOptions.setWidth(current);
         }
@@ -356,18 +356,21 @@
         if (callback !== undefined) callback();
       },
 
-      createNewNode(text) {
-        var textNode = {
+      createNewNode(props) {
+        let text;
+        //TODO remove after converting paste to pass object instead of text here for backwards compatability
+        typeof(props)!== "object" ?  text = props :  text = props.text;
+        let textNode = {
           id: 'note-' + uuid.v4(),
           class: 'b-no-snip',
           nodeShape: 'rect',
           text: text ? text : 'New',
           isSnip: false,
           fixed : true
-        }
+        };
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
         if (indexOfNode === -1) this.textNodes.push(textNode);
-        this.addNode(textNode.id);
+        (props && props.x && props.y)? this.addNodeHelper(textNode.id, props.x, props.y): this.addNodeHelper(textNode.id);
         this.notes += 1;
         this.noteObjs = [...this.noteObjs, textNode];
         this.resetTools();
@@ -410,9 +413,10 @@
         this.addNodeHelper(nodeId);
       },
 
-      dblClickOnPage() {
+      dblClickOnPage(e) {
         if (!this.dbClickCreateNode) return;
-        this.createNewNode()
+        let coords = this.graph.transformCoordinates({x:e.clientX, y:e.clientY});
+        this.createNewNode(coords);
       },
 
       resetTools() {

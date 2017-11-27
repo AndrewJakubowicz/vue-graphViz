@@ -21,7 +21,7 @@ const makeAbsoluteContext = (element, documentNode) => {
   };
 }
 
-module.exports = function (graph, mousedown, $lastNode, toNode) {
+module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
     return (nodesList) => {
         let tempDrawingArrow = {
             start: { x: 0, y:0 },
@@ -108,6 +108,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode) {
                             object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
                         });
                     }
+                    finishDrag();
                 });
         });
 

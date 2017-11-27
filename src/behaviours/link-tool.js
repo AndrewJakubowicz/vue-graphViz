@@ -5,8 +5,10 @@
  * Edge link tool.
  * Connects nodes together.
  */
+// import uuid from 'uuid'
 const Rx = require('rxjs');
 const d3 = require('d3');
+const uuid = require('uuid');
 
 const makeAbsoluteContext = (element, documentNode) => {
   return function(x,y) {
@@ -102,7 +104,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
                     if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash){
                         let subjectTemp = nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0];
                         graph.addTriplet({subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
-                            predicate: {type: " "},
+                            predicate: {type: " ", hash: uuid.v4()},
                             object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
                         });
                     }

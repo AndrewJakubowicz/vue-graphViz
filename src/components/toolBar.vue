@@ -31,12 +31,12 @@
             toggled: true,
             tip: "Pointer"
           },
-          {
-            action: 'CREATEEDGE',
-            icon: ['arrow-right'],
-            toggled: false,
-            tip: "Create Edge"
-          },
+          // {
+          //   action: 'CREATEEDGE',
+          //   icon: ['arrow-right'],
+          //   toggled: false,
+          //   tip: "Create Edge"
+          // },
 //          {
 //            action: 'DELETE',
 //            icon: ['trash'],
@@ -133,8 +133,9 @@
     top: 10px;
     list-style-type: none;
     font-size: 1.6em;
-    color: grey;
-    border: 2px solid #eeeeee;
+    color: #575959; /* change appearance of toolbar to fit to swarm interface */
+    border: 1px solid #bfcbd9;
+    border-radius: 4px;
     text-align: center;
   }
 
@@ -156,5 +157,9 @@
 
   .fa-sm { /* Translates the stacked icons to the same size as the other ones */
     font-size: 0.75em;
+  }
+
+  .fa-stack { /* adjust the gap between the stacked icon and the next */
+    height: 1em;
   }
 </style>

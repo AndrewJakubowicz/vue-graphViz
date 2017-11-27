@@ -151,7 +151,8 @@ export default ($action) => {
         $interval
       )
         .do(() => {
-          update()
+          action.update(text.getWithCursor());
+          action.restart();
         })
         .takeUntil($mouseClick)
         .takeUntil($exit)

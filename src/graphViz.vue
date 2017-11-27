@@ -22,6 +22,7 @@
   import toolBar from './components/toolBar';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
+  import edgeEdit from './behaviours/edge-edit';
   import uuid from 'uuid';
 
   const Rx = require('rxjs');
@@ -48,6 +49,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
+        dbClickCreateNode: true,
       };
     },
     mounted() {
@@ -82,7 +84,7 @@
       });
     },
     watch: {
-      width(current, old) {
+      width(current, old) { //TODO is this even working correctly?
         if (current !== old) {
           this.graph.canvasOptions.setWidth(current);
         }
@@ -181,7 +183,7 @@
           nodeMap: new Map()
         }
         this.$on('mouseovernode', function () {
-          console.log("mouseovernode")
+          console.log("mouseovernode") //TODO remove when done
         })
 
         this.graph = networkViz('graph', {
@@ -297,6 +299,29 @@
         });
         this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode);
         this.linkToolDispose = this.linkTool(this.textNodes);
+        this.graph.edgeOptions.setClickEdge((edge, e) => {
+          if (this.mouseState === POINTER || this.mouseState === CREATEEDGE) {
+            $mousedown.next({
+              type: "EDITEDGE",
+              edge: edge,
+              restart: this.graph.restart.styles,
+              save: newText => {
+                edge.edgeData.text = newText;
+                this.graph.updateTriplet({
+                  subject: edge.source.hash,
+                  predicate: edge.edgeData.type,
+                  object: edge.target.hash,
+                  edgeData: edge.edgeData
+                })
+              },
+              update: newText => {
+                edge.edgeData.text = newText;
+              }
+            });
+          }
+        });
+        //Initiate the edge edit function
+        edgeEdit($mousedown);
 
         // Set the action of clicking the node:
         this.graph.nodeOptions.setClickNode((node) => {
@@ -331,22 +356,26 @@
         if (callback !== undefined) callback();
       },
 
-      createNewNode(text) {
-        var textNode = {
+      createNewNode(props) {
+        let text;
+        //TODO remove after converting paste to pass object instead of text here for backwards compatability
+        typeof(props)!== "object" ?  text = props :  text = props.text;
+        let textNode = {
           id: 'note-' + uuid.v4(),
           class: 'b-no-snip',
           nodeShape: 'rect',
           text: text ? text : 'New',
           isSnip: false,
           fixed : true
-        }
+        };
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
         if (indexOfNode === -1) this.textNodes.push(textNode);
-        this.addNode(textNode.id);
+        (props && props.x && props.y)? this.addNodeHelper(textNode.id, props.x, props.y): this.addNodeHelper(textNode.id);
         this.notes += 1;
         this.noteObjs = [...this.noteObjs, textNode];
         this.resetTools();
       },
+
       toNode(nodeProtocolObject) {
         const className = `.${nodeProtocolObject.class}`;
         const backgroundColor = $(className).css('backgroundColor');
@@ -357,10 +386,12 @@
           ...nodeProtocolObject,
         };
       },
+
       addNodes() {
         // Adds all the prop nodes.
         this.textNodes.forEach(v => this.graph.addNode(this.toNode(v)));
       },
+
       addNodeHelper(nodeId, x, y) {
         // Adds nodes, and ignores the node if it can't be found.
         // This lets us optimistically create the diagram.
@@ -377,25 +408,29 @@
         // Update tools with new nodes.
         this.resetTools();
       },
+
       addNode(nodeId) {
         this.addNodeHelper(nodeId);
       },
 
-      dblClickOnPage() {
+      dblClickOnPage(e) {
         if (!this.dbClickCreateNode) return;
-        this.createNewNode()
+        let coords = this.graph.transformCoordinates({x:e.clientX, y:e.clientY});
+        this.createNewNode(coords);
       },
 
       resetTools() {
         this.linkToolDispose();
         this.linkToolDispose = this.linkTool([...this.textNodes, ...this.noteObjs]);
       },
+
       recalculateNodesOutside() {
         this.nodesOutsideDiagram = this.textNodes.filter((v) => {
           const result = !this.graph.hasNode(`${v.id}`);
           return result;
         });
       },
+
       changeMouseState(state) {
         if (!(state === DELETE
             || state === CREATEEDGE

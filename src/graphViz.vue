@@ -37,7 +37,7 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'graphClicked'],
     name: 'graph-viz',
     components: {nodeList, toolBar},
     data() {
@@ -53,6 +53,7 @@
       };
     },
     mounted() {
+      this.graphClicked = true
       document.addEventListener('paste', this.onPaste)
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
@@ -137,8 +138,9 @@
 
     methods: {
       onPaste (e) {
-        console.log('on paste',e)
-        this.createNewNode(e.clipboardData.getData('text/plain'))
+        if (this.graphClicked) {
+          this.createNewNode(e.clipboardData.getData('text/plain'))
+        }
       },
 
       updateTextNodes() {

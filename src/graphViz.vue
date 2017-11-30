@@ -37,7 +37,7 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'graphClicked'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'clickedGraphViz'],
     name: 'graph-viz',
     components: {nodeList, toolBar},
     data() {
@@ -138,7 +138,7 @@
 
     methods: {
       onPaste (e) {
-        if (this.graphClicked) {
+        if (this.clickedGraphViz) {
           this.createNewNode(e.clipboardData.getData('text/plain'))
         }
       },

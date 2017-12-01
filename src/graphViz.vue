@@ -150,7 +150,7 @@
         $('.menu-color').remove()
         $('.menu-shape').remove()
         $('.menu-action').remove()
-        $('.menu-arrow').remove()
+        $('.menu-trash').remove()
       },
 
       removeNode() {
@@ -522,13 +522,49 @@
     color: #575959;
   }
 
-  .menu-shape, .menu-color, .menu-action, .menu-arrow {
+  .pinned {
+      background: rgba(182, 239, 239, 1);
+      border-radius: 100%;
+      border: 1px solid #fff;
+      box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
+      color: #575959;
+      display: table-cell;
+      font-size: 15px;
+      height: 18px;
+      padding: 2px;
+      text-align: center;
+      transition: 2s;
+      vertical-align: middle;
+      width: 18px;
+      margin-top: 2px;
+      margin-left: 1px;
+  }
+
+  .unpinned {
+    background: rgba(182, 239, 239, 0.3);
+    border-radius: 100%;
+    border: 1px solid #fff;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
+    color: #9b9da0;
+    display: table-cell;
+    font-size: 15px;
+    height: 18px;
+    padding: 2px;
+    text-align: center;
+    transition: 2s;
+    vertical-align: middle;
+    width: 18px;
+    margin-top: 2px;
+    margin-left: 1px;
+  }
+
+  .menu-shape, .menu-color, .menu-action, .menu-trash {
     cursor: pointer;
     cursor: hand;
   }
 
   .custom-icon {
-    background: rgba(182, 239, 239, 0.6);
+    background: rgba(182, 239, 239, 0.3);
     border-radius: 100%;
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
@@ -552,6 +588,7 @@
   .fix-editor {
     display: none;
   }
+
   .icon-wrapper {
     display: inline-block;
   }
@@ -603,7 +640,7 @@
     display: inline-block;
     /* background-color: #F00; */
     border: 1px solid #AFAFAF;
-    box-shadow: 1px 1px 4px black;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     border-radius: 40px;
     padding: 0px;
     margin: 0px;

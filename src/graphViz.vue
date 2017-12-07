@@ -524,40 +524,34 @@
     color: #575959;
   }
 
-  .pinned {
-      background: rgba(182, 239, 239, 1);
-      border-radius: 100%;
-      border: 1px solid #fff;
-      box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
-      color: #575959;
-      display: table-cell;
-      font-size: 15px;
-      height: 18px;
-      padding: 2px;
-      text-align: center;
-      transition: 2s;
-      vertical-align: middle;
-      width: 18px;
-      margin-top: 2px;
-      margin-left: 1px;
+  .icon-wrapper {
+    margin-top: 1px !important;
+    display: inline-block;
+    width: 22px;
   }
 
-  .unpinned {
-    background: rgba(182, 239, 239, 0.3);
+  .icon-wrapper .pinned, .unpinned {
     border-radius: 100%;
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
-    color: #9b9da0;
     display: table-cell;
     font-size: 15px;
-    height: 18px;
+    height: 15px;
     padding: 2px;
     text-align: center;
     transition: 2s;
     vertical-align: middle;
-    width: 18px;
-    margin-top: 2px;
-    margin-left: 1px;
+    width: 22px;
+  }
+
+  .icon-wrapper .pinned {
+    background: rgba(182, 239, 239, 1);
+    color: #575959;
+  }
+
+  .icon-wrapper .unpinned {
+    background: rgba(182, 239, 239, 0.3);
+    color: #9b9da0;
   }
 
   .menu-shape, .menu-color, .menu-action, .menu-trash {
@@ -565,7 +559,7 @@
     cursor: hand;
   }
 
-  .custom-icon {
+  .icon-wrapper .custom-icon {
     background: rgba(182, 239, 239, 0.3);
     border-radius: 100%;
     border: 1px solid #fff;
@@ -573,14 +567,12 @@
     color: #575959;
     display: table-cell;
     font-size: 15px;
-    height: 18px;
+    height: 15px;
     padding: 2px;
     text-align: center;
     transition: 2s;
     vertical-align: middle;
-    width: 18px;
-    margin-top: 2px;
-    margin-left: 1px;
+    width: 22px;
   }
 
   .custom-icon:hover {

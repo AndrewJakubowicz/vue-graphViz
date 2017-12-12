@@ -487,7 +487,7 @@
                 console.log(this.graph);
                 const node = {
                   object: {hash: triplet.object},
-                  predicate: {type: triplet.predicate},
+                  predicate: triplet.predicate,
                   subject: {hash: triplet.subject},
                 };
                 this.graph.removeTriplet(node);

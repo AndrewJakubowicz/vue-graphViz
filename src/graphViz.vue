@@ -78,7 +78,7 @@
             this.graph.addTriplet({
               subject: this.toNode(this.textNodes[indexOfSubject]),
               object: this.toNode(this.textNodes[indexOfObject]),
-              predicate: {type: 'arrow'},
+              predicate: x.predicate
             });
           });
         }
@@ -130,7 +130,7 @@
           this.graph.addTriplet({
             subject: this.toNode(this.textNodes[indexOfSubject]),
             object: this.toNode(this.textNodes[indexOfObject]),
-            predicate: {type: 'arrow'},
+            predicate: x.predicate
           });
         });
       },
@@ -318,16 +318,15 @@
               edge: edge,
               restart: this.graph.restart.styles,
               save: newText => {
-                edge.edgeData.text = newText;
+                edge.predicate.text = newText;
                 this.graph.updateTriplet({
                   subject: edge.source.hash,
-                  predicate: edge.edgeData.type,
-                  object: edge.target.hash,
-                  edgeData: edge.edgeData
+                  predicate: edge.predicate,
+                  object: edge.target.hash
                 })
               },
               update: newText => {
-                edge.edgeData.text = newText;
+                edge.predicate.text = newText;
               }
             });
           }

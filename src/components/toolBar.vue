@@ -49,6 +49,12 @@
 //            toggled: false,
 //            tip: "Pin"
 //          },
+//           {
+//             action: 'SELECT',
+//             icon: ['square-o'],
+//             toggled: false,
+//             tip: "Rectangular Marquee"
+//           },
           {
             action: 'ADDNOTE',
             icon: ['plus-square-o'],
@@ -69,6 +75,18 @@
             tip: "Delete All"
           },
           {
+            action: 'UNDO',
+            icon: ['undo'],
+            toggled: false,
+            tip: "Undo (CTRL+Z)"
+          },
+          {
+            action: 'REDO',
+            icon: ['repeat'],
+            toggled: false,
+            tip: "Redo (CTRL+Y)"
+          },
+          {
             action: 'SAVE',
             icon: ['floppy-o'],
             toggled: false,
@@ -84,7 +102,9 @@
         if (action === 'SAVE'
           || action === 'ADDNOTE'
           || action === 'CLEARSCREEN'
-          || action === 'REMOVEARROWS') {
+          || action === 'REMOVEARROWS'
+          || action === 'UNDO'
+          || action === 'REDO') {
           // For the above actions, default to mouse pointer state.
           newAction = 'POINTER';
         }

@@ -34,6 +34,18 @@
   const CLEARSCREEN = 'CLEARSCREEN';
   const REMOVEARROWS = 'REMOVEARROWS';
   const PIN = 'PIN';
+  const SELECT = 'SELECT';
+
+  // ACTIONS
+  const UNDO = "UNDO";
+  const REDO = "REDO";
+  const ADDNODE = "ADDNODE";
+  const DELETENODE = "DELETENODE";
+  const DELEDGE = "DELEDGE";
+  const CLEARHISTORY = "CLEARHISTORY";
+  const NODEEDIT = "NODEEDIT";
+  const EDGEEDIT = "EDGEEDIT";
+  const SHAPE = "SHAPE", COLOUR = "COLOUR", TEXT = "TEXT", PINNED = "PINNED"
 
 
   export default {
@@ -50,10 +62,27 @@
         notes: 0,
         noteObjs: [],
         dbClickCreateNode: true,
+        rootObservable: new Rx.Subject(),
       };
     },
     mounted() {
-      document.addEventListener('paste', this.onPaste)
+      this.actions(this.rootObservable);
+
+      document.addEventListener('paste', this.onPaste);
+
+      const ctrlDown = Rx.Observable.fromEvent(document, "keydown")
+        .filter(e => e.ctrlKey);
+
+      ctrlDown.filter(e => e.keyCode === 90 && !e.shiftKey)
+        .subscribe(e => {
+          this.rootObservable.next({type: UNDO})
+        });
+
+      ctrlDown.filter(e => e.keyCode === 89 || (e.keyCode === 90 && e.shiftKey))
+        .subscribe(e => {
+          this.rootObservable.next({type: REDO})
+        });
+
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
         if (this.savedDiagram) {
@@ -77,7 +106,7 @@
             this.graph.addTriplet({
               subject: this.toNode(this.textNodes[indexOfSubject]),
               object: this.toNode(this.textNodes[indexOfObject]),
-              predicate: {type: 'arrow'},
+              predicate: {type: 'arrow', hash: uuid.v4()},
             });
           });
         }
@@ -136,14 +165,229 @@
     },
 
     methods: {
-      onPaste (e) {
-        console.log('on paste',e)
-        this.createNewNode(e.clipboardData.getData('text/plain'))
+
+      actions($action) {
+        const addNode = action => {
+          // if no node, create new node
+          if (action.newNode) {
+            let textNode = {
+              id: 'note-' + uuid.v4(),
+              class: 'b-no-snip',
+              nodeShape: 'rect',
+              text: action.newNode.text ? action.newNode.text : 'New',
+              isSnip: false,
+              fixed: true
+            };
+            const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
+            if (indexOfNode === -1) this.textNodes.push(textNode);
+            (action.newNode.x && action.newNode.y) ? this.addNodeHelper(textNode.id, action.newNode.x, action.newNode.y) : this.addNodeHelper(textNode.id);
+            this.notes += 1;
+            this.noteObjs = [...this.noteObjs, textNode];
+            this.resetTools();
+            return textNode;
+          }
+          // if existing node, add to graph
+          if (action.existingNode) {
+            this.graph.addNode(this.toNode(action.existingNode));
+            this.recalculateNodesOutside();
+            return action.existingNode;
+          }
+        };
+
+        const delNode = node => {
+          this.graph.removeNode(node.id, this.recalculateNodesOutside);
+        };
+
+        const addEdge = triplet => {
+          if (Array.isArray(triplet)) {
+            triplet.forEach(t => this.graph.addTriplet(t))
+          } else {
+            this.graph.addTriplet(triplet)
+          }
+        };
+
+        const delEdge = triplet => {
+          if (Array.isArray(triplet)) {
+            triplet.forEach(t => this.graph.removeTriplet(t))
+          } else {
+            this.graph.removeTriplet(triplet)
+          }
+        };
+
+        let undoStack = []; // TODO stack size limit? use circular list?
+        let redoStack = [];
+
+        $action
+          .do(action => console.log("action IN", action, undoStack, redoStack))
+          .do(action => {
+            if (!(action.type === UNDO || action.type === REDO)) {
+              redoStack = [];
+            }
+          })
+          .map(action => {
+            switch (action.type) {
+
+              case UNDO: {
+                if (undoStack.length > 0) {
+                  let saveRedo = redoStack;
+                  let nextAction = undoStack.pop();
+                  if (nextAction.type === DELETENODE) {
+                    nextAction.callback = () => {
+                      redoStack = saveRedo;
+                      redoStack.push(undoStack.pop());
+                    };
+
+                    this.rootObservable.next(nextAction);
+                  } else {
+
+                    this.rootObservable.next(nextAction);
+                    redoStack = saveRedo;
+                    redoStack.push(undoStack.pop());
+                  }
+
+
+                }
+                break;
+              }
+
+              case REDO: {
+                if (redoStack.length > 0) {
+                  let saveRedo = redoStack;
+                  this.rootObservable.next(redoStack.pop());
+                  redoStack = saveRedo;
+                }
+                break;
+              }
+
+              case ADDNODE: {
+                let node = addNode(action);
+                undoStack.push({
+                  type: DELETENODE,
+                  node: node
+                });
+                break;
+              }
+
+
+              case DELETENODE: {
+                // get all edges attached to node
+                const db = this.graph.getDB();
+
+                let subjectEdges = new Promise(function (resolve, reject) {
+                  db.get({subject: action.node.id}, (err, l) => {
+                    if (err) {
+                      reject(err)
+                    } else {
+                      resolve(l)
+                    }
+                  })
+                });
+
+                let objectEdges = new Promise(function (resolve, reject) {
+                  db.get({object: action.node.id}, (err, l) => {
+                    if (err) {
+                      reject(err)
+                    } else {
+                      resolve(l)
+                    }
+                  })
+                });
+
+                Promise.all([subjectEdges, objectEdges])
+                  .then(values => {
+                      let edges = [].concat.apply([], values)
+                        .map(x => {
+                          const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+                          const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+                          if (indexOfSubject !== -1 && indexOfObject !== -1) {
+                            return {
+                              subject: this.toNode(this.textNodes[indexOfSubject]),
+                              predicate: x.edgeData,
+                              object: this.toNode(this.textNodes[indexOfObject])
+                            };
+                          }
+                        });
+                      // delete all edges attached to node
+                      if (edges.length > 0) {
+                        this.rootObservable.next({
+                          type: DELEDGE,
+                          tripletObject: edges
+                        });
+                      }
+                      // delete node
+                      delNode(action.node);
+                      undoStack.push({
+                        type: ADDNODE,
+                        existingNode: action.node
+                      });
+
+                      if (action.callback) {
+                        action.callback()
+                      }
+
+                    }
+                  ).catch(err => console.log(err));
+
+                break;
+              }
+
+
+              case CREATEEDGE: {
+                addEdge(action.tripletObject);
+                undoStack.push({
+                  type: DELEDGE,
+                  tripletObject: action.tripletObject
+                });
+                break;
+              }
+
+              case DELEDGE: {
+                delEdge(action.tripletObject);
+                undoStack.push({
+                  type: CREATEEDGE,
+                  tripletObject: action.tripletObject
+                });
+                break;
+              }
+
+              case CLEARHISTORY: {
+                undoStack = [];
+                redoStack = [];
+                break;
+              }
+
+              case NODEEDIT: {
+                let oldProp;
+                switch (action.prop) {
+                  case SHAPE: {
+                    var foundIndex = this.textNodes.findIndex(x => x.id == action.target.id);
+                    oldProp = this.textNodes[foundIndex].nodeShape;
+                    this.textNodes[foundIndex].nodeShape = action.value;
+                    break;
+                  }
+                  default : {
+                    console.log("Unknown property:", action.prop)
+                  }
+                }
+                action.value = oldProp;
+                undoStack.push(action);
+                break;
+              }
+
+
+              default:
+                console.log("Unknown action:", action.type)
+
+            }
+          })
+          .subscribe(e => console.log("FIN"))
       },
 
-      updateTextNodes() {
-        var node = this.currentNode;
-        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
+      onPaste(e) {
+        this.rootObservable.next({
+          type: ADDNODE,
+          newNode: {text: e.clipboardData.getData('text/plain')},
+        });
       },
 
       deleteRadial() {
@@ -151,11 +395,6 @@
         $('.menu-shape').remove()
         $('.menu-action').remove()
         $('.menu-arrow').remove()
-      },
-
-      removeNode() {
-        var node = this.currentNode;
-        this.graph.removeNode(node.hash, this.recalculateNodesOutside);
       },
 
       clearScreen() {
@@ -174,7 +413,7 @@
       createGraph(callback) {
         const $mouseOverNode = new Rx.Subject();
         const $mousedown = new Rx.Subject();
-        let me = this
+        let me = this;
         const currentState = {
           currentNode: {
             data: {},
@@ -287,7 +526,10 @@
           },
 
           nodeRemove: (node) => {
-            this.removeNode(node);
+            this.rootObservable.next({
+              type: DELETENODE,
+              node: node
+            })
           },
 
           canDrag: () =>
@@ -307,7 +549,14 @@
         //     $mousedown.next({type: 'CREATEEDGE', clickedNode: node, selection});
         //   }
         // });
-        this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode, () => { this.mouseState = POINTER });
+        this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode, (tripletObject) => {
+          console.log("e", tripletObject)
+          this.rootObservable.next({
+            type: CREATEEDGE,
+            tripletObject: tripletObject
+          });
+          this.mouseState = POINTER
+        });
         this.linkToolDispose = this.linkTool(this.textNodes);
         this.graph.edgeOptions.setClickEdge((edge, e) => {
           if (this.mouseState === POINTER || this.mouseState === CREATEEDGE) {
@@ -338,6 +587,7 @@
           // If the mouse is a pointer and a note is clicked on set edit mode.
           if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
             this.currentNode = node;
+            // this.currentNode.shortname = prompt();
             $mousedown.next({
               type: 'EDITNODE',
               clickedNode: node,
@@ -347,43 +597,11 @@
               deleteRadial: this.deleteRadial
             });
           }
-//          if (this.mouseState === DELETE) {
-//            // Recalculate the nodes after deleting the node.
-//            this.graph.removeNode(node.hash, this.recalculateNodesOutside);
-//          }
-//          if (this.mouseState === PIN) {
-//            if (node.fixed === undefined) {
-//              node.fixed = true; // eslint-disable-line no-param-reassign
-//            } else {
-//              node.fixed = !node.fixed; // eslint-disable-line no-param-reassign
-//            }
-//            this.graph.restart.styles();
-//          }
         });
         // Initiate the text edit function
         textEdit($mousedown);
 
         if (callback !== undefined) callback();
-      },
-
-      createNewNode(props) {
-        let text;
-        //TODO remove after converting paste to pass object instead of text here for backwards compatability
-        typeof(props)!== "object" ?  text = props :  text = props.text;
-        let textNode = {
-          id: 'note-' + uuid.v4(),
-          class: 'b-no-snip',
-          nodeShape: 'rect',
-          text: text ? text : 'New',
-          isSnip: false,
-          fixed : true
-        };
-        const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
-        if (indexOfNode === -1) this.textNodes.push(textNode);
-        (props && props.x && props.y)? this.addNodeHelper(textNode.id, props.x, props.y): this.addNodeHelper(textNode.id);
-        this.notes += 1;
-        this.noteObjs = [...this.noteObjs, textNode];
-        this.resetTools();
       },
 
       toNode(nodeProtocolObject) {
@@ -425,8 +643,12 @@
 
       dblClickOnPage(e) {
         if (!this.dbClickCreateNode) return;
-        let coords = this.graph.transformCoordinates({x:e.clientX, y:e.clientY});
-        this.createNewNode(coords);
+        let coords = this.graph.transformCoordinates({x: e.clientX, y: e.clientY});
+        this.rootObservable.next({
+          type: ADDNODE,
+          newNode: coords,
+        });
+        // this.createNewNode(coords);
       },
 
       resetTools() {
@@ -449,7 +671,10 @@
             || state === ADDNOTE
             || state === CLEARSCREEN
             || state === REMOVEARROWS
-            || state === PIN)) {
+            || state === PIN
+            || state === SELECT
+            || state === UNDO
+            || state === REDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
           this.mouseState = state;
@@ -457,7 +682,7 @@
         switch (state) {
           case SAVE: {
             this.mouseState = POINTER;
-            this.deleteRadial()
+            this.deleteRadial();
             this.graph.saveGraph((savedData) => {
               this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
             });
@@ -465,7 +690,10 @@
           }
           case ADDNOTE: {
             this.mouseState = POINTER;
-            this.createNewNode()
+            this.rootObservable.next({
+              type: ADDNODE,
+              newNode: true,
+            });
             break;
           }
           case CLEARSCREEN: {
@@ -482,16 +710,33 @@
                 console.error(err);
               }
               console.log(l);
-              l.forEach((triplet) => {
-                console.log(this.graph);
-                const node = {
-                  object: {hash: triplet.object},
-                  predicate: {type: triplet.predicate},
-                  subject: {hash: triplet.subject},
-                };
-                this.graph.removeTriplet(node);
+
+              let triplets = l.map(x => {
+                const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+                const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+                if (indexOfSubject !== -1 && indexOfObject !== -1) {
+                  return {
+                    subject: this.toNode(this.textNodes[indexOfSubject]),
+                    predicate: x.edgeData,
+                    object: this.toNode(this.textNodes[indexOfObject])
+                  };
+                }
               });
+              this.rootObservable.next({
+                type: DELEDGE,
+                tripletObject: triplets
+              })
             });
+            break;
+          }
+          case UNDO: {
+            this.mouseState = POINTER;
+            this.rootObservable.next({type: UNDO});
+            break;
+          }
+          case REDO: {
+            this.mouseState = POINTER;
+            this.rootObservable.next({type: REDO});
             break;
           }
           default:
@@ -552,6 +797,7 @@
   .fix-editor {
     display: none;
   }
+
   .icon-wrapper {
     display: inline-block;
   }

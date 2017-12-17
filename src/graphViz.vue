@@ -45,7 +45,7 @@
   const CLEARHISTORY = "CLEARHISTORY";
   const NODEEDIT = "NODEEDIT";
   const EDGEEDIT = "EDGEEDIT";
-  const SHAPE = "SHAPE", COLOUR = "COLOUR", TEXT = "TEXT", PINNED = "PINNED";
+  const SHAPE = "SHAPE", COLOUR = "COLOUR", TEXT = "TEXT", PINNED = "PINNED"
 
 
   export default {
@@ -67,7 +67,7 @@
     },
     mounted() {
       this.actions(this.rootObservable);
-      this.graphClicked = true;
+this.graphClicked = true
       document.addEventListener('paste', this.onPaste);
 
       const ctrlDown = Rx.Observable.fromEvent(document, "keydown")
@@ -305,7 +305,7 @@
                           if (indexOfSubject !== -1 && indexOfObject !== -1) {
                             return {
                               subject: this.toNode(this.textNodes[indexOfSubject]),
-                              predicate: x.predicate,
+                              predicate: x.edgeData,
                               object: this.toNode(this.textNodes[indexOfObject])
                             };
                           }
@@ -328,8 +328,8 @@
                         action.callback()
                       }
 
-                    })
-                  .catch(err => console.log(err));
+                    }
+                  ).catch(err => console.log(err));
 
                 break;
               }
@@ -366,7 +366,6 @@
                     var foundIndex = this.textNodes.findIndex(x => x.id == action.target.id);
                     oldProp = this.textNodes[foundIndex].nodeShape;
                     this.textNodes[foundIndex].nodeShape = action.value;
-                    this.graph.restart.styles();
                     break;
                   }
                   default : {
@@ -385,14 +384,15 @@
             }
           })
           .subscribe(e => console.log("FIN"))
-      },
+          },
 
       onPaste(e) {
         if (this.clickedGraphViz) {
-          this.rootObservable.next({
-            type: ADDNODE,
-            newNode: {text: e.clipboardData.getData('text/plain')},
-          });
+
+        this.rootObservable.next({
+          type: ADDNODE,
+          newNode: {text: e.clipboardData.getData('text/plain')},
+        });
         }
       },
 
@@ -428,10 +428,10 @@
           },
           startedDragAt: "",
           nodeMap: new Map()
-        };
+        }
         this.$on('mouseovernode', function () {
           console.log("mouseovernode") //TODO remove when done
-        });
+        })
 
         this.graph = networkViz('graph', {
           layoutType: 'jaccardLinkLengths',
@@ -439,6 +439,7 @@
           jaccardModifier: 0.9,
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
+
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : "white";
           },
@@ -453,14 +454,8 @@
           },
 
           updateNodeShape: function updateNodeShape(node) {
-            me.rootObservable.next({
-              type: NODEEDIT,
-              target: node,
-              value: node.nodeShape,
-              prop: SHAPE
-            })
-            // var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
-            // me.textNodes[foundIndex].nodeShape = node.nodeShape;
+            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            me.textNodes[foundIndex].nodeShape = node.nodeShape;
           },
 
           // Shapes defined: rect, circle, capsule
@@ -561,6 +556,7 @@
         //   }
         // });
         this.linkTool = linkTool(this.graph, $mousedown, $mouseOverNode, this.toNode, (tripletObject) => {
+          console.log("e", tripletObject)
           this.rootObservable.next({
             type: CREATEEDGE,
             tripletObject: tripletObject

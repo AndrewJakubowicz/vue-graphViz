@@ -11,7 +11,7 @@ const d3 = require('d3');
 const uuid = require('uuid');
 
 const makeAbsoluteContext = (element, documentNode) => {
-  return function(x,y) {
+  return function (x, y) {
     var offset = documentNode.getBoundingClientRect();
     var matrix = element.getScreenCTM();
     return {
@@ -24,8 +24,10 @@ const makeAbsoluteContext = (element, documentNode) => {
 module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
   return (nodesList) => {
     let tempDrawingArrow = {
-      start: { x: 0, y:0 },
-      end: { x: 0, y:0 }
+
+      start: {x: 0, y: 0},
+      end: {x: 0, y: 0}
+
     }
     let currentState = {};
 
@@ -76,7 +78,10 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
         // Transform the document position back into an SVG position.
         var svg = graph.getSVGElement().node();
         var _pt = svg.createSVGPoint();
-        _pt.x = absoluteCenter.x; _pt.y = absoluteCenter.y;
+
+        _pt.x = absoluteCenter.x;
+        _pt.y = absoluteCenter.y;
+
         _pt = _pt.matrixTransform(svg.getScreenCTM().inverse());
 
         tempDrawingArrow.start = {x: _pt.x, y: _pt.y};
@@ -86,16 +91,20 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
           mm.preventDefault();
           var pt = svg.createSVGPoint();
 
-          function cursorPoint(evt){
-            pt.x = evt.clientX; pt.y = evt.clientY;
+          function cursorPoint(evt) {
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
             return pt.matrixTransform(svg.getScreenCTM().inverse());
           }
+
+
           return cursorPoint(mm)
         }).takeUntil(mouseUpOnNodeObservable)
           .finally(() => {
             // This is called when the sequence "completes".
             // Here we make the arrow disappear by moving it to the corner.
             // We also add the triplet.
+
             tempDrawingArrow.end = {x: 0, y:0};
             tempDrawingArrow.start = {x:0,y:0};
             updateLine();
@@ -111,6 +120,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
               });
             }
             finishDrag();
+
           });
       });
 
@@ -123,8 +133,9 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
       },
       function () {
         // FINISHED CODE
-        tempDrawingArrow.end = {x: 0, y:0};
-        tempDrawingArrow.start = {x:0,y:0};
+        tempDrawingArrow.end = {x: 0, y: 0};
+        tempDrawingArrow.start = {x: 0, y: 0};
+
         updateLine();
       });
 

@@ -19,16 +19,14 @@ const makeAbsoluteContext = (element, documentNode) => {
       y: (matrix.b * x) + (matrix.d * y) + matrix.f - offset.top
     };
   };
-}
+};
 
 module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
   return (nodesList) => {
     let tempDrawingArrow = {
-
       start: {x: 0, y: 0},
       end: {x: 0, y: 0}
-
-    }
+    };
     let currentState = {};
 
     /**
@@ -105,22 +103,19 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
             // Here we make the arrow disappear by moving it to the corner.
             // We also add the triplet.
 
-            tempDrawingArrow.end = {x: 0, y:0};
-            tempDrawingArrow.start = {x:0,y:0};
+            tempDrawingArrow.end = {x: 0, y: 0};
+            tempDrawingArrow.start = {x: 0, y: 0};
             updateLine();
 
             // Create the triplet
-            if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash){
+            if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash) {
               let subjectTemp = nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0];
-              graph.addTriplet({
-                subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
-                // predicate: {type: "arrow"},
-                predicate: {type: "arrow", hash: uuid.v4()},
-                object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
-              });
             }
-            finishDrag();
-
+            finishDrag({
+              subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
+              predicate: {type: "arrow", hash: uuid.v4()},
+              object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
+            });
           });
       });
 
@@ -150,4 +145,4 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
       currentNodeSub.unsubscribe();
     }
   }
-}
+};

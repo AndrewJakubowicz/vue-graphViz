@@ -85,7 +85,7 @@ export default ($action) => {
     })
     .map(action => {
       let edge = action.edge;
-      let text = Text(edge.edgeData.text);
+      let text = Text(edge.predicate.text);
       let update = () => {
         action.update(text.getText());
         action.restart();
@@ -129,7 +129,7 @@ export default ($action) => {
         .filter(e => e.keyCode === 13)
         .do(e => {
           // Prevent stacking newlines. (Not supported) //TODO why?
-          if (edge.edgeData.text.slice(-1) === "") {
+          if (edge.predicate.text.slice(-1) === "") {
             return;
           }
           text.newLine();
@@ -157,10 +157,10 @@ export default ($action) => {
         .takeUntil($mouseClick)
         .takeUntil($exit)
         .finally(() => {
-          edge.edgeData.text = text.getText();
-          if (!edge.edgeData.text || edge.edgeData.text === '' ||
-            edge.edgeData.text.length === 0 || edge.edgeData.text[0] === '') {
-            edge.edgeData.text = ''
+          edge.predicate.text = text.getText();
+          if (!edge.predicate.text || edge.predicate.text === '' ||
+            edge.predicate.text.length === 0 || edge.predicate.text[0] === '') {
+            edge.predicate.text = ''
           }
           save();
         });

@@ -49,7 +49,7 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'clickedGraphViz'],
     name: 'graph-viz',
     components: {nodeList, toolBar},
     data() {
@@ -67,7 +67,7 @@
     },
     mounted() {
       this.actions(this.rootObservable);
-
+this.graphClicked = true
       document.addEventListener('paste', this.onPaste);
 
       const ctrlDown = Rx.Observable.fromEvent(document, "keydown")
@@ -106,7 +106,9 @@
             this.graph.addTriplet({
               subject: this.toNode(this.textNodes[indexOfSubject]),
               object: this.toNode(this.textNodes[indexOfObject]),
-              predicate: {type: 'arrow', hash: uuid.v4()},
+
+              predicate: x.predicate
+
             });
           });
         }
@@ -158,13 +160,14 @@
           this.graph.addTriplet({
             subject: this.toNode(this.textNodes[indexOfSubject]),
             object: this.toNode(this.textNodes[indexOfObject]),
-            predicate: {type: 'arrow'},
+            predicate: x.predicate
           });
         });
       },
     },
 
     methods: {
+
 
       actions($action) {
         const addNode = action => {
@@ -381,20 +384,23 @@
             }
           })
           .subscribe(e => console.log("FIN"))
-      },
+          },
 
       onPaste(e) {
+        if (this.clickedGraphViz) {
+
         this.rootObservable.next({
           type: ADDNODE,
           newNode: {text: e.clipboardData.getData('text/plain')},
         });
+        }
       },
 
       deleteRadial() {
         $('.menu-color').remove()
         $('.menu-shape').remove()
         $('.menu-action').remove()
-        $('.menu-arrow').remove()
+        $('.menu-trash').remove()
       },
 
       clearScreen() {
@@ -565,16 +571,15 @@
               edge: edge,
               restart: this.graph.restart.styles,
               save: newText => {
-                edge.edgeData.text = newText;
+                edge.predicate.text = newText;
                 this.graph.updateTriplet({
                   subject: edge.source.hash,
-                  predicate: edge.edgeData.type,
-                  object: edge.target.hash,
-                  edgeData: edge.edgeData
+                  predicate: edge.predicate,
+                  object: edge.target.hash
                 })
               },
               update: newText => {
-                edge.edgeData.text = newText;
+                edge.predicate.text = newText;
               }
             });
           }
@@ -711,16 +716,18 @@
               }
               console.log(l);
 
+
               let triplets = l.map(x => {
                 const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
                 const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
                 if (indexOfSubject !== -1 && indexOfObject !== -1) {
                   return {
                     subject: this.toNode(this.textNodes[indexOfSubject]),
-                    predicate: x.edgeData,
+                    predicate: x.predicate,
                     object: this.toNode(this.textNodes[indexOfObject])
                   };
                 }
+
               });
               this.rootObservable.next({
                 type: DELEDGE,
@@ -767,27 +774,55 @@
     color: #575959;
   }
 
-  .menu-shape, .menu-color, .menu-action, .menu-arrow {
+  .icon-wrapper {
+    margin-top: 1px !important;
+    display: inline-block;
+    width: 22px;
+  }
+
+  .icon-wrapper .pinned, .unpinned {
+    border-radius: 100%;
+    border: 1px solid #fff;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
+    display: table-cell;
+    font-size: 15px;
+    height: 15px;
+    padding: 2px;
+    text-align: center;
+    transition: 2s;
+    vertical-align: middle;
+    width: 22px;
+  }
+
+  .icon-wrapper .pinned {
+    background: rgba(182, 239, 239, 1);
+    color: #575959;
+  }
+
+  .icon-wrapper .unpinned {
+    background: rgba(182, 239, 239, 0.3);
+    color: #9b9da0;
+  }
+
+  .menu-shape, .menu-color, .menu-action, .menu-trash {
     cursor: pointer;
     cursor: hand;
   }
 
-  .custom-icon {
-    background: rgba(182, 239, 239, 0.6);
+  .icon-wrapper .custom-icon {
+    background: rgba(182, 239, 239, 0.3);
     border-radius: 100%;
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     color: #575959;
     display: table-cell;
     font-size: 15px;
-    height: 18px;
+    height: 15px;
     padding: 2px;
     text-align: center;
     transition: 2s;
     vertical-align: middle;
-    width: 18px;
-    margin-top: 2px;
-    margin-left: 1px;
+    width: 22px;
   }
 
   .custom-icon:hover {
@@ -849,7 +884,7 @@
     display: inline-block;
     /* background-color: #F00; */
     border: 1px solid #AFAFAF;
-    box-shadow: 1px 1px 4px black;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     border-radius: 40px;
     padding: 0px;
     margin: 0px;

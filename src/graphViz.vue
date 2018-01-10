@@ -397,9 +397,9 @@
       },
 
       deleteRadial() {
-        $('.menu-color').remove()
-        $('.menu-shape').remove()
-        $('.menu-action').remove()
+        $('.menu-color').remove();
+        $('.menu-shape').remove();
+        $('.menu-action').remove();
         $('.menu-trash').remove()
       },
 
@@ -449,12 +449,12 @@
           },
 
           updateNodeColor: function updateNodeColor(node) {
-            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].color = node.color;
           },
 
           updateNodeShape: function updateNodeShape(node) {
-            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].nodeShape = node.nodeShape;
           },
 
@@ -531,7 +531,7 @@
 
           clickPin: (node, element) => {
             console.log(node);
-            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].fixed = node.fixed;
           },
 
@@ -576,9 +576,9 @@
               save: newText => {
                 edge.predicate.text = newText;
                 this.graph.updateTriplet({
-                  subject: edge.source.hash,
+                  subject: edge.source,
                   predicate: edge.predicate,
-                  object: edge.target.hash
+                  object: edge.target
                 })
               },
               update: newText => {

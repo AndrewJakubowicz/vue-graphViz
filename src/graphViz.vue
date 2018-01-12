@@ -115,7 +115,7 @@
       });
     },
     watch: {
-      width(current, old) { //TODO is this even working correctly?
+      width(current, old) { //this appears to do nothing
         if (current !== old) {
           this.graph.canvasOptions.setWidth(current);
         }
@@ -298,37 +298,37 @@
 
                 Promise.all([subjectEdges, objectEdges])
                   .then(values => {
-                      let edges = [].concat.apply([], values)
-                        .map(x => {
-                          const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
-                          const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
-                          if (indexOfSubject !== -1 && indexOfObject !== -1) {
-                            return {
-                              subject: this.toNode(this.textNodes[indexOfSubject]),
-                              predicate: x.predicate,
-                              object: this.toNode(this.textNodes[indexOfObject])
-                            };
-                          }
-                        });
-                      // delete all edges attached to node
-                      if (edges.length > 0) {
-                        this.rootObservable.next({
-                          type: DELEDGE,
-                          tripletObject: edges
-                        });
-                      }
-                      // delete node
-                      delNode(action.node);
-                      undoStack.push({
-                        type: ADDNODE,
-                        existingNode: action.node
+                    let edges = [].concat.apply([], values)
+                      .map(x => {
+                        const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+                        const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+                        if (indexOfSubject !== -1 && indexOfObject !== -1) {
+                          return {
+                            subject: this.toNode(this.textNodes[indexOfSubject]),
+                            predicate: x.predicate,
+                            object: this.toNode(this.textNodes[indexOfObject])
+                          };
+                        }
                       });
+                    // delete all edges attached to node
+                    if (edges.length > 0) {
+                      this.rootObservable.next({
+                        type: DELEDGE,
+                        tripletObject: edges
+                      });
+                    }
+                    // delete node
+                    delNode(action.node);
+                    undoStack.push({
+                      type: ADDNODE,
+                      existingNode: action.node
+                    });
 
-                      if (action.callback) {
-                        action.callback()
-                      }
+                    if (action.callback) {
+                      action.callback()
+                    }
 
-                    })
+                  })
                   .catch(err => console.log(err));
 
                 break;
@@ -359,24 +359,24 @@
                 break;
               }
 
-              case NODEEDIT: {
-                let oldProp;
-                switch (action.prop) {
-                  case SHAPE: {
-                    var foundIndex = this.textNodes.findIndex(x => x.id == action.target.id);
-                    oldProp = this.textNodes[foundIndex].nodeShape;
-                    this.textNodes[foundIndex].nodeShape = action.value;
-                    this.graph.restart.styles();
-                    break;
-                  }
-                  default : {
-                    console.log("Unknown property:", action.prop)
-                  }
-                }
-                action.value = oldProp;
-                undoStack.push(action);
-                break;
-              }
+              // case NODEEDIT: {
+              //   let oldProp;
+              //   switch (action.prop) {
+              //     case SHAPE: {
+              //       var foundIndex = this.textNodes.findIndex(x => x.id == action.target.id);
+              //       oldProp = this.textNodes[foundIndex].nodeShape;
+              //       this.textNodes[foundIndex].nodeShape = action.value;
+              //       this.graph.restart.styles();
+              //       break;
+              //     }
+              //     default : {
+              //       console.log("Unknown property:", action.prop)
+              //     }
+              //   }
+              //   action.value = oldProp;
+              //   undoStack.push(action);
+              //   break;
+              // }
 
 
               default:
@@ -384,7 +384,7 @@
 
             }
           })
-          .subscribe(e => console.log("FIN"))
+          .subscribe()
       },
 
       onPaste(e) {
@@ -397,9 +397,9 @@
       },
 
       deleteRadial() {
-        $('.menu-color').remove()
-        $('.menu-shape').remove()
-        $('.menu-action').remove()
+        $('.menu-color').remove();
+        $('.menu-shape').remove();
+        $('.menu-action').remove();
         $('.menu-trash').remove()
       },
 
@@ -430,7 +430,6 @@
           nodeMap: new Map()
         };
         this.$on('mouseovernode', function () {
-          console.log("mouseovernode") //TODO remove when done
         });
 
         this.graph = networkViz('graph', {
@@ -439,6 +438,7 @@
           jaccardModifier: 0.9,
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
+          edgeSmoothness: 15,
 
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : "white";
@@ -449,12 +449,12 @@
           },
 
           updateNodeColor: function updateNodeColor(node) {
-            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].color = node.color;
           },
 
           updateNodeShape: function updateNodeShape(node) {
-            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].nodeShape = node.nodeShape;
           },
 
@@ -486,6 +486,10 @@
 
           mouseOverRadial: (node) => {
             this.dbClickCreateNode = false;
+          },
+
+          mouseOutRadial: (node) => {
+            this.dbClickCreateNode = true;
           },
 
           mouseOverNode: (node, selection) => {
@@ -527,7 +531,7 @@
 
           clickPin: (node, element) => {
             console.log(node);
-            var foundIndex = me.textNodes.findIndex(x => x.id == node.id);
+            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
             me.textNodes[foundIndex].fixed = node.fixed;
           },
 
@@ -572,9 +576,9 @@
               save: newText => {
                 edge.predicate.text = newText;
                 this.graph.updateTriplet({
-                  subject: edge.source.hash,
+                  subject: edge.source,
                   predicate: edge.predicate,
-                  object: edge.target.hash
+                  object: edge.target
                 })
               },
               update: newText => {

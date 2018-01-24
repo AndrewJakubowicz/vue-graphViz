@@ -87,7 +87,7 @@ export default ($action) => {
       let edge = action.edge;
       let text = Text(edge.predicate.text);
       let update = () => {
-        action.update(text.getText());
+        action.save(text.getText());
         action.restart();
       };
       let save = () => {

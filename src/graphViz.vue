@@ -45,7 +45,7 @@
   const CLEARHISTORY = "CLEARHISTORY";
   const NODEEDIT = "NODEEDIT";
   const EDGEEDIT = "EDGEEDIT";
-  const SHAPE = "SHAPE", COLOUR = "COLOUR", TEXT = "TEXT", PINNED = "PINNED";
+  const SHAPE = "SHAPE", COLOR = "COLOR", TEXT = "TEXT", DRAG = "DRAG";
 
 
   export default {
@@ -62,6 +62,7 @@
         notes: 0,
         noteObjs: [],
         dbClickCreateNode: true,
+        canKeyboardUndo: true,
         rootObservable: new Rx.Subject(),
       };
     },
@@ -74,12 +75,14 @@
         .filter(e => e.ctrlKey);
 
       ctrlDown.filter(e => e.keyCode === 90 && !e.shiftKey)
-        .subscribe(e => {
+        .filter(() => this.canKeyboardUndo)
+        .subscribe(() => {
           this.rootObservable.next({type: UNDO})
         });
 
       ctrlDown.filter(e => e.keyCode === 89 || (e.keyCode === 90 && e.shiftKey))
-        .subscribe(e => {
+        .filter(() => this.canKeyboardUndo)
+        .subscribe(() => {
           this.rootObservable.next({type: REDO})
         });
 
@@ -168,7 +171,6 @@
 
     methods: {
 
-
       actions($action) {
         const addNode = action => {
           // if no node, create new node
@@ -179,7 +181,8 @@
               nodeShape: 'rect',
               text: action.newNode.text ? action.newNode.text : 'New',
               isSnip: false,
-              fixed: true
+              fixed: true,
+              color: "#ffffff"
             };
             const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
             if (indexOfNode === -1) this.textNodes.push(textNode);
@@ -197,8 +200,8 @@
           }
         };
 
-        const delNode = node => {
-          this.graph.removeNode(node.id, this.recalculateNodesOutside);
+        const delNode = nodeId => {
+          this.graph.removeNode(nodeId, this.recalculateNodesOutside);
         };
 
         const addEdge = triplet => {
@@ -221,7 +224,7 @@
         let redoStack = [];
 
         $action
-          .do(action => console.log("action IN", action, undoStack, redoStack))
+          .do(action => console.log("action", action, undoStack, redoStack))
           .do(action => {
             if (!(action.type === UNDO || action.type === REDO)) {
               redoStack = [];
@@ -229,6 +232,7 @@
           })
           .map(action => {
             switch (action.type) {
+              // each action MUST push an action to the undo stack.
 
               case UNDO: {
                 if (undoStack.length > 0) {
@@ -266,18 +270,17 @@
                 let node = addNode(action);
                 undoStack.push({
                   type: DELETENODE,
-                  node: node
+                  id: node.id
                 });
                 break;
               }
 
-
               case DELETENODE: {
                 // get all edges attached to node
                 const db = this.graph.getDB();
-
+                const node = this.graph.getNode(action.id);
                 let subjectEdges = new Promise(function (resolve, reject) {
-                  db.get({subject: action.node.id}, (err, l) => {
+                  db.get({subject: node.id}, (err, l) => {
                     if (err) {
                       reject(err)
                     } else {
@@ -287,7 +290,7 @@
                 });
 
                 let objectEdges = new Promise(function (resolve, reject) {
-                  db.get({object: action.node.id}, (err, l) => {
+                  db.get({object: node.id}, (err, l) => {
                     if (err) {
                       reject(err)
                     } else {
@@ -318,10 +321,10 @@
                       });
                     }
                     // delete node
-                    delNode(action.node);
+                    delNode(node.id);
                     undoStack.push({
                       type: ADDNODE,
-                      existingNode: action.node
+                      existingNode: node
                     });
 
                     if (action.callback) {
@@ -333,7 +336,6 @@
 
                 break;
               }
-
 
               case CREATEEDGE: {
                 addEdge(action.tripletObject);
@@ -359,24 +361,53 @@
                 break;
               }
 
-              // case NODEEDIT: {
-              //   let oldProp;
-              //   switch (action.prop) {
-              //     case SHAPE: {
-              //       var foundIndex = this.textNodes.findIndex(x => x.id == action.target.id);
-              //       oldProp = this.textNodes[foundIndex].nodeShape;
-              //       this.textNodes[foundIndex].nodeShape = action.value;
-              //       this.graph.restart.styles();
-              //       break;
-              //     }
-              //     default : {
-              //       console.log("Unknown property:", action.prop)
-              //     }
-              //   }
-              //   action.value = oldProp;
-              //   undoStack.push(action);
-              //   break;
-              // }
+              case NODEEDIT: {
+                let oldProp;
+                const id = action.id;
+                const node = this.graph.getNode(id);
+                const foundIndex = this.textNodes.findIndex(x => x.id == id);
+                switch (action.prop) {
+
+                  case TEXT: {
+                    oldProp = node.shortname;
+                    node.shortname = action.value;
+                    this.textNodes[foundIndex].text = action.value;
+                    this.graph.restart.layout();
+                    break;
+                  }
+
+                  case PIN: {
+                    node.fixed = !node.fixed;
+                    this.textNodes[foundIndex].fixed = node.fixed;
+                    this.graph.restart.layout();
+                    break;
+                  }
+
+                  case COLOR: {
+                    const color = action.value;
+                    oldProp = this.textNodes[foundIndex].color;
+                    this.graph.updateNodeColor(id, color);
+                    this.textNodes[foundIndex].color = color;
+                    break;
+                  }
+
+                  case SHAPE: {
+                    const shape = action.value;
+                    oldProp = this.textNodes[foundIndex].nodeShape;
+                    this.graph.updateNodeShape(id, shape);
+                    this.textNodes[foundIndex].nodeShape = shape;
+                    break;
+                  }
+                  default : {
+                    console.log("Unknown property:", action.prop)
+                  }
+                }
+                if (action.value && oldProp) {
+                  action.value = oldProp;
+                }
+                undoStack.push(action);
+                break;
+              }
 
 
               default:
@@ -434,28 +465,36 @@
 
         this.graph = networkViz('graph', {
           layoutType: 'jaccardLinkLengths',
-          edgeLength: 140,
+          edgeLength: 170,
           jaccardModifier: 0.9,
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
           edgeSmoothness: 15,
 
           nodeToColor: function nodeToColor(d) {
-            return d.color ? d.color : "white";
+            return d.color ? d.color : "#ffffff";
           },
 
           nodeToPin: function nodeToPin(d) {
             return d.fixed ? d.fixed : false;
           },
 
-          updateNodeColor: function updateNodeColor(node) {
-            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
-            me.textNodes[foundIndex].color = node.color;
+          updateNodeColor: (node, color) => {
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: COLOR,
+              value: color,
+              id: node.id,
+            });
           },
 
-          updateNodeShape: function updateNodeShape(node) {
-            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
-            me.textNodes[foundIndex].nodeShape = node.nodeShape;
+          updateNodeShape: (node, shape) => {
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: SHAPE,
+              value: shape,
+              id: node.id,
+            });
           },
 
           // Shapes defined: rect, circle, capsule
@@ -530,15 +569,17 @@
           },
 
           clickPin: (node, element) => {
-            console.log(node);
-            const foundIndex = me.textNodes.findIndex(x => x.id == node.id);
-            me.textNodes[foundIndex].fixed = node.fixed;
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: PIN,
+              id: node.id,
+            });
           },
 
           nodeRemove: (node) => {
             this.rootObservable.next({
               type: DELETENODE,
-              node: node
+              id: node.id,
             })
           },
 
@@ -591,23 +632,36 @@
         edgeEdit($mousedown);
 
         // Set the action of clicking the node:
-        this.graph.nodeOptions.setClickNode((node) => {
+        this.graph.nodeOptions.setClickNode((node, elem) => {
           // If the mouse is a pointer and a note is clicked on set edit mode.
           if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
+            const setCanUndo = bool => {
+              this.canKeyboardUndo = bool;
+            };
             this.currentNode = node;
-            // this.currentNode.shortname = prompt();
             $mousedown.next({
               type: 'EDITNODE',
               clickedNode: node,
-              restart: this.graph.restart.styles,
-              fullRestart: this.graph.restart.layout,
+              restart: this.graph.restart.layout,
               textNodes: this.textNodes,
-              deleteRadial: this.deleteRadial
+              deleteRadial: this.deleteRadial,
+              elem: elem.node().parentNode.querySelector("text"),
+              canUndo: setCanUndo,
+              callback: (newText) => {
+                this.rootObservable.next({
+                  type: NODEEDIT,
+                  prop: TEXT,
+                  value: newText,
+                  id: node.id,
+                });
+              },
             });
           }
         });
         // Initiate the text edit function
         textEdit($mousedown);
+
+        setTimeout(this.graph.restart.layout, 50); //TODO find permanent solution to nodes created wrong size upon loading
 
         if (callback !== undefined) callback();
       },
@@ -707,6 +761,7 @@
           case CLEARSCREEN: {
             this.mouseState = POINTER;
             this.clearScreen();
+            this.rootObservable.next({type: CLEARHISTORY});
             break;
           }
           case REMOVEARROWS: {
@@ -752,6 +807,12 @@
           default:
             break;
         }
+      },
+
+      updateCanvasSize() {
+        const wrapperElm = document.getElementById('xb-arg-map');
+        this.graph.canvasOptions.setWidth(wrapperElm.clientWidth);
+        this.graph.canvasOptions.setHeight(wrapperElm.clientHeight);
       },
     },
   };
@@ -850,6 +911,18 @@
 
   svg text::selection {
     background: none;
+  }
+
+  svg text.allowSelection {
+    -webkit-user-select: unset;
+    -moz-user-select: unset;
+    -ms-user-select: unset;
+    user-select: unset;
+  }
+
+  svg text.allowSelection::selection {
+    background-color: highlight;
+    color: highlighttext;
   }
 
   /*Ghazal Start*/

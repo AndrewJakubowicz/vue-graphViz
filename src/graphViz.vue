@@ -812,6 +812,10 @@
     cursor: hand;
   }
 
+  .menu-color .fa-paint-brush{
+    font-size: 19px !important;
+  }
+
   .icon-wrapper .custom-icon {
     background: rgba(182, 239, 239, 0.3);
     border-radius: 100%;

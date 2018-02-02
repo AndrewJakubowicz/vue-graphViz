@@ -179,7 +179,8 @@
               nodeShape: 'rect',
               text: action.newNode.text ? action.newNode.text : 'New',
               isSnip: false,
-              fixed: true
+              fixed: true,
+              color: '#ffffff'
             };
             const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
             if (indexOfNode === -1) this.textNodes.push(textNode);

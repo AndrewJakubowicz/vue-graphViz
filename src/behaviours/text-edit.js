@@ -18,37 +18,9 @@ export default ($action) => {
       let node = action.clickedNode;
       let deleteRadial = action.deleteRadial;
       let oldText = node.shortname;
-      let elem = action.elem;
       let callback = action.callback;
-
-      // block undo in graphviz usingkeyboard shortcut
-      action.canUndo(false);
-      // remove hover menu
-      deleteRadial();
-
-      elem.classList.add("allowSelection");
-
-      // select text if New else move caret to end
-      if (window.getSelection) {
-        let range = document.createRange();
-        range.selectNodeContents(elem);
-        if (elem.innerHTML !== "New") {
-          range.collapse(false);
-        }
-        let sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-      } else if (document.body.createTextRange) { // IE compatability
-        let textRange = document.body.createTextRange();
-        textRange.moveToElementText(elem);
-        if (elem.innerHTML !== "New") {
-          textRange.collapse(false);
-        }
-        textRange.select();
-      }
-
-      elem.focus(); // focus on text box
-      // elem.innerText = elem.innerHTML.replace(/<br>/g, "\n").replace(/&nbsp;/g, " "); // display HTML content of node //TODO-ya determine how interaction will work
+      text.clearText()
+      deleteRadial()
       restart();
 
       // correct behaviour on paste
@@ -105,21 +77,27 @@ export default ($action) => {
       // Return the typing observables merged together.
       let $typingControls = Rx.Observable.merge(
         $letters,
-      ).do(() => {
-        restart()
-      }).takeUntil($exit)
-        .finally(() => {
-          action.canUndo(true);
-          // elem.innerText = elem.innerText.trim().replace(/\n/g, "<br>");
-          // elem.innerText = elem.innerHTML;
-          if (!elem.innerText || elem.innerText === '' || elem.innerText.length === 0 ||
-            elem.innerText[0] === '' || elem.innerText === oldText) {
-            elem.innerText = oldText;
+        $newLine,
+        $interval
+      )
+        .do(_ => {
+          node.shortname = text.getWithCursor();
+          restart();
+        })
+        .takeUntil($mouseClick)
+        .takeUntil($exit)
+        .finally(_ => {
+          node.shortname = text.getText();
+          if (!node.shortname || node.shortname === '' ||
+            node.shortname.length === 0 || node.shortname[0] === '' || node.shortname === oldText) {
+            node.shortname = oldText;
             fullRestart();
           } else {
-            callback(elem.innerText)
+            callback(oldText, node.shortname)
           }
-        });
+
+        })
+
       return $typingControls
     }
   )

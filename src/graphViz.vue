@@ -369,10 +369,13 @@
                 switch (action.prop) {
 
                   case TEXT: {
-                    oldProp = node.shortname;
                     node.shortname = action.value;
                     this.textNodes[foundIndex].text = action.value;
                     this.graph.restart.layout();
+                    let old = action.oldText;
+                    action.oldText = action.value;
+                    action.value = old;
+
                     break;
                   }
 
@@ -645,13 +648,14 @@
               restart: this.graph.restart.layout,
               textNodes: this.textNodes,
               deleteRadial: this.deleteRadial,
-              elem: elem.node().parentNode.querySelector("text"),
-              canUndo: setCanUndo,
-              callback: (newText) => {
+              callback: (oldText, newText) => { //TODO temporary till HTML editor is working
+
                 this.rootObservable.next({
                   type: NODEEDIT,
                   prop: TEXT,
                   value: newText,
+                  oldText: oldText,
+
                   id: node.id,
                 });
               },

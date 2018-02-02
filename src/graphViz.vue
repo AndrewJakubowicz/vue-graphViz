@@ -369,10 +369,12 @@
                 switch (action.prop) {
 
                   case TEXT: {
-                    oldProp = node.shortname;
                     node.shortname = action.value;
                     this.textNodes[foundIndex].text = action.value;
                     this.graph.restart.layout();
+                    let old = action.oldText;
+                    action.oldText = action.value;
+                    action.value = old;
                     break;
                   }
 
@@ -632,26 +634,23 @@
         edgeEdit($mousedown);
 
         // Set the action of clicking the node:
-        this.graph.nodeOptions.setClickNode((node, elem) => {
+        this.graph.nodeOptions.setClickNode((node) => {
           // If the mouse is a pointer and a note is clicked on set edit mode.
           if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
-            const setCanUndo = bool => {
-              this.canKeyboardUndo = bool;
-            };
             this.currentNode = node;
             $mousedown.next({
               type: 'EDITNODE',
               clickedNode: node,
-              restart: this.graph.restart.layout,
+              restart: this.graph.restart.styles,
+              fullRestart: this.graph.restart.layout,
               textNodes: this.textNodes,
               deleteRadial: this.deleteRadial,
-              elem: elem.node().parentNode.querySelector("text"),
-              canUndo: setCanUndo,
-              callback: (newText) => {
+              callback: (oldText, newText) => { //TODO temporary till HTML editor is working
                 this.rootObservable.next({
                   type: NODEEDIT,
                   prop: TEXT,
                   value: newText,
+                  oldText: oldText,
                   id: node.id,
                 });
               },

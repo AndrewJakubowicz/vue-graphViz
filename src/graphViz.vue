@@ -361,6 +361,16 @@
                 break;
               }
 
+              case EDGEEDIT: { // unfinished don't judge the code
+                this.graph.editEdge(action);
+                let old = action.oldText;
+                action.oldText = action.value;
+                action.value = old;
+                undoStack.push(action);
+                break;
+              }
+
+
               case NODEEDIT: {
                 let oldProp;
                 const id = action.id;
@@ -627,7 +637,18 @@
               },
               update: newText => {
                 edge.predicate.text = newText;
-              }
+              },
+              callback: (oldText, newText) => {
+                this.rootObservable.next({
+                  type: EDGEEDIT,
+                  prop: TEXT,
+                  value: newText,
+                  oldText: oldText,
+                  hash: edge.predicate.hash,
+                  subjectHash: edge.source.hash,
+                  objectHash: edge.target.hash,
+                })
+              },
             });
           }
         });

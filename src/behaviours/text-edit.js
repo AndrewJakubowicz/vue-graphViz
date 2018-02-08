@@ -87,7 +87,7 @@ export default ($action) => {
       let textNodes = action.textNodes;
       let text = Text(node.shortname, node, restart);
       let deleteRadial = action.deleteRadial;
-      let oldText = node.shortname;
+      let oldText = text.getText();
       let callback = action.callback;
       text.clearText()
       deleteRadial()
@@ -155,7 +155,8 @@ export default ($action) => {
         .finally(_ => {
           node.shortname = text.getText();
           if (!node.shortname || node.shortname === '' ||
-            node.shortname.length === 0 || node.shortname[0] === '' || node.shortname === oldText) {
+            node.shortname.length === 0 || node.shortname[0] === '' ||
+            JSON.stringify(node.shortname) === JSON.stringify(oldText)) {
             node.shortname = oldText;
             fullRestart();
           } else {

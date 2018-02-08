@@ -444,7 +444,8 @@
         $('.menu-color').remove();
         $('.menu-shape').remove();
         $('.menu-action').remove();
-        $('.menu-trash').remove()
+        $('.menu-trash').remove();
+        $('.menu-hover-box').remove();
       },
 
       clearScreen() {

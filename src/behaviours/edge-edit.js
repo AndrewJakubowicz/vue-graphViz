@@ -89,7 +89,7 @@ export default ($action) => {
       let oldText = edge.predicate.text ? edge.predicate.text : "";
       let callback = action.callback;
       let update = () => {
-        action.update(text.getText());
+        action.save(text.getText());
         action.restart();
       };
       let save = () => {

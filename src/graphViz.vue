@@ -645,7 +645,8 @@
             $mousedown.next({
               type: 'EDITNODE',
               clickedNode: node,
-              restart: this.graph.restart.layout,
+              restart: this.graph.restart.styles,
+              fullRestart: this.graph.restart.layout,
               textNodes: this.textNodes,
               deleteRadial: this.deleteRadial,
               callback: (oldText, newText) => { //TODO temporary till HTML editor is working

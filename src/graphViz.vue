@@ -432,7 +432,7 @@
       },
 
       onPaste(e) {
-        if (this.clickedGraphViz) {
+        if (this.clickedGraphViz && !this.ifColorPickerOpen) {
           this.rootObservable.next({
             type: ADDNODE,
             newNode: {text: e.clipboardData.getData('text/plain')},
@@ -542,12 +542,22 @@
           },
 
           mouseOutRadial: (node) => {
-            this.dbClickCreateNode = true;
+            if (!this.ifColorPickerOpen){
+              this.dbClickCreateNode = true;
+            }
+          },
+
+          colorPickerOpen: (node) => {
+            this.ifColorPickerOpen = true;
+          },
+
+          colorPickerClose: (node) => {
+            this.ifColorPickerOpen = false;
           },
 
           mouseOverNode: (node, selection) => {
-            this.dbClickCreateNode = false;
-            this.clickedGraphViz= false;
+            me.dbClickCreateNode = false;
+            me.clickedGraphViz= false;
             if (currentState.currentNode.mouseOverNode) return;
             const tempNode = {...node, mouseOverNode: true};
             $mouseOverNode.next(tempNode);
@@ -567,8 +577,8 @@
           },
 
           mouseOutNode: (node, selection, e) => {
-            this.dbClickCreateNode = true;
-            this.clickedGraphViz = true;
+            me.dbClickCreateNode = true;
+            me.clickedGraphViz = true;
             const tempNode = {...node, mouseOverNode: false};
             $mouseOverNode.next(tempNode);
             currentState.currentNode.mouseOverNode = false;
@@ -733,7 +743,7 @@
       },
 
       dblClickOnPage(e) {
-        if (!this.dbClickCreateNode) return;
+        if (!this.dbClickCreateNode || this.ifColorPickerOpen) return;
         let coords = this.graph.transformCoordinates({x: e.clientX, y: e.clientY});
         this.rootObservable.next({
           type: ADDNODE,

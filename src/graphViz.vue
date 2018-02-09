@@ -547,6 +547,7 @@
 
           mouseOverNode: (node, selection) => {
             this.dbClickCreateNode = false;
+            this.clickedGraphViz= false;
             if (currentState.currentNode.mouseOverNode) return;
             const tempNode = {...node, mouseOverNode: true};
             $mouseOverNode.next(tempNode);
@@ -567,6 +568,7 @@
 
           mouseOutNode: (node, selection, e) => {
             this.dbClickCreateNode = true;
+            this.clickedGraphViz = true;
             const tempNode = {...node, mouseOverNode: false};
             $mouseOverNode.next(tempNode);
             currentState.currentNode.mouseOverNode = false;

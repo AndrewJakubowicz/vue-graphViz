@@ -474,7 +474,7 @@
       },
 
       onPaste(e) {
-        if (this.clickedGraphViz) {
+        if (this.clickedGraphViz && !this.ifColorPickerOpen) {
           this.rootObservable.next({
             type: ADDNODE,
             newNode: { text: e.clipboardData.getData('text/plain') },
@@ -487,6 +487,7 @@
         $('.menu-shape').remove();
         $('.menu-action').remove();
         $('.menu-trash').remove();
+        $('.menu-hover-box').remove();
       },
 
       clearScreen() {
@@ -583,11 +584,22 @@
           },
 
           mouseOutRadial: (node) => {
-            this.dbClickCreateNode = true;
+            if (!this.ifColorPickerOpen){
+              this.dbClickCreateNode = true;
+            }
+          },
+
+          colorPickerOpen: (node) => {
+            this.ifColorPickerOpen = true;
+          },
+
+          colorPickerClose: (node) => {
+            this.ifColorPickerOpen = false;
           },
 
           mouseOverNode: (node, selection) => {
-            this.dbClickCreateNode = false;
+            me.dbClickCreateNode = false;
+            me.clickedGraphViz= false;
             if (currentState.currentNode.mouseOverNode) return;
             const tempNode = { ...node, mouseOverNode: true };
             $mouseOverNode.next(tempNode);
@@ -607,7 +619,8 @@
           },
 
           mouseOutNode: (node, selection, e) => {
-            this.dbClickCreateNode = true;
+            me.dbClickCreateNode = true;
+            me.clickedGraphViz = true;
             const tempNode = { ...node, mouseOverNode: false };
             $mouseOverNode.next(tempNode);
             currentState.currentNode.mouseOverNode = false;
@@ -766,7 +779,7 @@
       },
 
       dblClickOnPage(e) {
-        if (!this.dbClickCreateNode) return;
+        if (!this.dbClickCreateNode || this.ifColorPickerOpen) return;
         const coords = this.transformCoordinates({ x: e.clientX, y: e.clientY });
         this.rootObservable.next({
           type: ADDNODE,
@@ -945,6 +958,10 @@
   .menu-shape, .menu-color, .menu-action, .menu-trash {
     cursor: pointer;
     cursor: hand;
+  }
+
+  .menu-color .fa-paint-brush{
+    font-size: 19px !important;
   }
 
   .icon-wrapper .custom-icon {

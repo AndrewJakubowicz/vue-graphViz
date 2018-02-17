@@ -86,6 +86,8 @@ export default ($action) => {
     .map(action => {
       let edge = action.edge;
       let text = Text(edge.predicate.text);
+      let oldText = edge.predicate.text ? edge.predicate.text : "";
+      let callback = action.callback;
       let update = () => {
         action.save(text.getText());
         action.restart();
@@ -159,10 +161,14 @@ export default ($action) => {
         .finally(() => {
           edge.predicate.text = text.getText();
           if (!edge.predicate.text || edge.predicate.text === '' ||
-            edge.predicate.text.length === 0 || edge.predicate.text[0] === '') {
-            edge.predicate.text = ''
+            edge.predicate.text.length === 0 || edge.predicate.text[0] === '' ||
+            JSON.stringify(edge.predicate.text) === JSON.stringify(oldText)) {
+            edge.predicate.text = oldText;
+            update();
+          } else {
+            callback(oldText, edge.predicate.text);
+            // save();
           }
-          save();
         });
       return $typingControls
     })

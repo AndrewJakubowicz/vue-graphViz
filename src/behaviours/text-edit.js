@@ -24,6 +24,7 @@ export default ($action, startCallback, endCallback) => {
       if (action.type === "EDITNODE") {
         oldText = action.clickedNode.shortname;
         defaultText = "New";
+        textElem.style.pointerEvents = "visiblePainted"; // allow mouse interaction with node text
       }
       if (action.type === "EDITEDGE") {
         defaultText = "";
@@ -71,7 +72,7 @@ export default ($action, startCallback, endCallback) => {
       // Exit on mouseclick
       let $mouseClick = Rx.Observable.concat(
         Rx.Observable.fromEvent(document, "click")
-          .filter(e => action.type === "EDITEDGE" && e.target !== textElem)
+          .filter(e => e.target !== textElem)
       );
       // Exit on focus lost
       let blur = Rx.Observable.fromEvent(textElem, "blur");
@@ -91,6 +92,9 @@ export default ($action, startCallback, endCallback) => {
         document.activeElement.blur();
         // remove text selection
         textElem.classList.remove("allowSelection");
+        if (action.type === "EDITNODE") {
+          textElem.style.pointerEvents = "none";
+        }
       });
 
 

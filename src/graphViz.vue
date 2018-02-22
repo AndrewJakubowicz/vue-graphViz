@@ -584,7 +584,7 @@
           },
 
           mouseOutRadial: (node) => {
-            if (!this.ifColorPickerOpen){
+            if (!this.ifColorPickerOpen) {
               this.dbClickCreateNode = true;
             }
           },
@@ -599,7 +599,7 @@
 
           mouseOverNode: (node, selection) => {
             me.dbClickCreateNode = false;
-            me.clickedGraphViz= false;
+            me.clickedGraphViz = false;
             if (currentState.currentNode.mouseOverNode) return;
             const tempNode = { ...node, mouseOverNode: true };
             $mouseOverNode.next(tempNode);
@@ -779,13 +779,12 @@
       },
 
       dblClickOnPage(e) {
-        if (!this.dbClickCreateNode || this.ifColorPickerOpen) return;
+        if (!this.dbClickCreateNode || this.ifColorPickerOpen || this.mouseState === TEXTEDIT) return;
         const coords = this.transformCoordinates({ x: e.clientX, y: e.clientY });
         this.rootObservable.next({
           type: ADDNODE,
           newNode: coords,
         });
-        // this.createNewNode(coords);
       },
 
       resetTools() {
@@ -885,10 +884,11 @@
 
       transformCoordinates({ x, y }) {
         const svg = this.graph.getSVGElement().node();
+        const transformGroup = svg.querySelector("g");
         const screenPoint = svg.createSVGPoint();
         screenPoint.x = x;
         screenPoint.y = y;
-        const CTM = svg.getScreenCTM();
+        const CTM = transformGroup.getScreenCTM();
         const point = screenPoint.matrixTransform(CTM.inverse());
         return {
           x: point.x,
@@ -960,7 +960,7 @@
     cursor: hand;
   }
 
-  .menu-color .fa-paint-brush{
+  .menu-color .fa-paint-brush {
     font-size: 19px !important;
   }
 

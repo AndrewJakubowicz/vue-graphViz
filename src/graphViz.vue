@@ -212,14 +212,6 @@
           this.graph.removeNode(nodeId, this.recalculateNodesOutside);
         };
 
-        const addEdge = (triplet) => {
-          if (Array.isArray(triplet)) {
-            triplet.forEach(t => this.graph.addTriplet(t));
-          } else {
-            this.graph.addTriplet(triplet);
-          }
-        };
-
         const delEdge = (triplet) => {
           if (Array.isArray(triplet)) {
             triplet.forEach(t => this.graph.removeTriplet(t));
@@ -228,7 +220,7 @@
           }
         };
 
-        let undoStack = []; // TODO stack size limit? use circular list?
+        let undoStack = [];
         let redoStack = [];
 
         $action
@@ -418,11 +410,25 @@
               }
 
               case CREATEEDGE: {
-                addEdge(action.tripletObject);
-                undoStack.push({
-                  type: DELEDGE,
-                  tripletObject: action.tripletObject,
-                });
+                const triplet = action.tripletObject;
+                if (Array.isArray(triplet)) { // TODO error handling for multiple edge creation
+                  triplet.forEach(t => this.graph.addTriplet(t));
+                  undoStack.push({
+                    type: DELEDGE,
+                    tripletObject: triplet,
+                  });
+                } else {
+                  const promise = this.graph.addTriplet(triplet);
+                  promise.then(() => {
+                    undoStack.push({
+                      type: DELEDGE,
+                      tripletObject: triplet,
+                    });
+                  })
+                    .catch((err) => {
+                      console.log(err);
+                    });
+                }
                 break;
               }
 
@@ -470,7 +476,11 @@
               }
             }
           })
-          .subscribe(action => console.log('action', action, undoStack, redoStack));
+          .subscribe(
+            action => console.log('action', action, undoStack, redoStack),
+            console.error,
+            () => console.log('FINISH'),
+          );
       },
 
       onPaste(e) {
@@ -931,7 +941,7 @@
     width: 22px;
   }
 
-  .icon-wrapper .pinned, .unpinned {
+  .icon-wrapper .pinned,  .icon-wrapper .unpinned {
     border-radius: 100%;
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
@@ -953,6 +963,8 @@
   .icon-wrapper .unpinned {
     background: rgba(182, 239, 239, 0.3);
     color: #9b9da0;
+    -webkit-text-stroke: 1px #9b9da0;
+    -webkit-text-fill-color: rgba(182, 239, 239, 0.3);
   }
 
   .menu-shape, .menu-color, .menu-action, .menu-trash {

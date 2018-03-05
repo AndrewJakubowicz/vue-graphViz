@@ -237,12 +237,11 @@
                 if (undoStack.length > 0) {
                   const saveRedo = redoStack;
                   const nextAction = undoStack.pop();
-                  if (nextAction.type === DELETENODE) {
+                  if (nextAction.type === DELETENODE || nextAction.type === CREATEEDGE) {
                     nextAction.callback = () => {
                       redoStack = saveRedo;
                       redoStack.push(undoStack.pop());
                     };
-
                     this.rootObservable.next(nextAction);
                   } else {
                     this.rootObservable.next(nextAction);
@@ -399,7 +398,6 @@
                     console.log('Unknown property:', action.prop);
                   }
                 }
-                console.log(oldValues);
                 undoStack.push({
                   type: action.type,
                   prop: action.prop,
@@ -417,6 +415,9 @@
                     type: DELEDGE,
                     tripletObject: triplet,
                   });
+                  if (action.callback) {
+                    action.callback();
+                  }
                 } else {
                   const promise = this.graph.addTriplet(triplet);
                   promise.then(() => {
@@ -424,6 +425,9 @@
                       type: DELEDGE,
                       tripletObject: triplet,
                     });
+                    if (action.callback) {
+                      action.callback();
+                    }
                   })
                     .catch((err) => {
                       console.log(err);
@@ -894,7 +898,7 @@
 
       transformCoordinates({ x, y }) {
         const svg = this.graph.getSVGElement().node();
-        const transformGroup = svg.querySelector("g");
+        const transformGroup = svg.querySelector('g');
         const screenPoint = svg.createSVGPoint();
         screenPoint.x = x;
         screenPoint.y = y;
@@ -941,7 +945,7 @@
     width: 22px;
   }
 
-  .icon-wrapper .pinned,  .icon-wrapper .unpinned {
+  .icon-wrapper .pinned, .icon-wrapper .unpinned {
     border-radius: 100%;
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);

@@ -704,7 +704,7 @@
               edge: edge,
               restart: this.graph.restart.layout,
               textElem: elem.node().querySelector('text'),
-              clickElem: elem,
+              clickedElem: elem,
               save: (newText) => {
                 this.rootObservable.next({
                   type: EDGEEDIT,
@@ -727,7 +727,7 @@
               clickedNode: node,
               restart: this.graph.restart.layout,
               textElem: elem.node().parentNode.querySelector('text'),
-              clickElem: elem,
+              clickedElem: elem,
               save: (newText) => {
                 this.rootObservable.next({
                   type: NODEEDIT,
@@ -920,6 +920,15 @@
 </script>
 
 <style>
+  .medium-editor-element {
+    min-height: inherit;
+  }
+
+  text p {
+    display: inherit;
+    -webkit-margin-after: 0;
+    -webkit-margin-before: 0;
+  }
 
   tooltip {
     /*position: absolute;*/
@@ -1028,7 +1037,7 @@
     padding-left: 1px;
   }
 
-  svg text.allowSelection::selection {
+  svg text.allowSelection::selection, svg text.allowSelection *::selection, svg text.allowSelection p::selection {
     background-color: highlight;
     color: highlighttext;
   }

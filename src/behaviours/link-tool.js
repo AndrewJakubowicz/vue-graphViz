@@ -21,11 +21,11 @@ const makeAbsoluteContext = (element, documentNode) => {
   };
 };
 
-module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
+module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finishDrag) {
   return (nodesList) => {
     let tempDrawingArrow = {
-      start: {x: 0, y: 0},
-      end: {x: 0, y: 0}
+      start: { x: 0, y: 0 },
+      end: { x: 0, y: 0 }
     };
     let currentState = {};
 
@@ -82,7 +82,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
 
         _pt = _pt.matrixTransform(svg.getScreenCTM().inverse());
 
-        tempDrawingArrow.start = {x: _pt.x, y: _pt.y};
+        tempDrawingArrow.start = { x: _pt.x, y: _pt.y };
 
         // Reference: http://stackoverflow.com/a/10298843/6421793
         return mousemove.map(function (mm) {
@@ -96,40 +96,47 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
           }
 
 
-          return cursorPoint(mm)
+          return cursorPoint(mm);
         }).takeUntil(mouseUpOnNodeObservable)
           .finally(() => {
             // This is called when the sequence "completes".
             // Here we make the arrow disappear by moving it to the corner.
             // We also add the triplet.
 
-            tempDrawingArrow.end = {x: 0, y: 0};
-            tempDrawingArrow.start = {x: 0, y: 0};
+            tempDrawingArrow.end = { x: 0, y: 0 };
+            tempDrawingArrow.start = { x: 0, y: 0 };
             updateLine();
 
             // Create the triplet
-            if (currentState.currentNode.mouseOverNode && currentState.startedDragAt !== currentState.currentNode.hash) {
-              let subjectTemp = nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0];
+            if (currentState.currentNode.mouseOverNode && currentState.startedDragAt
+              !== currentState.currentNode.hash) {
+              saveEdge({
+                subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
+                predicate: {
+                  type: "arrow",
+                  text: '',
+                  hash: uuid.v4(),
+                  subject: currentState.startedDragAt,
+                  object: currentState.currentNode.hash
+                },
+                object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0]),
+              });
             }
-            finishDrag({
-              subject: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.startedDragAt)[0]),
-              predicate: {type: "arrow", hash: uuid.v4()},
-              object: toNode(nodesList.filter(d => `${d.id || d.hash}` === currentState.currentNode.hash)[0])
-            });
+            finishDrag();
           });
       });
 
     var sub = mousedrag.subscribe(function (d) {
-        tempDrawingArrow.end = {x: d.x, y: d.y};
+        tempDrawingArrow.end = { x: d.x, y: d.y };
         updateLine();
       },
       function (error) {
-        console.log("ERROR", error)
+        console.log("ERROR", error);
       },
       function () {
         // FINISHED CODE
-        tempDrawingArrow.end = {x: 0, y: 0};
-        tempDrawingArrow.start = {x: 0, y: 0};
+        tempDrawingArrow.end = { x: 0, y: 0 };
+        tempDrawingArrow.start = { x: 0, y: 0 };
 
         updateLine();
       });
@@ -143,6 +150,6 @@ module.exports = function (graph, mousedown, $lastNode, toNode, finishDrag) {
     return () => {
       sub.unsubscribe();
       currentNodeSub.unsubscribe();
-    }
-  }
+    };
+  };
 };

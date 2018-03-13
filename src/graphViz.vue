@@ -51,7 +51,7 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'clickedGraphViz'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
     name: 'graph-viz',
     components: { nodeList, toolBar },
     data() {
@@ -71,7 +71,17 @@
     mounted() {
       this.actions(this.rootObservable);
       this.graphClicked = true;
-      document.addEventListener('paste', this.onPaste);
+
+      const $paste = Rx.Observable.fromEvent(document, 'paste')
+        .filter(() => this.clickedGraphViz)
+        .filter(() => !this.ifColorPickerOpen)
+        .filter(() => this.mouseState === POINTER)
+        .subscribe((e) => {
+          this.rootObservable.next({
+            type: ADDNODE,
+            newNode: { text: e.clipboardData.getData('text/plain') },
+          });
+        });
 
       const ctrlDown = Rx.Observable.fromEvent(document, 'keydown')
         .filter(e => e.ctrlKey);
@@ -487,15 +497,6 @@
           );
       },
 
-      onPaste(e) {
-        if (this.clickedGraphViz && !this.ifColorPickerOpen) {
-          this.rootObservable.next({
-            type: ADDNODE,
-            newNode: { text: e.clipboardData.getData('text/plain') },
-          });
-        }
-      },
-
       deleteRadial() {
         $('.menu-color').remove();
         $('.menu-shape').remove();
@@ -748,6 +749,14 @@
           this.canKeyboardUndo = true;
           this.mouseState = POINTER;
         });
+
+        // set clickedgraphviz to true first time user clicks
+        const svgElem = this.graph.getSVGElement().node();
+        Rx.Observable.fromEvent(svgElem, 'click')
+          .take(1)
+          .subscribe(() => {
+            this.clickedGraphViz = true;
+          });
 
         // TODO find permanent solution to nodes created wrong size upon loading
         setTimeout(this.graph.restart.layout, 50);

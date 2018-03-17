@@ -4,200 +4,154 @@
  * Deals with the text edit capability of the note nodes.
  */
 const Rx = require('rxjs');
-
-// Modal of the text
-function Text(startingText, node, restart) {
-  let text = [],
-    cursor = true;
-  if (!Array.isArray(startingText)) {
-    text.push(startingText);
-  } else {
-    // Make a copy of the array
-    text = JSON.parse(JSON.stringify(startingText));
-  }
-  return {
-    addLetter: (char) => {
-      let lastLine = text.slice(-1);
-      lastLine += char;
-      text[text.length - 1] = lastLine;
-    },
-    newLine: () => {
-      if (text[text.length - 1] === "") {
-        return;
-      }
-      text.push("");
-    },
-    deleteText: () => {
-      /**
-       * Delete a single character of text.
-       * Delete a line if it is empty.
-       */
-      if (text.length > 1) {
-        if (text[text.length - 1] === '') {
-          text = text.slice(0, -1)
-          return;
-        } else {
-          text[text.length - 1] = text[text.length - 1].slice(0, -1)
-          return;
-        }
-      } else {
-        if (text[0] === "") {
-          return;
-        }
-        text[0] = text[0].slice(0, -1);
-      }
-    },
-
-    clearText: () => {
-      if (text[0] === "New") {
-        text[0] = '';
-      }
-    },
-
-    toggleCursor: () => {
-      cursor = !cursor;
-    },
-    getWithCursor: () => {
-      let t = JSON.parse(JSON.stringify(text));
-      if (cursor) {
-        return t;
-      } else {
-        t[t.length - 1] += '|';
-        return t
-      }
-    },
-    getText: () => {
-      return JSON.parse(JSON.stringify(text));
-    }
-  }
-}
+const MediumEditor = require('medium-editor');
+require('medium-editor/dist/css/medium-editor.css');
+require('medium-editor/dist/css/themes/beagle.css');
 
 /**
  * Takes an action observable.
  */
-export default ($action) => {
+export default ($action, startCallback, endCallback) => {
   $action
-    .filter(action => {
-      return action.type === 'EDITNODE';
-    })
-    .map(action => {
-      let restart = action.restart;
-      let fullRestart = action.fullRestart;
-      let node = action.clickedNode;
-      let textNodes = action.textNodes;
-      let text = Text(node.shortname, node, restart);
-      let deleteRadial = action.deleteRadial;
-      let oldText = node.shortname;
-      let callback = action.callback;
-      text.clearText()
-      deleteRadial()
+    .filter(action => (action.type === 'EDITNODE' || action.type === 'EDITEDGE'))
+    .map((action) => {
+      startCallback && startCallback();
+      const fullRestart = action.restart;
+      const restart = () => action.restart('NOUPDATE');
+      const save = action.save;
+      const textElem = action.textElem;
+      const clickedElem = action.clickedElem;
+      let oldText;
+      let defaultText;
+      if (action.type === 'EDITNODE') {
+        oldText = action.clickedNode.shortname;
+        defaultText = 'New';
+        textElem.style.pointerEvents = 'visiblePainted'; // allow mouse interaction with node text
+      }
+      if (action.type === 'EDITEDGE') {
+        defaultText = '';
+        oldText = action.edge.predicate.text ? action.edge.predicate.text : defaultText;
+      }
+
+      // allow selection of text
+      textElem.classList.add('allowSelection');
+
+      // start rich text editor
+      const mediumEditorConfig = {
+        buttonLabels: 'fontawesome',
+        disableDoubleReturn: true,
+        toolbar: {
+          buttons: ['bold', 'italic', 'underline'],
+          diffTop: 0,
+        },
+        paste: {
+          forcePlainText: false,
+          cleanPastedHTML: false,
+        },
+        placeholder: false,
+      };
+      const editor = new MediumEditor(textElem, mediumEditorConfig);
+
+      // select text if New else move caret to end
+      if (window.getSelection) {
+        const range = document.createRange();
+        range.selectNodeContents(textElem);
+        if (textElem.innerHTML !== defaultText) {
+          range.collapse(false);
+        }
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else if (document.body.createTextRange) { // IE compatability
+        const textRange = document.body.createTextRange();
+        textRange.moveToElementText(textElem);
+        if (textElem.innerHTML !== defaultText) {
+          textRange.collapse(false);
+        }
+        textRange.select();
+      }
+
+      textElem.focus(); // focus on text box
       restart();
-      // Exit on "esc" keypress
-      let $exit = Rx.Observable.concat(
-        Rx.Observable.fromEvent(document, "keyup")
-          .filter(e => e.keyCode == 27)
+
+      // Input handling
+      const $input = Rx.Observable.fromEventPattern(
+        handler => editor.subscribe('editableInput', handler),
+        handler => editor.unsubscribe('editableInput', handler),
       );
-
-      let $mouseClick = Rx.Observable.concat(
-        Rx.Observable.fromEvent(document, "click")
-      );
-
-      // Backspace
-      let $backspace = Rx.Observable.fromEvent(document, "keydown")
-        .filter(e => e.keyCode === 8 && e.keyCode !== 13)
-        .do(_ => text.deleteText())
-        .do(fullRestart);
-
-      // Letters
-      let $letters = Rx.Observable.fromEvent(document, "keypress")
-        .filter(e => e.keyCode !== 8 && e.keyCode !== 13)
+      // correct behaviour on paste
+      const $paste = Rx.Observable.fromEvent(textElem, 'paste')
         .do((e) => {
-          if ((e.keyCode || e.which) === 32) {
-            e.preventDefault();
-          }
-          let event = e || window.event;
-          let char = String.fromCharCode(e.keyCode || e.which)
-          text.addLetter(char);
-        })
-        .do(fullRestart);
+          e.preventDefault();
+          const HTMLText = e.clipboardData.getData('text/html').replace(/[\n\r]+/g, '\n');
+          const plaintext = e.clipboardData.getData('text/plain');
+          editor.cleanPaste(HTMLText || plaintext);
+        });
 
-      let $newLine = Rx.Observable.fromEvent(document, "keypress")
-        .filter(e => e.keyCode === 13)
-        .do(e => {
-          // Prevent stacking newlines. (Not supported)
-          if (node.shortname.slice(-1) === "") {
-            return;
-          }
-          text.newLine();
-        })
-        .do(fullRestart)
+      // Exit Handling
+      // On "esc" keypress cancel changes
+      const $esc = Rx.Observable.concat(
+        Rx.Observable.fromEvent(document, 'keyup')
+          .filter(e => e.keyCode === 27)
+          .do(() => {
+            textElem.innerHTML = oldText;
+          }));
+      // On mouseclick
+      const $mouseClick = Rx.Observable.concat(
+        Rx.Observable.fromEvent(document, 'click')
+          .filter(e => e.target !== textElem)
+          .map(e => ({ e, descendants: Array.from(textElem.querySelectorAll('*')) }))
+          .filter(({ e, descendants }) => !descendants.includes(e.target)));
+      // Exit on focus lost
+      const $editorBlur = Rx.Observable.fromEventPattern(
+        handler => editor.subscribe('blur', handler),
+        handler => editor.unsubscribe('blur', handler),
+      );
+      const $windowBlur = Rx.Observable.fromEvent(window, 'blur');
+      // on exit
+      const $exit = Rx.Observable.merge(
+        $esc,
+        $mouseClick,
+        $windowBlur,
+        $editorBlur,
+      ).do(() => {
+        // remove selection
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        } else if (document.selection) {
+          document.selection.empty();
+        }
+        // remove focus
+        document.activeElement.blur();
+        // remove text selection
+        textElem.classList.remove('allowSelection');
+        if (action.type === 'EDITNODE') {
+          textElem.style.pointerEvents = 'none';
+        }
+      });
 
-      let $interval = Rx.Observable
-        .interval(500 /* ms */)
-        .timeInterval()
-        .do(_ => {
-          text.toggleCursor();
-        })
-
-      // Return the typing observables merged together.
-      let $typingControls = Rx.Observable.merge(
-        $backspace,
-        $letters,
-        $newLine,
-        $interval
-      )
-        .do(_ => {
-          node.shortname = text.getWithCursor();
-          restart();
-        })
-        .takeUntil($mouseClick)
+      // Return the typing observable.
+      const $typingControls = Rx.Observable
+        .merge($paste, $input)
+        .do(restart)
         .takeUntil($exit)
-        .finally(_ => {
-          node.shortname = text.getText();
-          if (!node.shortname || node.shortname === '' ||
-            node.shortname.length === 0 || node.shortname[0] === '' || node.shortname === oldText) {
-            node.shortname = oldText;
+        .finally(() => {
+          editor.destroy();
+          if (!textElem.innerHTML || textElem.innerHTML === '' ||
+            textElem.innerHTML.length === 0 || textElem.innerHTML === oldText) {
+            textElem.innerHTML = oldText;
             fullRestart();
           } else {
-            callback(oldText, node.shortname)
+            save && save(textElem.innerHTML);
           }
-
-        })
-
-      return $typingControls
+          endCallback && endCallback();
+        });
+      return $typingControls;
     })
     .switch()
     .subscribe(
-      console.log,
+      () => undefined,
       console.error,
-      () => console.log("FINISH")
-    )
-}
-
-
-function deleteText(nodeText) {
-  /**
-   * Delete a single character of text.
-   * Delete a line if it is empty.
-   */
-  if (nodeText.length > 1) {
-    if (nodeText[nodeText.length - 1] === '') {
-      node.shortname = nodeText.slice(0, -1)
-      return;
-    } else {
-      nodeText[nodeText.length - 1] = nodeText[nodeText.length - 1].slice(0, -1)
-      return;
-    }
-  } else {
-    if (nodeText[0] === "") {
-      return
-    }
-    nodeText[0] = nodeText[0].slice(0, -1)
-  }
-}
-
-function addLetter(text, character) {
-  let lastLine = text.slice(-1);
-  lastLine += character;
-  text[text.length - 1] = lastLine;
-}
+      () => console.log('FINISH'),
+    );
+};

@@ -48,6 +48,7 @@
   const SHAPE = 'SHAPE';
   const COLOR = 'COLOR';
   const TEXT = 'TEXT';
+  const WIDTH = 'WIDTH';
 
 
   export default {
@@ -197,6 +198,7 @@
               isSnip: false,
               fixed: true,
               color: '#ffffff',
+              fixedWidth: false,
             };
             const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
             if (indexOfNode === -1) this.textNodes.push(textNode);
@@ -214,7 +216,10 @@
           if (action.existingNode) {
             this.graph.addNode(this.toNode(action.existingNode));
             this.recalculateNodesOutside();
+            // TODO fixed width nodes on addition size incorrectly. 2nd restart required
+            this.graph.restart.layout();
             return action.existingNode;
+
           }
         };
 
@@ -378,6 +383,16 @@
                     textNodesEditHelper('fixed');
                     this.graph.editNode({
                       property: 'fixed',
+                      id: idArray,
+                      value: values,
+                    });
+                    break;
+                  }
+
+                  case WIDTH: {
+                    textNodesEditHelper('fixedWidth');
+                    this.graph.editNode({
+                      property: 'fixedWidth',
                       id: idArray,
                       value: values,
                     });
@@ -673,7 +688,35 @@
             });
           },
 
-          canDrag: () => this.$data.mouseState === POINTER,
+          resizeDrag: (d, mouseDown) => {
+            console.log(mouseDown);
+            this.isResizing = true;
+            const initialX = mouseDown.clientX;
+            const svgInitialX = this.transformCoordinates({ x: initialX, y: mouseDown.clientY }).x;
+            const initWidth = d.width;
+            Rx.Observable.fromEvent(document, 'mousemove')
+              .do(e => e.stopPropagation())
+              .map(e => this.transformCoordinates({ x: e.clientX, y: mouseDown.clientY }).x)
+              .map(moveX => moveX - svgInitialX)
+              .map(dx => initWidth + (dx * 2))
+              .filter(width => width > 42)
+              .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
+              .finally(() => {
+                this.isResizing = false;
+                this.rootObservable.next({
+                  type: NODEEDIT,
+                  prop: WIDTH,
+                  id: d.id,
+                  value: d.fixedWidth,
+                });
+              })
+              .subscribe((x) => {
+                d.fixedWidth = x;
+                this.graph.restart.layout();
+              });
+          },
+
+          canDrag: () => this.$data.mouseState === POINTER && !this.isResizing,
         });
 
 
@@ -929,14 +972,17 @@
 </script>
 
 <style>
-  .medium-editor-element {
-    min-height: inherit;
+  .medium-editor-toolbar li button {
+    font-size: 16px !important;
   }
 
-  text p {
-    display: inherit;
-    -webkit-margin-after: 0;
-    -webkit-margin-before: 0;
+  .medium-editor-button-active {
+    background-color: #000 !important;
+    color: #56e8e8 !important;
+  }
+
+  .medium-editor-element {
+    min-height: inherit;
   }
 
   tooltip {
@@ -1027,11 +1073,20 @@
   }
 
   /*This prevents the dirty highlighting of the svg text*/
-  svg text {
+  svg text, svg text * {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+  }
+
+  svg text, svg text * {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 22px;
+    display: inherit;
+    -webkit-margin-after: 0;
+    -webkit-margin-before: 0;
+    word-break: break-word;
   }
 
   svg text::selection {

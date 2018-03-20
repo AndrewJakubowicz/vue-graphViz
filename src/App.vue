@@ -96,7 +96,8 @@
   }
 
   text {
-    font-family: "Source Sans Pro", 'sans-serif' !important;
+    font-family: "Source Sans Pro", sans-serif !important;
+    font-weight: 100 !important;
   }
 
   .b-arg-map .graph-unorderedList li {

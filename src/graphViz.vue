@@ -219,7 +219,6 @@
             // TODO fixed width nodes on addition size incorrectly. 2nd restart required
             this.graph.restart.layout();
             return action.existingNode;
-
           }
         };
 
@@ -842,6 +841,8 @@
 
       addNode(nodeId) {
         this.addNodeHelper(nodeId);
+        // TODO fixed width nodes on addition size incorrectly. 2nd restart required.
+        this.graph.restart.layout();
       },
 
       dblClickOnPage(e) {
@@ -1081,12 +1082,10 @@
   }
 
   svg text, svg text * {
-    font-family: "Source Sans Pro", sans-serif;
     font-size: 22px;
     display: inherit;
     -webkit-margin-after: 0;
     -webkit-margin-before: 0;
-    word-break: break-word;
   }
 
   svg text::selection {

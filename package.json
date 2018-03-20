@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "d3": "4.9.1",
-    "networkvizjs": "git+https://github.com/theya222/networkVizJS.git#e2f7cc30e26cc69d3377e9594d9c41fbe6f7e9eb",
+    "medium-editor": "^5.23.3",
+    "networkvizjs": "git+https://github.com/SpyR1014/networkVizJS.git#79f4a8e3f09bbbd197c8fc19a907008fbbd803d3",
     "rxjs": "5.4.1",
     "vue": "^2.3.3"
   },

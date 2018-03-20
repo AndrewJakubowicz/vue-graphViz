@@ -48,10 +48,11 @@
   const SHAPE = 'SHAPE';
   const COLOR = 'COLOR';
   const TEXT = 'TEXT';
+  const WIDTH = 'WIDTH';
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'clickedGraphViz'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
     name: 'graph-viz',
     components: { nodeList, toolBar },
     data() {
@@ -71,7 +72,17 @@
     mounted() {
       this.actions(this.rootObservable);
       this.graphClicked = true;
-      document.addEventListener('paste', this.onPaste);
+
+      const $paste = Rx.Observable.fromEvent(document, 'paste')
+        .filter(() => this.clickedGraphViz)
+        .filter(() => !this.ifColorPickerOpen)
+        .filter(() => this.mouseState === POINTER)
+        .subscribe((e) => {
+          this.rootObservable.next({
+            type: ADDNODE,
+            newNode: { text: e.clipboardData.getData('text/plain') },
+          });
+        });
 
       const ctrlDown = Rx.Observable.fromEvent(document, 'keydown')
         .filter(e => e.ctrlKey);
@@ -187,6 +198,7 @@
               isSnip: false,
               fixed: true,
               color: '#ffffff',
+              fixedWidth: false,
             };
             const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
             if (indexOfNode === -1) this.textNodes.push(textNode);
@@ -204,20 +216,14 @@
           if (action.existingNode) {
             this.graph.addNode(this.toNode(action.existingNode));
             this.recalculateNodesOutside();
+            // TODO fixed width nodes on addition size incorrectly. 2nd restart required
+            this.graph.restart.layout();
             return action.existingNode;
           }
         };
 
         const delNode = (nodeId) => {
           this.graph.removeNode(nodeId, this.recalculateNodesOutside);
-        };
-
-        const addEdge = (triplet) => {
-          if (Array.isArray(triplet)) {
-            triplet.forEach(t => this.graph.addTriplet(t));
-          } else {
-            this.graph.addTriplet(triplet);
-          }
         };
 
         const delEdge = (triplet) => {
@@ -228,7 +234,7 @@
           }
         };
 
-        let undoStack = []; // TODO stack size limit? use circular list?
+        let undoStack = [];
         let redoStack = [];
 
         $action
@@ -245,12 +251,11 @@
                 if (undoStack.length > 0) {
                   const saveRedo = redoStack;
                   const nextAction = undoStack.pop();
-                  if (nextAction.type === DELETENODE) {
+                  if (nextAction.type === DELETENODE || nextAction.type === CREATEEDGE) {
                     nextAction.callback = () => {
                       redoStack = saveRedo;
                       redoStack.push(undoStack.pop());
                     };
-
                     this.rootObservable.next(nextAction);
                   } else {
                     this.rootObservable.next(nextAction);
@@ -383,6 +388,16 @@
                     break;
                   }
 
+                  case WIDTH: {
+                    textNodesEditHelper('fixedWidth');
+                    this.graph.editNode({
+                      property: 'fixedWidth',
+                      id: idArray,
+                      value: values,
+                    });
+                    break;
+                  }
+
                   case COLOR: {
                     textNodesEditHelper('color');
                     this.graph.editNode({
@@ -407,7 +422,6 @@
                     console.log('Unknown property:', action.prop);
                   }
                 }
-                console.log(oldValues);
                 undoStack.push({
                   type: action.type,
                   prop: action.prop,
@@ -418,11 +432,31 @@
               }
 
               case CREATEEDGE: {
-                addEdge(action.tripletObject);
-                undoStack.push({
-                  type: DELEDGE,
-                  tripletObject: action.tripletObject,
-                });
+                const triplet = action.tripletObject;
+                if (Array.isArray(triplet)) { // TODO error handling for multiple edge creation
+                  triplet.forEach(t => this.graph.addTriplet(t));
+                  undoStack.push({
+                    type: DELEDGE,
+                    tripletObject: triplet,
+                  });
+                  if (action.callback) {
+                    action.callback();
+                  }
+                } else {
+                  const promise = this.graph.addTriplet(triplet);
+                  promise.then(() => {
+                    undoStack.push({
+                      type: DELEDGE,
+                      tripletObject: triplet,
+                    });
+                    if (action.callback) {
+                      action.callback();
+                    }
+                  })
+                    .catch((err) => {
+                      console.log(err);
+                    });
+                }
                 break;
               }
 
@@ -470,16 +504,11 @@
               }
             }
           })
-          .subscribe(action => console.log('action', action, undoStack, redoStack));
-      },
-
-      onPaste(e) {
-        if (this.clickedGraphViz && !this.ifColorPickerOpen) {
-          this.rootObservable.next({
-            type: ADDNODE,
-            newNode: { text: e.clipboardData.getData('text/plain') },
-          });
-        }
+          .subscribe(
+            action => console.log('action', action, undoStack, redoStack),
+            console.error,
+            () => console.log('FINISH'),
+          );
       },
 
       deleteRadial() {
@@ -584,7 +613,7 @@
           },
 
           mouseOutRadial: (node) => {
-            if (!this.ifColorPickerOpen){
+            if (!this.ifColorPickerOpen) {
               this.dbClickCreateNode = true;
             }
           },
@@ -599,7 +628,7 @@
 
           mouseOverNode: (node, selection) => {
             me.dbClickCreateNode = false;
-            me.clickedGraphViz= false;
+            me.clickedGraphViz = false;
             if (currentState.currentNode.mouseOverNode) return;
             const tempNode = { ...node, mouseOverNode: true };
             $mouseOverNode.next(tempNode);
@@ -658,7 +687,35 @@
             });
           },
 
-          canDrag: () => this.$data.mouseState === POINTER,
+          resizeDrag: (d, mouseDown) => {
+            console.log(mouseDown);
+            this.isResizing = true;
+            const initialX = mouseDown.clientX;
+            const svgInitialX = this.transformCoordinates({ x: initialX, y: mouseDown.clientY }).x;
+            const initWidth = d.width;
+            Rx.Observable.fromEvent(document, 'mousemove')
+              .do(e => e.stopPropagation())
+              .map(e => this.transformCoordinates({ x: e.clientX, y: mouseDown.clientY }).x)
+              .map(moveX => moveX - svgInitialX)
+              .map(dx => initWidth + (dx * 2))
+              .filter(width => width > 42)
+              .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
+              .finally(() => {
+                this.isResizing = false;
+                this.rootObservable.next({
+                  type: NODEEDIT,
+                  prop: WIDTH,
+                  id: d.id,
+                  value: d.fixedWidth,
+                });
+              })
+              .subscribe((x) => {
+                d.fixedWidth = x;
+                this.graph.restart.layout();
+              });
+          },
+
+          canDrag: () => this.$data.mouseState === POINTER && !this.isResizing,
         });
 
 
@@ -690,7 +747,7 @@
               edge: edge,
               restart: this.graph.restart.layout,
               textElem: elem.node().querySelector('text'),
-              clickElem: elem,
+              clickedElem: elem,
               save: (newText) => {
                 this.rootObservable.next({
                   type: EDGEEDIT,
@@ -713,7 +770,7 @@
               clickedNode: node,
               restart: this.graph.restart.layout,
               textElem: elem.node().parentNode.querySelector('text'),
-              clickElem: elem,
+              clickedElem: elem,
               save: (newText) => {
                 this.rootObservable.next({
                   type: NODEEDIT,
@@ -734,6 +791,14 @@
           this.canKeyboardUndo = true;
           this.mouseState = POINTER;
         });
+
+        // set clickedgraphviz to true first time user clicks
+        const svgElem = this.graph.getSVGElement().node();
+        Rx.Observable.fromEvent(svgElem, 'click')
+          .take(1)
+          .subscribe(() => {
+            this.clickedGraphViz = true;
+          });
 
         // TODO find permanent solution to nodes created wrong size upon loading
         setTimeout(this.graph.restart.layout, 50);
@@ -776,16 +841,17 @@
 
       addNode(nodeId) {
         this.addNodeHelper(nodeId);
+        // TODO fixed width nodes on addition size incorrectly. 2nd restart required.
+        this.graph.restart.layout();
       },
 
       dblClickOnPage(e) {
-        if (!this.dbClickCreateNode || this.ifColorPickerOpen) return;
+        if (!this.dbClickCreateNode || this.ifColorPickerOpen || this.mouseState === TEXTEDIT) return;
         const coords = this.transformCoordinates({ x: e.clientX, y: e.clientY });
         this.rootObservable.next({
           type: ADDNODE,
           newNode: coords,
         });
-        // this.createNewNode(coords);
       },
 
       resetTools() {
@@ -885,10 +951,11 @@
 
       transformCoordinates({ x, y }) {
         const svg = this.graph.getSVGElement().node();
+        const transformGroup = svg.querySelector('g');
         const screenPoint = svg.createSVGPoint();
         screenPoint.x = x;
         screenPoint.y = y;
-        const CTM = svg.getScreenCTM();
+        const CTM = transformGroup.getScreenCTM();
         const point = screenPoint.matrixTransform(CTM.inverse());
         return {
           x: point.x,
@@ -906,6 +973,18 @@
 </script>
 
 <style>
+  .medium-editor-toolbar li button {
+    font-size: 16px !important;
+  }
+
+  .medium-editor-button-active {
+    background-color: #000 !important;
+    color: #56e8e8 !important;
+  }
+
+  .medium-editor-element {
+    min-height: inherit;
+  }
 
   tooltip {
     /*position: absolute;*/
@@ -931,7 +1010,7 @@
     width: 22px;
   }
 
-  .icon-wrapper .pinned, .unpinned {
+  .icon-wrapper .pinned, .icon-wrapper .unpinned {
     border-radius: 100%;
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
@@ -953,6 +1032,8 @@
   .icon-wrapper .unpinned {
     background: rgba(182, 239, 239, 0.3);
     color: #9b9da0;
+    -webkit-text-stroke: 1px #9b9da0;
+    -webkit-text-fill-color: rgba(182, 239, 239, 0.3);
   }
 
   .menu-shape, .menu-color, .menu-action, .menu-trash {
@@ -960,7 +1041,7 @@
     cursor: hand;
   }
 
-  .menu-color .fa-paint-brush{
+  .menu-color .fa-paint-brush {
     font-size: 19px !important;
   }
 
@@ -993,11 +1074,18 @@
   }
 
   /*This prevents the dirty highlighting of the svg text*/
-  svg text {
+  svg text, svg text * {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+  }
+
+  svg text, svg text * {
+    font-size: 22px;
+    display: inherit;
+    -webkit-margin-after: 0;
+    -webkit-margin-before: 0;
   }
 
   svg text::selection {
@@ -1012,7 +1100,7 @@
     padding-left: 1px;
   }
 
-  svg text.allowSelection::selection {
+  svg text.allowSelection::selection, svg text.allowSelection *::selection, svg text.allowSelection p::selection {
     background-color: highlight;
     color: highlighttext;
   }

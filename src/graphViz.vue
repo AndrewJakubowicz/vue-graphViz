@@ -52,7 +52,7 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'imgDropGraph'],
     name: 'graph-viz',
     components: { nodeList, toolBar },
     data() {
@@ -133,6 +133,60 @@
       });
     },
     watch: {
+      imgDropGraph(current, old) { // this appears to do nothing
+        let me = this
+        function imageToBase64(img) {
+          if (!img) return
+          var canvas, ctx, dataURL, base64
+          canvas = document.createElement("canvas")
+          ctx = canvas.getContext("2d");
+          var cw=canvas.width;
+          var ch=canvas.height;
+          var maxW=150;
+          var maxH=100;
+          var iw=img.width;
+          var ih=img.height;
+          var scale=Math.min((maxW/iw),(maxH/ih));
+          var iwScaled=iw*scale;
+          var ihScaled=ih*scale;
+          canvas.width=iwScaled;
+          canvas.height=ihScaled;
+          ctx.drawImage(img,0,0,iwScaled,ihScaled);
+          dataURL = canvas.toDataURL("image/png");
+          base64 = dataURL.replace(/^data:image\/png;base64,/, "");
+          return base64;
+        }
+        let img = document.querySelector('[src = "' + current.imgSrc + '"]')
+        if (!img) return
+        let base64 = imageToBase64(img)
+        var parts = img.getAttribute('src').split('/');
+        var id = parts[parts.length - 1];
+        if (current.dropped && current.dropped !== old.dropped) {
+          if (!current.existingNode) {
+            this.rootObservable.next({
+              type: ADDNODE,
+              newNode: {text: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/><br>New'},
+            })
+          } else {
+            let node = null
+            const indexOfNode = me.textNodes.map(v => v.id).indexOf(current.existingNode.id)
+            if (indexOfNode === -1) {
+              return
+            }
+            node = this.toNode(this.textNodes[indexOfNode]);
+            if (node.text.includes('<img')) {
+              node.text = node.text.replace(/<img[^>]*>/g, "")
+              node.text = node.text.replace(/<br>/g, "")
+            }
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: TEXT,
+              value: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/><br>' + node.text,
+              id: current.existingNode.id,
+            });
+          }
+        }
+      },
       width(current, old) { // this appears to do nothing
         if (current !== old) {
           this.graph.canvasOptions.setWidth(current);

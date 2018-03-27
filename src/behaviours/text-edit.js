@@ -41,7 +41,7 @@ export default ($action, startCallback, endCallback) => {
         buttonLabels: 'fontawesome',
         disableDoubleReturn: true,
         toolbar: {
-          buttons: ['bold', 'italic', 'underline'],
+          buttons: ['bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter'],
           diffTop: 0,
         },
         paste: {

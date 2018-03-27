@@ -4,7 +4,7 @@
     <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
 
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
-    <toolBar @clickedAction="changeMouseState($event)"/>
+    <toolBar @clickedAction="changeMouseState($event)" @mouseEnter="deleteRadial()"/>
 
     <div id="graph" v-on:dblclick="dblClickOnPage"></div>
 
@@ -133,55 +133,57 @@
       });
     },
     watch: {
-      imgDropGraph(current, old) { // this appears to do nothing
-        let me = this
+      imgDropGraph(current, old) {
+        let me = this;
+
         function imageToBase64(img) {
-          if (!img) return
-          var canvas, ctx, dataURL, base64
-          canvas = document.createElement("canvas")
+          if (!img) return;
+          var canvas, ctx, dataURL, base64;
+          canvas = document.createElement("canvas");
           ctx = canvas.getContext("2d");
-          var cw=canvas.width;
-          var ch=canvas.height;
-          var maxW=150;
-          var maxH=100;
-          var iw=img.width;
-          var ih=img.height;
-          var scale=Math.min((maxW/iw),(maxH/ih));
-          var iwScaled=iw*scale;
-          var ihScaled=ih*scale;
-          canvas.width=iwScaled;
-          canvas.height=ihScaled;
-          ctx.drawImage(img,0,0,iwScaled,ihScaled);
+          var cw = canvas.width;
+          var ch = canvas.height;
+          var maxW = 150;
+          var maxH = 100;
+          var iw = img.width;
+          var ih = img.height;
+          var scale = Math.min((maxW / iw), (maxH / ih));
+          var iwScaled = iw * scale;
+          var ihScaled = ih * scale;
+          canvas.width = iwScaled;
+          canvas.height = ihScaled;
+          ctx.drawImage(img, 0, 0, iwScaled, ihScaled);
           dataURL = canvas.toDataURL("image/png");
           base64 = dataURL.replace(/^data:image\/png;base64,/, "");
           return base64;
         }
-        let img = document.querySelector('[src = "' + current.imgSrc + '"]')
-        if (!img) return
-        let base64 = imageToBase64(img)
+
+        let img = document.querySelector('[src = "' + current.imgSrc + '"]');
+        if (!img) return;
+        let base64 = imageToBase64(img);
         var parts = img.getAttribute('src').split('/');
         var id = parts[parts.length - 1];
         if (current.dropped && current.dropped !== old.dropped) {
           if (!current.existingNode) {
             this.rootObservable.next({
               type: ADDNODE,
-              newNode: {text: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/><br>New'},
-            })
+              newNode: { text: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/>\nNew' },
+            });
           } else {
-            let node = null
-            const indexOfNode = me.textNodes.map(v => v.id).indexOf(current.existingNode.id)
+            let node = null;
+            const indexOfNode = me.textNodes.map(v => v.id).indexOf(current.existingNode.id);
             if (indexOfNode === -1) {
-              return
+              return;
             }
             node = this.toNode(this.textNodes[indexOfNode]);
             if (node.text.includes('<img')) {
-              node.text = node.text.replace(/<img[^>]*>/g, "")
-              node.text = node.text.replace(/<br>/g, "")
+              node.text = node.text.replace(/<img[^>]*>/g, "");
+              node.text = node.text.replace(/\n/g, "");
             }
             this.rootObservable.next({
               type: NODEEDIT,
               prop: TEXT,
-              value: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/><br>' + node.text,
+              value: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/>\n' + node.text,
               id: current.existingNode.id,
             });
           }
@@ -571,6 +573,7 @@
         $('.menu-action').remove();
         $('.menu-trash').remove();
         $('.menu-hover-box').remove();
+        $('.menu-resize').remove();
       },
 
       clearScreen() {
@@ -741,30 +744,36 @@
             });
           },
 
-          resizeDrag: (d, mouseDown) => {
-            console.log(mouseDown);
+          resizeDrag: (node, selection, event) => {
             this.isResizing = true;
-            const initialX = mouseDown.clientX;
-            const svgInitialX = this.transformCoordinates({ x: initialX, y: mouseDown.clientY }).x;
-            const initWidth = d.width;
+            const initialX = event.clientX;
+            const svgInitialX = this.transformCoordinates({ x: initialX, y: event.clientY }).x;
+            const initWidth = node.width;
             Rx.Observable.fromEvent(document, 'mousemove')
               .do(e => e.stopPropagation())
-              .map(e => this.transformCoordinates({ x: e.clientX, y: mouseDown.clientY }).x)
+              .map(e => this.transformCoordinates({ x: e.clientX, y: event.clientY }).x)
               .map(moveX => moveX - svgInitialX)
               .map(dx => initWidth + (dx * 2))
-              .filter(width => width > 42)
+              .filter((width) => {
+                const img = selection.node().parentNode.querySelector('text img');
+                const imgWidth = img ? img.offsetWidth : 0;
+                const minWidth = imgWidth + 30;
+                console.log(width, minWidth, imgWidth);
+                return width > minWidth;
+              })
+              .debounceTime(10)
               .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
               .finally(() => {
                 this.isResizing = false;
                 this.rootObservable.next({
                   type: NODEEDIT,
                   prop: WIDTH,
-                  id: d.id,
-                  value: d.fixedWidth,
+                  id: node.id,
+                  value: node.fixedWidth,
                 });
               })
               .subscribe((x) => {
-                d.fixedWidth = x;
+                node.fixedWidth = x;
                 this.graph.restart.layout();
               });
           },
@@ -1140,6 +1149,11 @@
     display: inherit;
     -webkit-margin-after: 0;
     -webkit-margin-before: 0;
+  }
+
+  text {
+    font-family: "Source Sans Pro", sans-serif !important;
+    font-weight: 100 !important;
   }
 
   svg text::selection {

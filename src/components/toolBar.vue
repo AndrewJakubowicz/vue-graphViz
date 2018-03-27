@@ -1,5 +1,5 @@
 <template>
-  <ul class="graph-unorderedList">
+  <ul class="graph-unorderedList" @mouseenter="mouseEnter()">
     <li v-for="item in tools" :key="item.action" @click="clicked(item.action)"
         v-bind:class="{ active: item.toggled }">
         <span v-if="item.icon.length === 1" class="icon-alone tooltip">
@@ -96,6 +96,9 @@
       };
     },
     methods: {
+      mouseEnter() {
+        this.$emit('mouseEnter');
+      },
       clicked(action) {
         this.$emit('clickedAction', action);
         let newAction = action;

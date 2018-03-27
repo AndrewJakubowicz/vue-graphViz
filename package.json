@@ -9,7 +9,7 @@
     "dev": "node build/dev-server.js",
     "start": "node build/dev-server.js",
     "build": "node build/build.js",
-    "unit": "cross-env BABEL_ENV=test karma start test/unit/karma.conf.js --single-run", 
+    "unit": "cross-env BABEL_ENV=test karma start test/unit/karma.conf.js --single-run",
     "e2e": "node test/e2e/runner.js",
     "test": "npm run unit && npm run e2e",
     "lint": "eslint --ext .js,.vue src test/unit/specs test/e2e/specs"
@@ -17,7 +17,7 @@
   "dependencies": {
     "d3": "4.9.1",
     "medium-editor": "^5.23.3",
-    "networkvizjs": "git+https://github.com/SpyR1014/networkVizJS.git#79f4a8e3f09bbbd197c8fc19a907008fbbd803d3",
+    "networkvizjs": "git+https://github.com/SpyR1014/networkVizJS.git#3d9165d174dc33869d2891272144f58d2c1b749d",
     "rxjs": "5.4.1",
     "vue": "^2.3.3"
   },

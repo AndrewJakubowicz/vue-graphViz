@@ -931,16 +931,16 @@
 
       changeMouseState(state) {
         if (!(state === DELETE
-            || state === CREATEEDGE
-            || state === POINTER
-            || state === SAVE
-            || state === ADDNOTE
-            || state === CLEARSCREEN
-            || state === REMOVEARROWS
-            || state === PIN
-            || state === SELECT
-            || state === UNDO
-            || state === REDO)) {
+          || state === CREATEEDGE
+          || state === POINTER
+          || state === SAVE
+          || state === ADDNOTE
+          || state === CLEARSCREEN
+          || state === REMOVEARROWS
+          || state === PIN
+          || state === SELECT
+          || state === UNDO
+          || state === REDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
           this.mouseState = state;
@@ -949,9 +949,11 @@
           case SAVE: {
             this.mouseState = POINTER;
             this.deleteRadial();
-            this.graph.saveGraph((savedData) => {
-              this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
-            });
+            setTimeout(() => {
+              this.graph.saveGraph((savedData) => {
+                this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
+              });
+            }, 50);
             break;
           }
           case ADDNOTE: {

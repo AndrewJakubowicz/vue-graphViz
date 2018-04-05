@@ -573,6 +573,7 @@
         $('.menu-action').remove();
         $('.menu-trash').remove();
         $('.menu-hover-box').remove();
+        $('.edge-hover-menu').remove();
         $('.menu-resize').remove();
       },
 
@@ -745,6 +746,9 @@
           },
 
           resizeDrag: (node, selection, event) => {
+            if (this.mouseState === TEXTEDIT) {
+              return;
+            }
             this.isResizing = true;
             const initialX = event.clientX;
             const svgInitialX = this.transformCoordinates({ x: initialX, y: event.clientY }).x;
@@ -758,7 +762,6 @@
                 const img = selection.node().parentNode.querySelector('text img');
                 const imgWidth = img ? img.offsetWidth : 0;
                 const minWidth = imgWidth + 30;
-                console.log(width, minWidth, imgWidth);
                 return width > minWidth;
               })
               .debounceTime(10)

@@ -142,7 +142,7 @@ export default ($action, startCallback, endCallback) => {
             textElem.innerHTML = oldText;
             fullRestart();
           } else {
-            save && save(textElem.innerHTML);
+            save && save(textElem.innerHTML.replace(/^<p>|<\/p>$/g, ""));
           }
           endCallback && endCallback();
         });

@@ -29,7 +29,7 @@
             action: 'POINTER',
             icon: ['mouse-pointer'],
             toggled: true,
-            tip: "Pointer"
+            tip: 'Pointer',
           },
           // {
           //   action: 'CREATEEDGE',
@@ -59,38 +59,44 @@
             action: 'ADDNOTE',
             icon: ['plus-square-o'],
             toggled: false,
-            tip: "Add Node"
+            tip: 'Add Node',
+          },
+          {
+            action: 'IMPORTPROB',
+            icon: ['fas fa-percent'],
+            toggled: false,
+            tip: 'Import Probability Diagram',
           },
           {
             action: 'REMOVEARROWS', /* to remove all arrows from the screen */
             icon: ['fa fa-arrow-circle-o-right fa-stack-2x', 'fa fa-ban fa-stack-2x text-danger'],
             toggled: false,
-            tip: "Delete Edges"
+            tip: 'Delete Edges',
           },
           {
             action: 'CLEARSCREEN', /* to remove all nodes and arrows from the screen */
 //            icon: ['fa fa-share-alt fa-rotate-90 fa-stack-1x', 'fa fa-ban fa-stack-2x text-danger'],
             icon: ['close'],
             toggled: false,
-            tip: "Delete All"
+            tip: 'Delete All',
           },
           {
             action: 'UNDO',
             icon: ['undo'],
             toggled: false,
-            tip: "Undo (CTRL+Z)"
+            tip: 'Undo (CTRL+Z)',
           },
           {
             action: 'REDO',
             icon: ['repeat'],
             toggled: false,
-            tip: "Redo (CTRL+Y)"
+            tip: 'Redo (CTRL+Y)',
           },
           {
             action: 'SAVE',
             icon: ['floppy-o'],
             toggled: false,
-            tip: "Save"
+            tip: 'Save',
           },
         ],
       };
@@ -106,6 +112,7 @@
           || action === 'ADDNOTE'
           || action === 'CLEARSCREEN'
           || action === 'REMOVEARROWS'
+          || action === 'IMPORTPROB'
           || action === 'UNDO'
           || action === 'REDO') {
           // For the above actions, default to mouse pointer state.

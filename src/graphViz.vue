@@ -35,6 +35,7 @@
   const PIN = 'PIN';
   const SELECT = 'SELECT';
   const TEXTEDIT = 'TEXTEDIT';
+  const IMPORTPROB = 'IMPORTPROB';
 
   // ACTIONS
   const UNDO = 'UNDO';
@@ -52,7 +53,7 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'imgDropGraph'],
+    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'imgDropGraph', 'getDlist'],
     name: 'graph-viz',
     components: { nodeList, toolBar },
     data() {
@@ -139,8 +140,8 @@
         function imageToBase64(img) {
           if (!img) return;
           var canvas, ctx, dataURL, base64;
-          canvas = document.createElement("canvas");
-          ctx = canvas.getContext("2d");
+          canvas = document.createElement('canvas');
+          ctx = canvas.getContext('2d');
           var cw = canvas.width;
           var ch = canvas.height;
           var maxW = 150;
@@ -153,8 +154,8 @@
           canvas.width = iwScaled;
           canvas.height = ihScaled;
           ctx.drawImage(img, 0, 0, iwScaled, ihScaled);
-          dataURL = canvas.toDataURL("image/png");
-          base64 = dataURL.replace(/^data:image\/png;base64,/, "");
+          dataURL = canvas.toDataURL('image/png');
+          base64 = dataURL.replace(/^data:image\/png;base64,/, '');
           return base64;
         }
 
@@ -177,8 +178,8 @@
             }
             node = this.toNode(this.textNodes[indexOfNode]);
             if (node.text.includes('<img')) {
-              node.text = node.text.replace(/<img[^>]*>/g, "");
-              node.text = node.text.replace(/\n/g, "");
+              node.text = node.text.replace(/<img[^>]*>/g, '');
+              node.text = node.text.replace(/\n/g, '');
             }
             this.rootObservable.next({
               type: NODEEDIT,
@@ -275,6 +276,18 @@
             // TODO fixed width nodes on addition size incorrectly. 2nd restart required
             this.graph.restart.layout();
             return action.existingNode;
+          }
+          // if prob import
+          // TODO finish addNode method. support multiple node addition, simplify node addition and creation
+          if (action.probNode) {
+            const n = action.probNode;
+            const indexOfNode = this.textNodes.map(v => v.id).indexOf(n.id);
+            if (indexOfNode === -1) this.textNodes.push(n);
+            this.addNodeHelper(n.id);
+            this.notes += 1;
+            this.noteObjs = [...this.noteObjs, n];
+            this.resetTools();
+            return n;
           }
         };
 
@@ -939,6 +952,7 @@
           || state === SAVE
           || state === ADDNOTE
           || state === CLEARSCREEN
+          || state === IMPORTPROB
           || state === REMOVEARROWS
           || state === PIN
           || state === SELECT
@@ -973,6 +987,64 @@
             this.rootObservable.next({ type: CLEARHISTORY });
             break;
           }
+
+          case IMPORTPROB: {
+            this.mouseState = POINTER;
+            const Dlist = this.getDlist && this.getDlist();
+            if (!Dlist || Object.keys(Dlist).length === 0) return;
+            // const Dlist = { X: new Set(), Y: new Set('X'), Z: new Set('X') }; // test list
+            const listOfNodes = {};
+            const listOfEdges = [];
+            Object.keys(Dlist).forEach((D) => {
+              listOfNodes[D] = this.toNode({
+                id: 'note-' + uuid.v4(),
+                class: 'b-no-snip',
+                nodeShape: 'circle',
+                text: D,
+                isSnip: false,
+                fixed: false,
+                color: '#ffffff',
+                fixedWidth: false,
+              });
+            });
+
+            Object.values(listOfNodes).forEach((node) => {
+              this.rootObservable.next({
+                type: ADDNODE,
+                probNode: node,
+              });
+            });
+
+            Object.entries(Dlist).forEach(([key, val]) => {
+              val.forEach((n) => {
+                listOfEdges.push({
+                  subject: listOfNodes[n],
+                  predicate: {
+                    type: 'arrow',
+                    text: '',
+                    hash: uuid.v4(),
+                    subject: listOfNodes[n].id,
+                    object: listOfNodes[key].id,
+                    constraint: {
+                      axis: 'x',
+                      type: 'separation',
+                      leftID: listOfNodes[n].id,
+                      rightID: listOfNodes[key].id,
+                      gap: 170,
+                    },
+                  },
+                  object: listOfNodes[key],
+                });
+              });
+            });
+
+            this.rootObservable.next({
+              type: CREATEEDGE,
+              tripletObject: listOfEdges,
+            });
+            break;
+          }
+
           case REMOVEARROWS: {
             this.mouseState = POINTER;
             const db = this.graph.getDB();

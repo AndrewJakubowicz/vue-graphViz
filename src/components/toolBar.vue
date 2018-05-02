@@ -71,7 +71,7 @@
             action: 'REMOVEARROWS', /* to remove all arrows from the screen */
             icon: ['fa fa-arrow-circle-o-right fa-stack-2x', 'fa fa-ban fa-stack-2x text-danger'],
             toggled: false,
-            tip: 'Delete Edges',
+            tip: 'Delete Arrows',
           },
           {
             action: 'CLEARSCREEN', /* to remove all nodes and arrows from the screen */

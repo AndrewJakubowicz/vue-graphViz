@@ -1026,7 +1026,7 @@
                     subject: listOfNodes[n].id,
                     object: listOfNodes[key].id,
                     constraint: {
-                      axis: 'x',
+                      axis: 'y',
                       type: 'separation',
                       leftID: listOfNodes[n].id,
                       rightID: listOfNodes[key].id,

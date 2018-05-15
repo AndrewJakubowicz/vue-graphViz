@@ -989,10 +989,11 @@
           }
 
           case IMPORTPROB: {
+            // test case
+            // const Dlist = { X: new Set(), Y: new Set('X'), Z: new Set('X'), A: new Set('B'), B: new Set() };
             this.mouseState = POINTER;
             const Dlist = this.getDlist && this.getDlist();
             if (!Dlist || Object.keys(Dlist).length === 0) return;
-            // const Dlist = { X: new Set(), Y: new Set('X'), Z: new Set('X') }; // test list
             const listOfNodes = {};
             const listOfEdges = [];
             Object.keys(Dlist).forEach((D) => {
@@ -1042,6 +1043,8 @@
               type: CREATEEDGE,
               tripletObject: listOfEdges,
             });
+            //TODO: get a promise for when edge creation completes
+            setTimeout(this.graph.restart.handleDisconnects, 250);
             break;
           }
 

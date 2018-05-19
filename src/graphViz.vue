@@ -1042,9 +1042,8 @@
             this.rootObservable.next({
               type: CREATEEDGE,
               tripletObject: listOfEdges,
+              callback: this.graph.restart.handleDisconnects
             });
-            //TODO: get a promise for when edge creation completes
-            setTimeout(this.graph.restart.handleDisconnects, 250);
             break;
           }
 

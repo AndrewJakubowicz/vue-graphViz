@@ -5,7 +5,15 @@
 
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram' @clickedNodeInList="addNode($event)"/>
     <toolBar @clickedAction="changeMouseState($event)" @mouseEnter="deleteRadial()"/>
-
+    <photoshop-picker v-show="ifColorPickerOpen"
+                      :style="styleObject"
+                      :value="colors"
+                      @ok="onColorOk"
+                      @cancel="onColorCancel"
+                      @input="updateFromPicker"
+                      @change="updateFromInput"
+                      ref="vueColorPicker">
+    </photoshop-picker>
     <div id="graph" v-on:dblclick="dblClickOnPage"></div>
 
   </div>
@@ -18,6 +26,7 @@
    - mouseoutnode, void
    */
   import uuid from 'uuid';
+  import {Photoshop} from 'vue-color'
   import networkViz from 'networkvizjs';
   import nodeList from './components/nodeList';
   import toolBar from './components/toolBar';
@@ -55,9 +64,27 @@
   export default {
     props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'imgDropGraph', 'getDlist'],
     name: 'graph-viz',
-    components: { nodeList, toolBar },
+    components: {
+      nodeList,
+      toolBar,
+      'photoshop-picker': Photoshop
+    },
     data() {
       return {
+        ifColorPickerOpen: false,
+        updateValue: null,
+        styleObject: {
+          top: '230px',
+          left: '230px',
+          position: 'absolute'
+        },
+        colors: {
+          hex: '#1BAD64',
+          hsl: {h: 150, s: 0.5, l: 0.2, a: 1},
+          hsv: {h: 150, s: 0.66, v: 0.30, a: 1},
+          rgba: {r: 25, g: 77, b: 51, a: 1},
+          a: 1
+        },
         graph: undefined,
         nodesOutsideDiagram: [],
         mouseState: POINTER,
@@ -242,6 +269,39 @@
     },
 
     methods: {
+
+      onColorOk (ev) {
+        this.ifColorPickerOpen = false
+        let newColor = '#FFFFFF'
+        if (!this.colors) {
+          return
+        }
+        if (typeof this.colors === 'object') {
+          newColor = this.colors.hex
+        } else if (typeof this.colors === 'string' && this.colors.startsWith('#')){
+          newColor = this.colors
+        }
+        this.coloredEl[0].setAttribute('fill', newColor)
+        this.rootObservable.next({
+          type: NODEEDIT,
+          prop: COLOR,
+          value: newColor,
+          id: this.coloredNode.id,
+        })
+      },
+
+      onColorCancel (ev) {
+        this.ifColorPickerOpen = false
+      },
+
+      updateFromPicker(value) {
+        this.colors = value;
+        console.log('changed by picker');
+      },
+
+      updateFromInput(event) {
+        console.log('changed by input');
+      },
 
       actions($action) {
         const addNode = (action) => {
@@ -689,12 +749,38 @@
             }
           },
 
-          colorPickerOpen: (node) => {
-            this.ifColorPickerOpen = true;
-          },
+          mouseOverBrush: (ev, element, node ) => {
+            me.dbClickCreateNode = false
+            me.ifColorPickerOpen = true
+            me.coloredEl = element._groups[0]
+            me.coloredNode = node
+            me.colors = node.color
+            me.$refs.vueColorPicker.currentColor = node.color
+//            me.$refs.vueColorPicker.inputChange(node.color)
 
-          colorPickerClose: (node) => {
-            this.ifColorPickerOpen = false;
+            let grapgEditor = document.getElementById('graph').getBoundingClientRect()
+            let graphEditorX = grapgEditor.x
+            let graphEditorY = grapgEditor.y
+            let graphEditorW = grapgEditor.width
+            let graphEditorH = grapgEditor.height
+            let posX = ev.clientX - graphEditorX
+            let posY = node.y
+
+            if (posX + 400 > graphEditorW) {
+              posX = posX - 400
+            }
+            if (posY < 0 ){
+              posY = 0
+            }
+            if (posY + 400 > graphEditorH) {
+              posY = posY - (posY + 400 - graphEditorH)
+            }
+            this.styleObject = {
+              position: 'absolute !important',
+              top: posY + 'px !important',
+              left: posX + 'px !important',
+              'z-index': '9999'
+            }
           },
 
           mouseOverNode: (node, selection) => {
@@ -1114,6 +1200,37 @@
     },
   };
 </script>
+
+<style>
+  .vc-photoshop {
+    width: 400px !important;
+    max-height: 233px !important;
+  }
+
+  .vc-ps-ac-btn {
+    margin-bottom: 3px !important;
+  }
+
+  .vc-ps-fields .vc-input__input {
+    margin-bottom: 2px !important;
+  }
+
+  .vc-ps-saturation-wrap {
+    max-height: 200px !important;
+  }
+  .vc-ps-hue-wrap {
+    max-height: 200px !important;
+  }
+
+  .vc-ps-fields .vc-input__desc {
+    right: 10px !important;
+  }
+
+  .vc-ps-body {
+    padding: 5px !important;
+  }
+
+</style>
 
 <style>
   .medium-editor-toolbar li button {

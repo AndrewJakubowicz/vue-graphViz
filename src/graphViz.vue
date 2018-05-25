@@ -95,6 +95,7 @@
         dbClickCreateNode: true,
         canKeyboardUndo: true,
         rootObservable: new Rx.Subject(),
+        scale: 1
       };
     },
     mounted() {
@@ -749,6 +750,10 @@
             }
           },
 
+          zoomScale: (scale) => {
+            this.scale = scale
+          },
+
           mouseOverBrush: (ev, element, node ) => {
             me.dbClickCreateNode = false
             me.ifColorPickerOpen = true
@@ -1033,17 +1038,17 @@
 
       changeMouseState(state) {
         if (!(state === DELETE
-          || state === CREATEEDGE
-          || state === POINTER
-          || state === SAVE
-          || state === ADDNOTE
-          || state === CLEARSCREEN
-          || state === IMPORTPROB
-          || state === REMOVEARROWS
-          || state === PIN
-          || state === SELECT
-          || state === UNDO
-          || state === REDO)) {
+            || state === CREATEEDGE
+            || state === POINTER
+            || state === SAVE
+            || state === ADDNOTE
+            || state === CLEARSCREEN
+            || state === IMPORTPROB
+            || state === REMOVEARROWS
+            || state === PIN
+            || state === SELECT
+            || state === UNDO
+            || state === REDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
           this.mouseState = state;
@@ -1054,7 +1059,7 @@
             this.deleteRadial();
             setTimeout(() => {
               this.graph.saveGraph((savedData) => {
-                this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
+                this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes, this.scale);
               });
             }, 50);
             break;

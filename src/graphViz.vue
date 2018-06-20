@@ -270,7 +270,22 @@
     },
 
     methods: {
-
+      async showLoadingMask (text) {
+        const target = this.$el
+        const options = {
+          target: target,
+          text: text
+        }
+        target.style.opacity = '0.2'
+        this.responseLoadingMask = this.$loading(options)
+        return await this.$nextTick()
+      },
+      hideLoadingMask () {
+        let me = this
+        if (me.responseLoadingMask) {
+          me.responseLoadingMask.close()
+        }
+      },
       onColorOk (ev) {
         this.ifColorPickerOpen = false
         let newColor = '#FFFFFF'
@@ -1057,9 +1072,13 @@
           case SAVE: {
             this.mouseState = POINTER;
             this.deleteRadial();
+
+            const text = 'Saving Graph...'
+            this.showLoadingMask(text)
+
             setTimeout(() => {
               this.graph.saveGraph((savedData) => {
-                this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes, this.scale);
+                this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
               });
             }, 50);
             break;

@@ -59,6 +59,7 @@
   const COLOR = 'COLOR';
   const TEXT = 'TEXT';
   const WIDTH = 'WIDTH';
+  const IMAGE = 'IMAGE';
 
 
   export default {
@@ -192,11 +193,21 @@
         let base64 = imageToBase64(img);
         var parts = img.getAttribute('src').split('/');
         var id = parts[parts.length - 1];
+
+        var nodeImg = {
+          src: base64,
+          width: 60,
+          height: 70,
+          class: 'img-node'
+        }
         if (current.dropped && current.dropped !== old.dropped) {
           if (!current.existingNode) {
             this.rootObservable.next({
               type: ADDNODE,
-              newNode: { text: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/>\nNew' },
+              newNode: {
+                text: 'New',
+                img: nodeImg
+              },
             });
           } else {
             let node = null;
@@ -205,14 +216,16 @@
               return;
             }
             node = this.toNode(this.textNodes[indexOfNode]);
-            if (node.text.includes('<img')) {
-              node.text = node.text.replace(/<img[^>]*>/g, '');
-              node.text = node.text.replace(/\n/g, '');
+            node.img = {
+              src: base64,
+              width: 60,
+              height: 70,
+              class: 'img-node'
             }
             this.rootObservable.next({
               type: NODEEDIT,
-              prop: TEXT,
-              value: '<img style="max-width:80px; max-height:80px; width:auto; height:auto;" id="' + id + '" src="data:image/png;base64,' + base64 + '"/>\n' + node.text,
+              prop: IMAGE,
+              value: node.img,
               id: current.existingNode.id,
             });
           }
@@ -328,6 +341,7 @@
               class: 'b-no-snip',
               nodeShape: 'rect',
               text: action.newNode.text ? action.newNode.text : 'New',
+              img: action.newNode.img,
               isSnip: false,
               fixed: true,
               color: '#ffffff',
@@ -517,6 +531,15 @@
                     textNodesEditHelper('text');
                     this.graph.editNode({
                       property: 'shortname',
+                      id: idArray,
+                      value: values,
+                    });
+                    break;
+                  }
+                  case IMAGE: {
+                    textNodesEditHelper('img');
+                    this.graph.editNode({
+                      property: 'img',
                       id: idArray,
                       value: values,
                     });
@@ -864,6 +887,10 @@
             });
           },
 
+          imgResize: (bool) => {
+            this.isResizing = bool;
+          },
+
           resizeDrag: (node, selection, event) => {
             if (this.mouseState === TEXTEDIT) {
               return;
@@ -872,15 +899,16 @@
             const initialX = event.clientX;
             const svgInitialX = this.transformCoordinates({ x: initialX, y: event.clientY }).x;
             const initWidth = node.width;
+
             Rx.Observable.fromEvent(document, 'mousemove')
               .do(e => e.stopPropagation())
               .map(e => this.transformCoordinates({ x: e.clientX, y: event.clientY }).x)
               .map(moveX => moveX - svgInitialX)
               .map(dx => initWidth + (dx * 2))
               .filter((width) => {
-                const img = selection.node().parentNode.querySelector('text img');
-                const imgWidth = img ? img.offsetWidth : 0;
-                const minWidth = imgWidth + 30;
+                var img = selection.node().parentNode.querySelector("image")
+                var imgWidth = img ? img.getBBox().width : 0;
+                var minWidth = imgWidth + 30;
                 return width > minWidth;
               })
               .debounceTime(10)
@@ -1152,9 +1180,8 @@
             this.rootObservable.next({
               type: CREATEEDGE,
               tripletObject: listOfEdges,
+              callback: this.graph.restart.handleDisconnects
             });
-            //TODO: get a promise for when edge creation completes
-            setTimeout(this.graph.restart.handleDisconnects, 250);
             break;
           }
 
@@ -1226,6 +1253,7 @@
 </script>
 
 <style>
+
   .vc-photoshop {
     width: 400px !important;
     max-height: 233px !important;
@@ -1393,6 +1421,7 @@
     background-color: highlight;
     color: highlighttext;
   }
+
 
   /*Ghazal Start*/
   /*.node:hover .b-snip-arg-for {*/

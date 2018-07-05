@@ -731,7 +731,8 @@
           },
 
           nodeToPin: function nodeToPin(d) {
-            return d.fixed ? d.fixed : false;
+            // 1st bit is user set, second bit is set by d3 whilst dragging. hence check LSB if d.fixed is not bool
+            return (d.fixed === true || d.fixed % 2 === 1);
           },
 
           updateNodeColor: (node, color) => {
@@ -1180,7 +1181,7 @@
             this.rootObservable.next({
               type: CREATEEDGE,
               tripletObject: listOfEdges,
-              callback: this.graph.restart.handleDisconnects
+              callback: this.graph.restart.handleDisconnects,
             });
             break;
           }

@@ -26,7 +26,7 @@
    - mouseoutnode, void
    */
   import uuid from 'uuid';
-  import {Photoshop} from 'vue-color'
+  import {Photoshop} from 'vue-color';
   import networkViz from 'networkvizjs';
   import nodeList from './components/nodeList';
   import toolBar from './components/toolBar';
@@ -81,9 +81,9 @@
         },
         colors: {
           hex: '#1BAD64',
-          hsl: {h: 150, s: 0.5, l: 0.2, a: 1},
-          hsv: {h: 150, s: 0.66, v: 0.30, a: 1},
-          rgba: {r: 25, g: 77, b: 51, a: 1},
+          hsl: { h: 150, s: 0.5, l: 0.2, a: 1 },
+          hsv: { h: 150, s: 0.66, v: 0.30, a: 1 },
+          rgba: { r: 25, g: 77, b: 51, a: 1 },
           a: 1
         },
         graph: undefined,
@@ -168,18 +168,18 @@
 
         function imageToBase64(img) {
           if (!img) return;
-          var canvas, ctx, dataURL, base64;
+          let canvas, ctx, dataURL, base64;
           canvas = document.createElement('canvas');
           ctx = canvas.getContext('2d');
-          var cw = canvas.width;
-          var ch = canvas.height;
-          var maxW = 150;
-          var maxH = 100;
-          var iw = img.width;
-          var ih = img.height;
-          var scale = Math.min((maxW / iw), (maxH / ih));
-          var iwScaled = iw * scale;
-          var ihScaled = ih * scale;
+          const cw = canvas.width;
+          const ch = canvas.height;
+          const maxW = 150;
+          const maxH = 100;
+          const iw = img.width;
+          const ih = img.height;
+          const scale = Math.min((maxW / iw), (maxH / ih));
+          const iwScaled = iw * scale;
+          const ihScaled = ih * scale;
           canvas.width = iwScaled;
           canvas.height = ihScaled;
           ctx.drawImage(img, 0, 0, iwScaled, ihScaled);
@@ -191,15 +191,15 @@
         let img = document.querySelector('[src = "' + current.imgSrc + '"]');
         if (!img) return;
         let base64 = imageToBase64(img);
-        var parts = img.getAttribute('src').split('/');
-        var id = parts[parts.length - 1];
+        const parts = img.getAttribute('src').split('/');
+        const id = parts[parts.length - 1];
 
-        var nodeImg = {
+        const nodeImg = {
           src: base64,
           width: 60,
           height: 70,
           class: 'img-node'
-        }
+        };
         if (current.dropped && current.dropped !== old.dropped) {
           if (!current.existingNode) {
             this.rootObservable.next({
@@ -221,7 +221,7 @@
               width: 60,
               height: 70,
               class: 'img-node'
-            }
+            };
             this.rootObservable.next({
               type: NODEEDIT,
               prop: IMAGE,
@@ -283,44 +283,44 @@
     },
 
     methods: {
-      async showLoadingMask (text) {
-        const target = this.$el
+      async showLoadingMask(text) {
+        const target = this.$el;
         const options = {
           target: target,
           text: text
-        }
-        target.style.opacity = '0.2'
-        this.responseLoadingMask = this.$loading(options)
-        return await this.$nextTick()
+        };
+        target.style.opacity = '0.2';
+        this.responseLoadingMask = this.$loading(options);
+        return await this.$nextTick();
       },
-      hideLoadingMask () {
-        let me = this
+      hideLoadingMask() {
+        let me = this;
         if (me.responseLoadingMask) {
-          me.responseLoadingMask.close()
+          me.responseLoadingMask.close();
         }
       },
-      onColorOk (ev) {
-        this.ifColorPickerOpen = false
-        let newColor = '#FFFFFF'
+      onColorOk(ev) {
+        this.ifColorPickerOpen = false;
+        let newColor = '#FFFFFF';
         if (!this.colors) {
-          return
+          return;
         }
         if (typeof this.colors === 'object') {
-          newColor = this.colors.hex
-        } else if (typeof this.colors === 'string' && this.colors.startsWith('#')){
-          newColor = this.colors
+          newColor = this.colors.hex;
+        } else if (typeof this.colors === 'string' && this.colors.startsWith('#')) {
+          newColor = this.colors;
         }
-        this.coloredEl[0].setAttribute('fill', newColor)
+        this.coloredEl[0].setAttribute('fill', newColor);
         this.rootObservable.next({
           type: NODEEDIT,
           prop: COLOR,
           value: newColor,
           id: this.coloredNode.id,
-        })
+        });
       },
 
-      onColorCancel (ev) {
-        this.ifColorPickerOpen = false
+      onColorCancel(ev) {
+        this.ifColorPickerOpen = false;
       },
 
       updateFromPicker(value) {
@@ -339,7 +339,7 @@
             const textNode = {
               id: 'note-' + uuid.v4(),
               class: 'b-no-snip',
-              nodeShape: 'rect',
+              nodeShape: this.graph.getLayoutOptions().nodeShape,
               text: action.newNode.text ? action.newNode.text : 'New',
               img: action.newNode.img,
               isSnip: false,
@@ -753,8 +753,10 @@
             });
           },
 
+          nodeShape: 'capsule',
+
           // Shapes defined: rect, circle, capsule
-          nodeShape: (d) => {
+          nodePath: (d) => {
             switch (d.nodeShape) {
               case 'rect': {
                 return 'M16 48 L48 48 L48 16 L16 16 Z';
@@ -762,15 +764,42 @@
               case 'circle': {
                 return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
               }
+              // case 'capsule': {
+              //   const X = 37;
+              //   const Y = -13;
+              //   const p1x = 25 + X;
+              //   const p1y = 25 + Y;
+              //   const p2x = 75 + X;
+              //   const p3x = 100 + X;
+              //   const p4y = 50 + Y;
+              //   return `M ${p1x} ${p1y} L ${p2x} ${p1y} C ${p3x} ${p1y} ${p3x} ${p4y} ${p2x} ${p4y} L ${p1x} ${p4y} C ${X} ${p4y} ${X} ${p1y} ${p1x} ${p1y} `;
+              // }
               case 'capsule': {
-                const X = 37;
-                const Y = -13;
-                const p1x = 25 + X;
-                const p1y = 25 + Y;
-                const p2x = 75 + X;
-                const p3x = 100 + X;
-                const p4y = 50 + Y;
-                return `M ${p1x} ${p1y} L ${p2x} ${p1y} C ${p3x} ${p1y} ${p3x} ${p4y} ${p2x} ${p4y} L ${p1x} ${p4y} C ${X} ${p4y} ${X} ${p1y} ${p1x} ${p1y} `;
+                const width = d.width;
+                const height = d.height;
+                if (width && height){
+                  const x = width / 2;
+                  const y = height / 2;
+                  const r = Math.round(Math.min(width, height) / 8);
+                  const v0 = { x: x, y: y };
+                  const v1 = { x: x, y: y + height };
+                  const v2 = { x: x + width, y: y + height };
+                  const v3 = { x: x + width, y: y };
+                  return [`M${v0.x} ${v0.y + r}`,
+                    `V${v1.y - r}`,
+                    `C${v1.x} ${v1.y} ${v1.x + r} ${v1.y} ${v1.x + r} ${v1.y}`,
+                    `H${v2.x - r}`,
+                    `C${v2.x} ${v2.y} ${v2.x} ${v2.y - r} ${v2.x} ${v2.y - r}`,
+                    `V${v3.y + r}`,
+                    `C${v3.x} ${v3.y} ${v3.x - r} ${v3.y} ${v3.x - r} ${v3.y}`,
+                    `H${v0.x + r}`,
+                    `C${v0.x} ${v0.y} ${v0.x} ${v0.y + r} ${v0.x} ${v0.y + r} Z`]
+                    .join(' ');
+                } else {
+                  return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z'
+                }
+
+
               }
               default : {
                 // Return rect by default
@@ -790,41 +819,41 @@
           },
 
           zoomScale: (scale) => {
-            this.scale = scale
+            this.scale = scale;
           },
 
-          mouseOverBrush: (ev, element, node ) => {
-            me.dbClickCreateNode = false
-            me.ifColorPickerOpen = true
-            me.coloredEl = element._groups[0]
-            me.coloredNode = node
-            me.colors = node.color
-            me.$refs.vueColorPicker.currentColor = node.color
+          mouseOverBrush: (ev, element, node) => {
+            me.dbClickCreateNode = false;
+            me.ifColorPickerOpen = true;
+            me.coloredEl = element._groups[0];
+            me.coloredNode = node;
+            me.colors = node.color;
+            me.$refs.vueColorPicker.currentColor = node.color;
 //            me.$refs.vueColorPicker.inputChange(node.color)
 
-            let grapgEditor = document.getElementById('graph').getBoundingClientRect()
-            let graphEditorX = grapgEditor.x
-            let graphEditorY = grapgEditor.y
-            let graphEditorW = grapgEditor.width
-            let graphEditorH = grapgEditor.height
-            let posX = ev.clientX - graphEditorX
-            let posY = node.y
+            let grapgEditor = document.getElementById('graph').getBoundingClientRect();
+            let graphEditorX = grapgEditor.x;
+            let graphEditorY = grapgEditor.y;
+            let graphEditorW = grapgEditor.width;
+            let graphEditorH = grapgEditor.height;
+            let posX = ev.clientX - graphEditorX;
+            let posY = node.y;
 
             if (posX + 400 > graphEditorW) {
-              posX = posX - 400
+              posX = posX - 400;
             }
-            if (posY < 0 ){
-              posY = 0
+            if (posY < 0) {
+              posY = 0;
             }
             if (posY + 400 > graphEditorH) {
-              posY = posY - (posY + 400 - graphEditorH)
+              posY = posY - (posY + 400 - graphEditorH);
             }
             this.styleObject = {
               position: 'absolute !important',
               top: posY + 'px !important',
               left: posX + 'px !important',
               'z-index': '9999'
-            }
+            };
           },
 
           mouseOverNode: (node, selection) => {
@@ -907,9 +936,9 @@
               .map(moveX => moveX - svgInitialX)
               .map(dx => initWidth + (dx * 2))
               .filter((width) => {
-                var img = selection.node().parentNode.querySelector("image")
-                var imgWidth = img ? img.getBBox().width : 0;
-                var minWidth = imgWidth + 30;
+                const img = selection.node().parentNode.querySelector('image');
+                const imgWidth = img ? img.getBBox().width : 0;
+                const minWidth = imgWidth + 30;
                 return width > minWidth;
               })
               .debounceTime(10)
@@ -1075,24 +1104,23 @@
 
       recalculateNodesOutside() {
         this.nodesOutsideDiagram = this.textNodes.filter((v) => {
-          const result = !this.graph.hasNode(`${v.id}`);
-          return result;
+          return !this.graph.hasNode(`${v.id}`);
         });
       },
 
       changeMouseState(state) {
         if (!(state === DELETE
-            || state === CREATEEDGE
-            || state === POINTER
-            || state === SAVE
-            || state === ADDNOTE
-            || state === CLEARSCREEN
-            || state === IMPORTPROB
-            || state === REMOVEARROWS
-            || state === PIN
-            || state === SELECT
-            || state === UNDO
-            || state === REDO)) {
+          || state === CREATEEDGE
+          || state === POINTER
+          || state === SAVE
+          || state === ADDNOTE
+          || state === CLEARSCREEN
+          || state === IMPORTPROB
+          || state === REMOVEARROWS
+          || state === PIN
+          || state === SELECT
+          || state === UNDO
+          || state === REDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
           this.mouseState = state;
@@ -1102,8 +1130,8 @@
             this.mouseState = POINTER;
             this.deleteRadial();
 
-            const text = 'Saving Graph...'
-            this.showLoadingMask(text)
+            const text = 'Saving Graph...';
+            this.showLoadingMask(text);
 
             setTimeout(() => {
               this.graph.saveGraph((savedData) => {
@@ -1271,6 +1299,7 @@
   .vc-ps-saturation-wrap {
     max-height: 200px !important;
   }
+
   .vc-ps-hue-wrap {
     max-height: 200px !important;
   }
@@ -1422,7 +1451,6 @@
     background-color: highlight;
     color: highlighttext;
   }
-
 
   /*Ghazal Start*/
   /*.node:hover .b-snip-arg-for {*/

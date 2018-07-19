@@ -104,28 +104,28 @@
         ],
         selectTools: [
           {
-            action: 'COPY',
-            icon: ['copy'],
-            toggled: false,
-            tip: 'Copy',
-          },
-          {
             action: 'COLOR',
             icon: ['paint-brush'],
             toggled: false,
             tip: 'Color',
           },
           {
-            action: 'DELETE',
-            icon: ['trash'],
-            toggled: false,
-            tip: 'Delete'
-          },
-          {
             action: 'PIN',
             icon: ['thumb-tack'],
             toggled: false,
             tip: 'Pin'
+          },
+          {
+            action: 'COPY',
+            icon: ['copy'],
+            toggled: false,
+            tip: 'Copy',
+          },
+          {
+            action: 'DELETE',
+            icon: ['trash'],
+            toggled: false,
+            tip: 'Delete'
           },
         ],
       };

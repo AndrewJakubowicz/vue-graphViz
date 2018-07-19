@@ -1158,7 +1158,7 @@
             this.styleObject = {
               position: 'absolute !important',
               top: 70 + 'px !important',
-              left: 1565 + 'px !important',
+              right: 95 + 'px !important',
               'z-index': '9999'
             };
             const svgElem = this.graph.getSVGElement().node();
@@ -1426,38 +1426,11 @@
 
 <style>
 
-  .vc-photoshop {
-    width: 400px !important;
-    max-height: 233px !important;
+  .vc-compact {
+    width: 245px !important;
+    box-sizing: border-box;
   }
 
-  .vc-ps-ac-btn {
-    margin-bottom: 3px !important;
-  }
-
-  .vc-ps-fields .vc-input__input {
-    margin-bottom: 2px !important;
-  }
-
-  .vc-ps-saturation-wrap {
-    max-height: 200px !important;
-  }
-
-  .vc-ps-hue-wrap {
-    max-height: 200px !important;
-  }
-
-  .vc-ps-fields .vc-input__desc {
-    right: 10px !important;
-  }
-
-  .vc-ps-body {
-    padding: 5px !important;
-  }
-
-</style>
-
-<style>
   .highlight {
     stroke: #4fc1e9;
   }

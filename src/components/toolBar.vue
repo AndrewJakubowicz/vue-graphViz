@@ -1,26 +1,47 @@
 <template>
-  <ul class="graph-unorderedList" @mouseenter="mouseEnter()">
-    <li v-for="item in tools" :key="item.action" @click="clicked(item.action)"
-        v-bind:class="{ active: item.toggled }">
+  <div>
+    <transition name="slide-fade">
+      <ul class="graph-unorderedList" @mouseenter="mouseEnter()"
+          id="graph-select-tool" v-show="tools[tools.reduce((acc,curr, i) => (curr.action === 'SELECT'? i: acc), -1)].toggled">
+        <li v-for="item in selectTools" :key="item.action" @click="clicked(item.action)"
+            v-bind:class="{ active: item.toggled }">
         <span v-if="item.icon.length === 1" class="icon-alone tooltip">
           <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
-      <span v-else class="fa-stack fa-sm tooltip">
+          <span v-else class="fa-stack fa-sm tooltip">
             <i :class="item.icon[0]"></i>
             <i :class="item.icon[1]"></i>
             <span class="screen-reader-text">{{ item.action }}</span>
         <span class="tooltiptext">{{item.tip}}</span>
         </span>
-
-    </li>
-  </ul>
+        </li>
+      </ul>
+    </transition>
+    <ul class="graph-unorderedList" @mouseenter="mouseEnter()" id="graph-main-tool">
+      <li v-for="item in tools" :key="item.action" @click="clicked(item.action)"
+          v-bind:class="{ active: item.toggled }">
+        <span v-if="item.icon.length === 1" class="icon-alone tooltip">
+          <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
+          <span class="screen-reader-text">{{ item.action }}</span>
+          <span class="tooltiptext">{{item.tip}}</span>
+        </span>
+        <span v-else class="fa-stack fa-sm tooltip">
+            <i :class="item.icon[0]"></i>
+            <i :class="item.icon[1]"></i>
+            <span class="screen-reader-text">{{ item.action }}</span>
+        <span class="tooltiptext">{{item.tip}}</span>
+        </span>
+      </li>
+    </ul>
+  </div>
 </template>
 
 
 <script>
   export default {
+    props: ['mouse'],
     name: 'toolBar',
     data() {
       return {
@@ -31,30 +52,12 @@
             toggled: true,
             tip: 'Pointer',
           },
-          // {
-          //   action: 'CREATEEDGE',
-          //   icon: ['arrow-right'],
-          //   toggled: false,
-          //   tip: "Create Edge"
-          // },
-//          {
-//            action: 'DELETE',
-//            icon: ['trash'],
-//            toggled: false,
-//            tip: "Delete"
-//          },
-//          {
-//            action: 'PIN', /* to pin down nodes to the screen */
-//            icon: ['thumb-tack'],
-//            toggled: false,
-//            tip: "Pin"
-//          },
-//           {
-//             action: 'SELECT',
-//             icon: ['square-o'],
-//             toggled: false,
-//             tip: "Rectangular Marquee"
-//           },
+          {
+            action: 'SELECT',
+            icon: ['fw'],
+            toggled: false,
+            tip: 'Select Tool'
+          },
           {
             action: 'ADDNOTE',
             icon: ['plus-square-o'],
@@ -99,6 +102,32 @@
             tip: 'Save',
           },
         ],
+        selectTools: [
+          {
+            action: 'COPY',
+            icon: ['copy'],
+            toggled: false,
+            tip: 'Copy',
+          },
+          {
+            action: 'COLOR',
+            icon: ['paint-brush'],
+            toggled: false,
+            tip: 'Color',
+          },
+          {
+            action: 'DELETE',
+            icon: ['trash'],
+            toggled: false,
+            tip: 'Delete'
+          },
+          {
+            action: 'PIN',
+            icon: ['thumb-tack'],
+            toggled: false,
+            tip: 'Pin'
+          },
+        ],
       };
     },
     methods: {
@@ -110,6 +139,7 @@
         let newAction = action;
         if (action === 'SAVE'
           || action === 'ADDNOTE'
+          || action === 'DELETE'
           || action === 'CLEARSCREEN'
           || action === 'REMOVEARROWS'
           || action === 'IMPORTPROB'
@@ -118,16 +148,43 @@
           // For the above actions, default to mouse pointer state.
           newAction = 'POINTER';
         }
+        if (action === 'PIN'
+          || action === 'COLOR'
+          || action === 'COPY') {
+          // For the above actions, default to mouse select state.
+          newAction = 'SELECT';
+        }
         this.tools = this.tools.map(v => ({
           ...v,
           toggled: v.action === newAction,
         }));
       },
     },
+    watch: {
+      mouse(newVal, oldVal) {
+        this.tools = this.tools.map(v => ({
+          ...v,
+          toggled: v.action === newVal,
+        }));
+
+      }
+    }
   };
 </script>
 
 <style scoped>
+  .slide-fade-enter-active {
+    transition: all .2s ease;
+  }
+
+  .slide-fade-leave-active {
+    transition: all .2s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+  }
+
+  .slide-fade-enter, .slide-fade-leave-to {
+    transform: translateX(50px);
+    opacity: 0;
+  }
 
   .tooltip {
     position: relative;
@@ -155,12 +212,20 @@
     visibility: visible;
   }
 
+  #graph-main-tool {
+    right: 10px;
+    top: 10px;
+  }
+
+  #graph-select-tool {
+    right: 60px;
+    top: 37px;
+  }
+
   ul {
     margin: 0;
     padding: 0;
     position: absolute;
-    right: 10px;
-    top: 10px;
     list-style-type: none;
     font-size: 1.6em;
     color: #575959; /* change appearance of toolbar to fit to swarm interface */
@@ -187,6 +252,12 @@
 
   .fa-sm { /* Translates the stacked icons to the same size as the other ones */
     font-size: 0.75em;
+  }
+
+  .fa-fw {
+    width: 0.8em;
+    height: 0.8em;
+    border: dotted .1em;
   }
 
   .fa-stack { /* adjust the gap between the stacked icon and the next */

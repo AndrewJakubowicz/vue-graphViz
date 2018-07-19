@@ -1178,7 +1178,7 @@
             this.rootObservable.next({
               type: CREATE,
               newNode: [...this.activeSelect.nodes.values()].map(d => {
-                const { color, fixed, fixedWidth, img, isSnip, nodeShape, text } = d;
+                const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname } = d;
                 return {
                   color,
                   fixed,
@@ -1186,7 +1186,7 @@
                   img,
                   isSnip,
                   nodeShape,
-                  text,
+                  shortname,
                   class: d.class.replace(' highlight', ''),
                 };
               })

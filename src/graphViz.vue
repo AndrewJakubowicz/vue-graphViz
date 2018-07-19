@@ -1195,13 +1195,13 @@
           }
 
           case DELETE: {
-            this.changeMouseState(POINTER);
             const nodes = [...this.activeSelect.nodes.keys()];
             this.activeSelect.clear();
             this.rootObservable.next({
               type: DELETE,
               nodeId: nodes,
             });
+            this.changeMouseState(POINTER);
             break;
           }
 

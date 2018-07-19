@@ -1208,8 +1208,8 @@
           case IMPORTPROB: {
             this.changeMouseState(POINTER);
             // test case
-            const Dlist = { X: new Set(), Y: new Set('X'), Z: new Set('X'), A: new Set('B'), B: new Set() };
-            // const Dlist = this.getDlist && this.getDlist();
+            // const Dlist = { X: new Set(), Y: new Set('X'), Z: new Set('X'), A: new Set('B'), B: new Set() };
+            const Dlist = this.getDlist && this.getDlist();
             if (!Dlist || Object.keys(Dlist).length === 0) return;
             const objOfNodes = {};
             const listOfEdges = [];

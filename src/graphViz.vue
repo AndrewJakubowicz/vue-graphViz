@@ -112,21 +112,39 @@
           });
         });
 
-      const ctrlDown = Rx.Observable.fromEvent(document, 'keydown')
-        .filter(e => e.ctrlKey);
+      const keyDown = Rx.Observable.fromEvent(document, 'keydown');
+      const ctrlDown = keyDown.filter(e => e.ctrlKey);
 
-      ctrlDown.filter(e => e.keyCode === 90 && !e.shiftKey)
+      ctrlDown.filter(e => e.keyCode === 90 && !e.shiftKey && !e.altKey)
         .filter(() => this.canKeyboardUndo)
         .subscribe((e) => {
           e.preventDefault();
           this.rootObservable.next({ type: UNDO });
         });
 
-      ctrlDown.filter(e => e.keyCode === 89 || (e.keyCode === 90 && e.shiftKey))
+      ctrlDown.filter(e => (e.keyCode === 89 && !e.shiftKey && !e.altKey) || (e.keyCode === 90 && e.shiftKey && !e.altKey))
         .filter(() => this.canKeyboardUndo)
         .subscribe((e) => {
           e.preventDefault();
           this.rootObservable.next({ type: REDO });
+        });
+
+      ctrlDown.filter(e => e.keyCode === 83)
+        .subscribe((e) => {
+          e.preventDefault();
+          this.changeMouseState(SAVE);
+        });
+
+      // keyboard shortcuts to switch mouse tool
+      keyDown.filter(e => (e.keyCode === 80 && this.mouseState === SELECT && !e.ctrlKey && !e.shiftKey && !e.altKey))
+        .subscribe((e) => {
+          e.preventDefault();
+          this.changeMouseState(POINTER);
+        });
+      keyDown.filter(e => (e.keyCode === 83 && this.mouseState === POINTER && !e.ctrlKey && !e.shiftKey && !e.altKey))
+        .subscribe((e) => {
+          e.preventDefault();
+          this.changeMouseState(SELECT);
         });
 
       this.createGraph(() => {
@@ -157,6 +175,8 @@
           });
         }
       });
+
+
     },
     watch: {
       imgDropGraph(current, old) {
@@ -1225,9 +1245,9 @@
 
           case DELETE: {
             const nodes = [...this.activeSelect.nodes.keys()];
-            if (this.activeSelect.size === 0) break;
             this.changeMouseState(POINTER);
             this.activeSelect.clear();
+            if (nodes.length === 0) break;
             this.rootObservable.next({
               type: DELETE,
               nodeId: nodes,
@@ -1321,6 +1341,7 @@
           }
 
           case POINTER: {
+            this.mouseState = POINTER;
             this.activeSelect.clear();
             this.graph.restart.styles();
             break;

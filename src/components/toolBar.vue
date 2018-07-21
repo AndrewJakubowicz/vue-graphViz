@@ -51,13 +51,13 @@
             action: 'POINTER',
             icon: ['mouse-pointer'],
             toggled: true,
-            tip: 'Pointer',
+            tip: 'Pointer (P)',
           },
           {
             action: 'SELECT',
             icon: ['fw'],
             toggled: false,
-            tip: 'Select Tool'
+            tip: 'Select Tool (S)'
           },
           {
             action: 'ADDNOTE',
@@ -87,7 +87,7 @@
             action: 'SAVE',
             icon: ['floppy-o'],
             toggled: false,
-            tip: 'Save',
+            tip: 'Save (Ctrl+S)',
           },
         ],
         selectTools: [

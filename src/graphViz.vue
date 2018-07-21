@@ -152,9 +152,7 @@
             this.graph.addTriplet({
               subject: this.toNode(this.textNodes[indexOfSubject]),
               object: this.toNode(this.textNodes[indexOfObject]),
-
               predicate: x.predicate,
-
             });
           });
         }
@@ -1448,8 +1446,6 @@
               .takeWhile(() => this.mouseState === SELECT);
 
             const ctrl = keyDown.filter(e => (e.ctrlKey && !e.shiftKey && !e.altKey));
-
-            keyDown.subscribe(e => console.log(e));
 
             // ESC clear selection
             keyDown.filter(e => e.keyCode === 27)

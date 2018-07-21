@@ -2,7 +2,8 @@
   <div>
     <transition name="slide-fade">
       <ul class="graph-unorderedList" @mouseenter="mouseEnter()"
-          id="graph-select-tool" v-show="tools[tools.reduce((acc,curr, i) => (curr.action === 'SELECT'? i: acc), -1)].toggled">
+          id="graph-select-tool"
+          v-show="tools[tools.reduce((acc,curr, i) => (curr.action === 'SELECT'? i: acc), -1)].toggled">
         <li v-for="item in selectTools" :key="item.action" @click="clicked(item.action)"
             v-bind:class="{ active: item.toggled }">
         <span v-if="item.icon.length === 1" class="icon-alone tooltip">
@@ -71,29 +72,16 @@
             tip: 'Import Probability Diagram',
           },
           {
-            action: 'REMOVEARROWS', /* to remove all arrows from the screen */
-            icon: ['fa fa-arrow-circle-o-right fa-stack-2x', 'fa fa-ban fa-stack-2x text-danger'],
-            toggled: false,
-            tip: 'Delete Arrows',
-          },
-          {
-            action: 'CLEARSCREEN', /* to remove all nodes and arrows from the screen */
-//            icon: ['fa fa-share-alt fa-rotate-90 fa-stack-1x', 'fa fa-ban fa-stack-2x text-danger'],
-            icon: ['close'],
-            toggled: false,
-            tip: 'Delete All',
-          },
-          {
             action: 'UNDO',
             icon: ['undo'],
             toggled: false,
-            tip: 'Undo (CTRL+Z)',
+            tip: 'Undo (Ctrl+Z)',
           },
           {
             action: 'REDO',
             icon: ['repeat'],
             toggled: false,
-            tip: 'Redo (CTRL+Y)',
+            tip: 'Redo (Ctrl+Y)',
           },
           {
             action: 'SAVE',
@@ -125,7 +113,25 @@
             action: 'DELETE',
             icon: ['trash'],
             toggled: false,
-            tip: 'Delete'
+            tip: 'Delete (Del)'
+          },
+          {
+            action: 'BOLD',
+            icon: ['bold'],
+            toggled: false,
+            tip: 'Bold  (Ctrl+B)'
+          },
+          {
+            action: 'ITALIC',
+            icon: ['italic'],
+            toggled: false,
+            tip: 'Italics  (Ctrl+I)'
+          },
+          {
+            action: 'UNDERLINE',
+            icon: ['underline'],
+            toggled: false,
+            tip: 'Underline (Ctrl+U)'
           },
         ],
       };
@@ -140,8 +146,6 @@
         if (action === 'SAVE'
           || action === 'ADDNOTE'
           || action === 'DELETE'
-          || action === 'CLEARSCREEN'
-          || action === 'REMOVEARROWS'
           || action === 'IMPORTPROB'
           || action === 'UNDO'
           || action === 'REDO') {
@@ -150,6 +154,9 @@
         }
         if (action === 'PIN'
           || action === 'COLOR'
+          || action === 'BOLD'
+          || action === 'ITALIC'
+          || action === 'UNDERLINE'
           || action === 'COPY') {
           // For the above actions, default to mouse select state.
           newAction = 'SELECT';
@@ -174,16 +181,15 @@
 
 <style scoped>
   .slide-fade-enter-active {
-    transition: all .2s ease;
+    transition: all .2s ease-out;
   }
 
   .slide-fade-leave-active {
-    transition: all .2s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+    transition: all .2s ease-in;
   }
 
   .slide-fade-enter, .slide-fade-leave-to {
-    transform: translateX(50px);
-    opacity: 0;
+    transform: translate(50px, -70px) scale(1, 0);
   }
 
   .tooltip {
@@ -210,16 +216,22 @@
 
   .tooltip:hover .tooltiptext {
     visibility: visible;
+    -webkit-transition-delay: 0.4s;
+    -moz-transition-delay: 0.4s;
+    -ms-transition-delay: 0.4s;
+    -o-transition-delay: 0.4s;
+    transition-delay: 0.4s;
   }
 
   #graph-main-tool {
     right: 10px;
     top: 10px;
+    padding: 5px;
   }
 
   #graph-select-tool {
     right: 60px;
-    top: 37px;
+    top: 16px;
   }
 
   ul {

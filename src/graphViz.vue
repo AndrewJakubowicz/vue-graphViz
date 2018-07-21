@@ -36,6 +36,7 @@
   import Selection from './behaviours/selection';
 
   const ADDNOTE = 'ADDNOTE';
+  const BOLD = 'BOLD';
   const CLEARHISTORY = 'CLEARHISTORY';
   const CLEARSCREEN = 'CLEARSCREEN';
   const COLOR = 'COLOR';
@@ -46,6 +47,7 @@
   const EDGEEDIT = 'EDGEEDIT';
   const IMAGE = 'IMAGE';
   const IMPORTPROB = 'IMPORTPROB';
+  const ITALIC = 'ITALIC';
   const NODEEDIT = 'NODEEDIT';
   const PIN = 'PIN';
   const REDO = 'REDO';
@@ -56,6 +58,7 @@
   const SHAPE = 'SHAPE';
   const TEXT = 'TEXT';
   const TEXTEDIT = 'TEXTEDIT';
+  const UNDERLINE = 'UNDERLINE';
   const UNDO = 'UNDO';
   const WIDTH = 'WIDTH';
 
@@ -1115,17 +1118,20 @@
 
       changeMouseState(state) {
         if (!(state === ADDNOTE
+          || state === BOLD
           || state === CLEARSCREEN
           || state === COPY
           || state === COLOR
           || state === DELETE
           || state === IMPORTPROB
+          || state === ITALIC
           || state === PIN
           || state === POINTER
           || state === REDO
           || state === REMOVEARROWS
           || state === SAVE
           || state === SELECT
+          || state === UNDERLINE
           || state === UNDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
@@ -1138,6 +1144,30 @@
             this.rootObservable.next({
               type: CREATE,
               newNode: true,
+            });
+            break;
+          }
+
+          case BOLD: {
+            this.mouseState = SELECT;
+            const nodes = [...this.activeSelect.nodes.values()];
+            if (nodes.length === 0) break;
+            const reCheckBold = /^ *(<.*>)*(<b>)(.*)(<\/b>)(<\/.*>)* *$/;
+            const bold = nodes.every((d) => reCheckBold.test(d.shortname));
+            const values = nodes.map(d => {
+              // remove existing bold tags
+              let str = d.shortname.replace(/<b>|<\/b>/g, '');
+              if (!bold) {
+                // add bold tags to outside of string
+                str = '<b>' + str + '</b>';
+              }
+              return str;
+            });
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: TEXT,
+              id: [...this.activeSelect.nodes.keys()],
+              value: values,
             });
             break;
           }
@@ -1175,6 +1205,7 @@
 
           case COPY: {
             this.mouseState = SELECT;
+            if (this.activeSelect.nodes.size === 0) break;
             this.rootObservable.next({
               type: CREATE,
               newNode: [...this.activeSelect.nodes.values()].map(d => {
@@ -1196,12 +1227,13 @@
 
           case DELETE: {
             const nodes = [...this.activeSelect.nodes.keys()];
+            if (this.activeSelect.size === 0) break;
+            this.changeMouseState(POINTER);
             this.activeSelect.clear();
             this.rootObservable.next({
               type: DELETE,
               nodeId: nodes,
             });
-            this.changeMouseState(POINTER);
             break;
           }
 
@@ -1256,8 +1288,31 @@
             break;
           }
 
+          case ITALIC: {
+            this.mouseState = SELECT;
+            const nodes = [...this.activeSelect.nodes.values()];
+            if (nodes.length === 0) break;
+            const reCheckItalic = /^ *(<.*>)*(<i>)(.*)(<\/i>)(<\/.*>)* *$/;
+            const italic = nodes.every((d) => reCheckItalic.test(d.shortname));
+            const values = nodes.map(d => {
+              let str = d.shortname.replace(/<i>|<\/i>/g, ''); // remove existing italic tags
+              if (!italic) {
+                str = '<i>' + str + '</i>';// add italic tags to outside of string
+              }
+              return str;
+            });
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: TEXT,
+              id: [...this.activeSelect.nodes.keys()],
+              value: values,
+            });
+            break;
+          }
+
           case PIN: {
             this.mouseState = SELECT;
+            if (this.activeSelect.nodes.size === 0) break;
             this.rootObservable.next({
               type: NODEEDIT,
               prop: PIN,
@@ -1338,9 +1393,9 @@
                 const elem = g.append('path')
                   .attr('id', 'selector')
                   .attr('d', `M${x} ${y} H${x} V${y} H${x}Z`)
-                  .attr('style', 'stroke:rgba(0,0,150,0.8);stroke-width:1')
-                  // .attr("shape-rendering", "crispEdges")
-                  .attr('fill', 'rgba(0,0,150,0.1)')
+                  .attr('style', 'stroke:rgba(129, 179, 254);stroke-width:1')
+                  .attr('shape-rendering', 'crispEdges')
+                  .attr('fill', 'rgba(0, 110, 251, 0.1)')
                   .attr('stroke-dasharray', '4 3');
                 return { x, y, addTo, elem };
               })
@@ -1387,6 +1442,93 @@
                 this.activeSelect.selectExclusive(newSelect);
                 this.graph.restart.styles();
               });
+
+            /** DEFINE KEYBOARD SHORTCUTS FOR SELECT TOOL **/
+            const keyDown = Rx.Observable.fromEvent(document, 'keydown')
+              .takeWhile(() => this.mouseState === SELECT);
+
+            const ctrl = keyDown.filter(e => (e.ctrlKey && !e.shiftKey && !e.altKey));
+
+            keyDown.subscribe(e => console.log(e));
+
+            // ESC clear selection
+            keyDown.filter(e => e.keyCode === 27)
+              .do(e => e.preventDefault())
+              .subscribe(() => {
+                this.activeSelect.clear();
+                this.graph.restart.styles();
+              });
+
+            // DEL delete
+            keyDown.filter(e => e.keyCode === 46)
+              .do(e => e.preventDefault())
+              .subscribe(() => {
+                this.changeMouseState(DELETE);
+              });
+
+            // ctrl + C duplicate
+            ctrl.filter(e => e.keyCode === 67)
+              .do(e => e.preventDefault())
+              .subscribe(() => {
+                this.changeMouseState(COPY);
+              });
+
+            // ctrl + U underline
+            ctrl.filter(e => e.keyCode === 85)
+              .do(e => e.preventDefault())
+              .subscribe(() => {
+                this.changeMouseState(UNDERLINE);
+              });
+            // ctrl + B underline
+            ctrl.filter(e => e.keyCode === 66)
+              .do(e => e.preventDefault())
+              .subscribe(() => {
+                this.changeMouseState(BOLD);
+              });
+            // ctrl + U underline
+            ctrl.filter(e => e.keyCode === 73)
+              .do(e => e.preventDefault())
+              .subscribe(() => {
+                this.changeMouseState(ITALIC);
+              });
+
+            // ctrl + A select all
+            ctrl.filter(e => e.keyCode === 65)
+              .subscribe(() => {
+                const newSelect = this.graph.selectByCoords({
+                  x: -Infinity,
+                  X: Infinity,
+                  y: -Infinity,
+                  Y: Infinity
+                });
+                this.activeSelect.select(newSelect);
+                this.graph.restart.styles();
+              });
+            break;
+          }
+
+          case UNDERLINE: {
+            this.mouseState = SELECT;
+            const nodes = [...this.activeSelect.nodes.values()];
+            if (nodes.length === 0) break;
+            const reCheckUnderlined = /^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/;
+            const underline = nodes.every((d) => reCheckUnderlined.test(d.shortname));
+            const values = nodes.map(d => {
+              // remove existing underlines
+              // let str = d.shortname.replace(/^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/, '$1$3$5');
+              let str = d.shortname.replace(/<u>|<\/u>/g, '');
+              if (!underline) {
+                // add underline tags inside other tegs
+                str = str.replace(/ *^((<[^<>]*>)*)(.*?)((<\/[^<>]*>)*)$ */, '$1<u>$3</u>$4');
+              }
+              return str;
+            });
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: TEXT,
+              id: [...this.activeSelect.nodes.keys()],
+              value: values,
+            });
             break;
           }
 
@@ -1432,7 +1574,7 @@
   }
 
   .highlight {
-    stroke: #4fc1e9;
+    stroke: rgb(129, 179, 254);
   }
 
   .medium-editor-toolbar li button {

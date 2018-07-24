@@ -1412,9 +1412,9 @@
                 const elem = g.append('path')
                   .attr('id', 'selector')
                   .attr('d', `M${x} ${y} H${x} V${y} H${x}Z`)
-                  .attr('style', 'stroke:rgba(129, 179, 254);stroke-width:1')
+                  .attr('style', 'stroke:rgba(78, 140, 233);stroke-width:1')
                   .attr('shape-rendering', 'crispEdges')
-                  .attr('fill', 'rgba(0, 110, 251, 0.1)')
+                  .attr('fill', 'rgba(78,168,233,0.1)')
                   .attr('stroke-dasharray', '4 3');
                 return { x, y, addTo, elem };
               })
@@ -1591,7 +1591,7 @@
   }
 
   .highlight {
-    stroke: rgb(129, 179, 254);
+    stroke: rgb(64, 158, 255);
   }
 
   .medium-editor-toolbar li button {

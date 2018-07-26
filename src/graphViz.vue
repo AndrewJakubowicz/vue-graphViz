@@ -92,16 +92,51 @@
         noteObjs: [],
         dbClickCreateNode: true,
         canKeyboardUndo: true,
-        rootObservable: new Rx.Subject(),
+        destroy$: new Rx.Subject(),
+        rootObservable: undefined,
         scale: 1,
         activeSelect: new Selection(),
       };
     },
     mounted() {
+      this.rootObservable = new Rx.Subject().takeUntil(this.destroy$);
       this.actions(this.rootObservable);
       this.graphClicked = true;
 
+
+      this.createGraph(() => {
+        // Create initial diagram from createDiagram.
+        if (this.savedDiagram) {
+          // Create from saved.
+          const savedGraph = JSON.parse(this.savedDiagram);
+          const nodes = savedGraph.nodes;
+
+          nodes.forEach((v) => {
+            // Append x and y co-ordinates to the nodes passed in.
+            this.addNodeHelper(v.hash, v.x, v.y);
+          });
+          const triplets = savedGraph.triplets;
+          triplets.forEach((x) => {
+            // Create the triplets between the nodes.
+            const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+            const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+            if (indexOfSubject === -1 || indexOfObject === -1) {
+              return;
+            }
+            // Create the triplet
+            this.graph.addTriplet({
+              subject: this.toNode(this.textNodes[indexOfSubject]),
+              object: this.toNode(this.textNodes[indexOfObject]),
+              predicate: x.predicate,
+            });
+          });
+        }
+      });
+
+      const svg = this.graph.getSVGElement().node();
+
       const $paste = Rx.Observable.fromEvent(document, 'paste')
+        .takeUntil(this.destroy$)
         .filter(() => this.clickedGraphViz)
         .filter(() => !this.ifColorPickerOpen)
         .filter(() => this.mouseState === POINTER)
@@ -112,7 +147,9 @@
           });
         });
 
-      const keyDown = Rx.Observable.fromEvent(document, 'keydown');
+      const keyDown = Rx.Observable.fromEvent(document, 'keydown')
+        .filter(() => false)
+        .takeUntil(this.destroy$);
       const ctrlDown = keyDown.filter(e => e.ctrlKey);
 
       ctrlDown.filter(e => e.keyCode === 90 && !e.shiftKey && !e.altKey)
@@ -146,35 +183,6 @@
           e.preventDefault();
           this.changeMouseState(SELECT);
         });
-
-      this.createGraph(() => {
-        // Create initial diagram from createDiagram.
-        if (this.savedDiagram) {
-          // Create from saved.
-          const savedGraph = JSON.parse(this.savedDiagram);
-          const nodes = savedGraph.nodes;
-
-          nodes.forEach((v) => {
-            // Append x and y co-ordinates to the nodes passed in.
-            this.addNodeHelper(v.hash, v.x, v.y);
-          });
-          const triplets = savedGraph.triplets;
-          triplets.forEach((x) => {
-            // Create the triplets between the nodes.
-            const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
-            const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
-            if (indexOfSubject === -1 || indexOfObject === -1) {
-              return;
-            }
-            // Create the triplet
-            this.graph.addTriplet({
-              subject: this.toNode(this.textNodes[indexOfSubject]),
-              object: this.toNode(this.textNodes[indexOfObject]),
-              predicate: x.predicate,
-            });
-          });
-        }
-      });
 
 
     },
@@ -725,8 +733,8 @@
       },
 
       createGraph(callback) {
-        const $mouseOverNode = new Rx.Subject();
-        const $mousedown = new Rx.Subject();
+        const $mouseOverNode = new Rx.Subject().takeUntil(this.destroy$);
+        const $mousedown = new Rx.Subject().takeUntil(this.destroy$);
         let me = this;
         const currentState = {
           currentNode: {
@@ -858,7 +866,7 @@
             let graphEditorW = grapgEditor.width;
             let graphEditorH = grapgEditor.height;
             let posX = ev.clientX - graphEditorX;
-            let posY = ev.clientY + 30;
+            let posY = ev.clientY + 50 - graphEditorY;
 
             if (posX + 250 > graphEditorW) {
               posX = posX - 250;
@@ -1074,6 +1082,7 @@
         // set clickedgraphviz to true first time user clicks
         const svgElem = this.graph.getSVGElement().node();
         Rx.Observable.fromEvent(svgElem, 'click')
+          .takeUntil(this.destroy$)
           .take(1)
           .subscribe(() => {
             this.clickedGraphViz = true;
@@ -1244,6 +1253,7 @@
             };
             const svgElem = this.graph.getSVGElement().node();
             Rx.Observable.fromEvent(svgElem, 'click')
+              .takeUntil(this.destroy$)
               .takeWhile(() => this.ifColorPickerOpen === true)
               .take(1)
               .do(e => e.stopPropagation())
@@ -1259,13 +1269,13 @@
             const idMap = new Map();
             const svg = this.graph.getSVGElement().node();
             const b = svg.getBoundingClientRect();
-            const editorBounds = this.transformCoordinates({ x: b.width - b.x, y: b.height - b.y });
+            const editorBounds = this.transformCoordinates({ x: b.width + b.x, y: b.height + b.y });
             const newNodes = [...this.activeSelect.nodes.values()]
               .map(d => {
                 const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname, id, x, y, width, height } = d;
                 const newId = 'note-' + uuid.v4();
                 const newX = x + 100 + width / 2 > editorBounds.x ? x - 20 - width / 2 : x + 20 + width / 2;
-                const newY = y + 100 + height > editorBounds.y ? y - 20 - height : y + 20 + height;
+                const newY = y + 160 + height > editorBounds.y ? y - 15 - height : y + 15 + height;
                 const newnode = {
                   color,
                   fixed,
@@ -1471,8 +1481,12 @@
           }
 
           case SAVE: {
+            this.activeSelect.clear();
             this.changeMouseState(POINTER);
             this.deleteRadial();
+
+            this.destroy$.next(true);
+            this.destroy$.unsubscribe();
 
             const text = 'Saving Graph...';
             this.showLoadingMask(text);
@@ -1538,6 +1552,7 @@
               });
 
             Rx.Observable.fromEvent(svg.node(), 'click')
+              .takeUntil(this.destroy$)
               .takeWhile(() => this.mouseState === SELECT)
               .do(e => e.preventDefault())
               .do(e => e.stopPropagation())
@@ -1556,6 +1571,8 @@
 
             /** DEFINE KEYBOARD SHORTCUTS FOR SELECT TOOL **/
             const keyDown = Rx.Observable.fromEvent(document, 'keydown')
+              .filter(() => false)
+              .takeUntil(this.destroy$)
               .takeWhile(() => this.mouseState === SELECT);
 
             const ctrl = keyDown.filter(e => (e.ctrlKey && !e.shiftKey && !e.altKey));
@@ -1603,6 +1620,7 @@
 
             // ctrl + A select all
             ctrl.filter(e => e.keyCode === 65)
+              .do(e => e.preventDefault())
               .subscribe(() => {
                 const newSelect = this.graph.selectByCoords({
                   x: -Infinity,
@@ -1704,6 +1722,10 @@
   .vc-compact {
     width: 245px !important;
     box-sizing: border-box;
+  }
+
+  .vc-compact-color-item {
+    margin-top: 0px !important;
   }
 
   .highlight {

@@ -107,7 +107,7 @@
             action: 'COPY',
             icon: ['copy'],
             toggled: false,
-            tip: 'Copy',
+            tip: 'Duplicate (Ctrl+C)',
           },
           {
             action: 'DELETE',
@@ -148,6 +148,7 @@
           || action === 'DELETE'
           || action === 'IMPORTPROB'
           || action === 'UNDO'
+          || action === 'COPY'
           || action === 'REDO') {
           // For the above actions, default to mouse pointer state.
           newAction = 'POINTER';
@@ -156,8 +157,7 @@
           || action === 'COLOR'
           || action === 'BOLD'
           || action === 'ITALIC'
-          || action === 'UNDERLINE'
-          || action === 'COPY') {
+          || action === 'UNDERLINE') {
           // For the above actions, default to mouse select state.
           newAction = 'SELECT';
         }

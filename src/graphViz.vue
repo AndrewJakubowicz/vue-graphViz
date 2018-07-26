@@ -515,8 +515,8 @@
                 });
                 // promise containing edges selected for deletion
                 const edgePromise = edgeArray.map(triplet => {
-                  triplet.subject = triplet.subject.id;
-                  triplet.object = triplet.object.id;
+                  triplet.subject = triplet.predicate.subject;
+                  triplet.object = triplet.predicate.object;
                   return Promise.resolve(triplet);
                 });
 
@@ -932,7 +932,7 @@
           },
 
           nodeRemove: (node) => {
-            this.activeSelect.deselect(node);
+            this.changeMouseState(POINTER);
             this.rootObservable.next({
               type: DELETE,
               nodeId: node.id,
@@ -940,6 +940,7 @@
           },
 
           edgeRemove: (edge) => {
+            this.changeMouseState(POINTER);
             this.rootObservable.next({
               type: DELETE,
               triplet: edge,
@@ -1009,7 +1010,16 @@
         });
         this.linkToolDispose = this.linkTool(this.textNodes);
         // Set the action of clicking the edge:
-        this.graph.edgeOptions.setClickEdge((edge, elem) => {
+        this.graph.edgeOptions.setClickEdge((edge, elem, e) => {
+          if (this.mouseState === SELECT) {
+            if (e.shiftKey) {
+              this.activeSelect.selectExclusive(edge);
+            } else {
+              this.activeSelect.clear();
+              this.activeSelect.select(edge);
+            }
+            this.graph.restart.styles();
+          }
           if (this.mouseState === POINTER || this.mouseState === CREATEEDGE) {
             $mousedown.next({
               type: 'EDITEDGE',
@@ -1115,7 +1125,10 @@
       },
 
       dblClickOnPage(e) {
-        if (!this.dbClickCreateNode || this.ifColorPickerOpen || this.mouseState === TEXTEDIT) return;
+        if (!this.dbClickCreateNode
+          || this.ifColorPickerOpen
+          || this.mouseState === TEXTEDIT
+          || e.target.tagName !== 'svg') return;
         const coords = this.transformCoordinates({ x: e.clientX, y: e.clientY });
         this.rootObservable.next({
           type: CREATE,
@@ -1168,11 +1181,11 @@
 
           case BOLD: {
             this.mouseState = SELECT;
-            const nodes = [...this.activeSelect.nodes.values()];
-            if (nodes.length === 0) break;
+            let nodes = [...this.activeSelect.nodes.values()];
+            let edges = [...this.activeSelect.edges.values()];
             const reCheckBold = /^ *(<.*>)*(<b>)(.*)(<\/b>)(<\/.*>)* *$/;
-            const bold = nodes.every((d) => reCheckBold.test(d.shortname));
-            const values = nodes.map(d => {
+            const bold = nodes.every((d) => reCheckBold.test(d.shortname)) && edges.every((d) => reCheckBold.test(d.predicate.text));
+            nodes = nodes.map(d => {
               // remove existing bold tags
               let str = d.shortname.replace(/<b>|<\/b>/g, '');
               if (!bold) {
@@ -1181,12 +1194,32 @@
               }
               return str;
             });
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: TEXT,
-              id: [...this.activeSelect.nodes.keys()],
-              value: values,
-            });
+            edges = edges.map(d => {
+                // remove existing bold tags
+                let str = d.predicate.text.replace(/<b>|<\/b>/g, '');
+                if (!bold) {
+                  // add bold tags to outside of string
+                  str = '<b>' + str + '</b>';
+                }
+                return str;
+              }
+            );
+            if (nodes.length > 0) {
+              this.rootObservable.next({
+                type: NODEEDIT,
+                prop: TEXT,
+                id: [...this.activeSelect.nodes.keys()],
+                value: nodes,
+              });
+            }
+            if (edges.length > 0) {
+              this.rootObservable.next({
+                type: EDGEEDIT,
+                prop: TEXT,
+                hash: [...this.activeSelect.edges.keys()],
+                value: edges,
+              });
+            }
             break;
           }
 
@@ -1222,13 +1255,18 @@
           }
 
           case COPY: {
-            this.mouseState = SELECT;
             if (this.activeSelect.nodes.size === 0) break;
-            this.rootObservable.next({
-              type: CREATE,
-              newNode: [...this.activeSelect.nodes.values()].map(d => {
-                const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname } = d;
-                return {
+            const idMap = new Map();
+            const svg = this.graph.getSVGElement().node();
+            const b = svg.getBoundingClientRect();
+            const editorBounds = this.transformCoordinates({ x: b.width - b.x, y: b.height - b.y });
+            const newNodes = [...this.activeSelect.nodes.values()]
+              .map(d => {
+                const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname, id, x, y, width, height } = d;
+                const newId = 'note-' + uuid.v4();
+                const newX = x + 100 + width / 2 > editorBounds.x ? x - 20 - width / 2 : x + 20 + width / 2;
+                const newY = y + 100 + height > editorBounds.y ? y - 20 - height : y + 20 + height;
+                const newnode = {
                   color,
                   fixed,
                   fixedWidth,
@@ -1237,20 +1275,54 @@
                   nodeShape,
                   shortname,
                   class: d.class.replace(' highlight', ''),
+                  id: newId,
+                  hash: newId,
+                  x: newX,
+                  y: newY,
                 };
-              })
+                idMap.set(id, newnode);
+                return newnode;
+              });
+            const newEdges = [...this.activeSelect.edges.values()]
+              .filter(d => idMap.has(d.predicate.subject) || idMap.has(d.predicate.object))
+              .map(d => {
+                  let subject = d.source;
+                  const predicate = d.predicate;
+                  let object = d.target;
+                  if (idMap.has(predicate.subject)) {
+                    subject = idMap.get(predicate.subject);
+                  }
+                  if (idMap.has(predicate.object)) {
+                    object = idMap.get(predicate.object);
+                  }
+                  const newPredicate = Object.assign({}, predicate);
+                  newPredicate.subject = subject.id;
+                  newPredicate.object = object.id;
+                  newPredicate.hash = 'edge-' + uuid.v4();
+                  newPredicate.class = newPredicate.class.replace(' highlight', '');
+                  return { subject, predicate: newPredicate, object };
+                }
+              );
+
+            this.changeMouseState(POINTER);
+            this.rootObservable.next({
+              type: CREATE,
+              newNode: newNodes,
+              triplet: newEdges,
             });
             break;
           }
 
           case DELETE: {
             const nodes = [...this.activeSelect.nodes.keys()];
+            const edges = [...this.activeSelect.edges.values()];
             this.changeMouseState(POINTER);
             this.activeSelect.clear();
-            if (nodes.length === 0) break;
+            if (nodes.length === 0 && edges.length === 0) break;
             this.rootObservable.next({
               type: DELETE,
               nodeId: nodes,
+              triplet: edges,
             });
             break;
           }
@@ -1284,6 +1356,7 @@
                     hash: 'edge-' + uuid.v4(),
                     subject: objOfNodes[n].id,
                     object: objOfNodes[key].id,
+                    class: '',
                     constraint: {
                       axis: 'y',
                       type: 'separation',
@@ -1308,23 +1381,41 @@
 
           case ITALIC: {
             this.mouseState = SELECT;
-            const nodes = [...this.activeSelect.nodes.values()];
-            if (nodes.length === 0) break;
+            let nodes = [...this.activeSelect.nodes.values()];
+            let edges = [...this.activeSelect.edges.values()];
             const reCheckItalic = /^ *(<.*>)*(<i>)(.*)(<\/i>)(<\/.*>)* *$/;
-            const italic = nodes.every((d) => reCheckItalic.test(d.shortname));
-            const values = nodes.map(d => {
+            const italic = nodes.every((d) => reCheckItalic.test(d.shortname)) && edges.every((d) => reCheckItalic.test(d.predicate.text));
+            nodes = nodes.map(d => {
               let str = d.shortname.replace(/<i>|<\/i>/g, ''); // remove existing italic tags
               if (!italic) {
                 str = '<i>' + str + '</i>';// add italic tags to outside of string
               }
               return str;
             });
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: TEXT,
-              id: [...this.activeSelect.nodes.keys()],
-              value: values,
-            });
+            edges = edges.map(d => {
+                let str = d.predicate.text.replace(/<i>|<\/i>/g, ''); // remove existing italic tags
+                if (!italic) {
+                  str = '<i>' + str + '</i>'; // add italic tags to outside of string
+                }
+                return str;
+              }
+            );
+            if (nodes.length > 0) {
+              this.rootObservable.next({
+                type: NODEEDIT,
+                prop: TEXT,
+                id: [...this.activeSelect.nodes.keys()],
+                value: nodes,
+              });
+            }
+            if (edges.length > 0) {
+              this.rootObservable.next({
+                type: EDGEEDIT,
+                prop: TEXT,
+                hash: [...this.activeSelect.edges.keys()],
+                value: edges,
+              });
+            }
             break;
           }
 
@@ -1426,7 +1517,8 @@
                   .map(e => ({ X: e.x, Y: e.y }))
                   .map(({ X, Y }) => {
                     elem.attr('d', `M${x} ${y} H${X} V${Y} H${x}Z`);
-                    return this.graph.selectByCoords({ x, X, y, Y });
+                    const selection = this.graph.selectByCoords({ x, X, y, Y });
+                    return [...selection.nodes, ...selection.edges];
                   })
                   .pairwise()
                   .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
@@ -1457,7 +1549,7 @@
                 return { x, y };
               })
               .subscribe(({ x, y }) => {
-                const newSelect = this.graph.selectByCoords({ x, X: x, y, Y: y });
+                const newSelect = this.graph.selectByCoords({ x, X: x, y, Y: y }).nodes;
                 this.activeSelect.selectExclusive(newSelect);
                 this.graph.restart.styles();
               });
@@ -1518,7 +1610,11 @@
                   y: -Infinity,
                   Y: Infinity
                 });
-                this.activeSelect.select(newSelect);
+                this.activeSelect.select(newSelect.nodes);
+                this.activeSelect.select(newSelect.edges);
+                // select all edges
+                const db = this.graph.getDB();
+
                 this.graph.restart.styles();
               });
             break;
@@ -1526,11 +1622,11 @@
 
           case UNDERLINE: {
             this.mouseState = SELECT;
-            const nodes = [...this.activeSelect.nodes.values()];
-            if (nodes.length === 0) break;
+            let nodes = [...this.activeSelect.nodes.values()];
+            let edges = [...this.activeSelect.edges.values()];
             const reCheckUnderlined = /^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/;
-            const underline = nodes.every((d) => reCheckUnderlined.test(d.shortname));
-            const values = nodes.map(d => {
+            const underline = nodes.every((d) => reCheckUnderlined.test(d.shortname)) && edges.every((d) => reCheckUnderlined.test(d.predicate.text));
+            nodes = nodes.map(d => {
               // remove existing underlines
               // let str = d.shortname.replace(/^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/, '$1$3$5');
               let str = d.shortname.replace(/<u>|<\/u>/g, '');
@@ -1540,12 +1636,32 @@
               }
               return str;
             });
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: TEXT,
-              id: [...this.activeSelect.nodes.keys()],
-              value: values,
+            edges = edges.map(d => {
+              // remove existing underlines
+              // let str = d.shortname.replace(/^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/, '$1$3$5');
+              let str = d.predicate.text.replace(/<u>|<\/u>/g, '');
+              if (!underline) {
+                // add underline tags inside other tegs
+                str = str.replace(/ *^((<[^<>]*>)*)(.*?)((<\/[^<>]*>)*)$ */, '$1<u>$3</u>$4');
+              }
+              return str;
             });
+            if (nodes.length > 0) {
+              this.rootObservable.next({
+                type: NODEEDIT,
+                prop: TEXT,
+                id: [...this.activeSelect.nodes.keys()],
+                value: nodes,
+              });
+            }
+            if (edges.length > 0) {
+              this.rootObservable.next({
+                type: EDGEEDIT,
+                prop: TEXT,
+                hash: [...this.activeSelect.edges.keys()],
+                value: edges,
+              });
+            }
             break;
           }
 

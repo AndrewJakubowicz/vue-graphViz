@@ -22,16 +22,14 @@ export default class Selection {
     else {
       select = Array.isArray(select) ? select : [select];
       select.forEach((d) => {
-        switch (d.hash.substring(0, 4)) {
+        const hash = d.hash ? d.hash : d.predicate.hash;
+        switch (hash.substring(0, 4)) {
           case 'edge': {
-            this._edges.set(d.hash, d);
+            this.addEdge(d);
             break;
           }
           case 'note': {
-            this._nodes.set(d.hash, d);
-            if (!d.class.includes('highlight')) {
-              d.class += ' highlight';
-            }
+            this.addNode(d);
             break;
           }
           default: {
@@ -40,6 +38,28 @@ export default class Selection {
         }
       });
     }
+  }
+
+  addNode(d) {
+    this._nodes.set(d.hash, d);
+    if (!d.class.includes('highlight')) {
+      d.class += ' highlight';
+    }
+  }
+
+  delNode(d) {
+    this._nodes.delete(d.hash);
+    d.class = d.class.replace(' highlight', '');
+  }
+
+  addEdge(d) {
+    this._edges.set(d.predicate.hash, d);
+    d.predicate.class += ' highlight';
+  }
+
+  delEdge(d) {
+    this._edges.delete(d.predicate.hash);
+    d.predicate.class = d.predicate.class.replace(' highlight', '');
   }
 
   /**
@@ -53,14 +73,14 @@ export default class Selection {
     else {
       select = Array.isArray(select) ? select : [select];
       select.forEach((d) => {
-        switch (d.hash.substring(0, 4)) {
+        const hash = d.hash ? d.hash : d.predicate.hash;
+        switch (hash.substring(0, 4)) {
           case 'edge': {
-            this._edges.delete(d.hash);
+            this.delEdge(d);
             break;
           }
           case 'note': {
-            this._nodes.delete(d.hash);
-            d.class = d.class.replace(' highlight', '');
+            this.delNode(d);
             break;
           }
           default: {
@@ -82,21 +102,23 @@ export default class Selection {
     else {
       select = Array.isArray(select) ? select : [select];
       select.forEach((d) => {
-        switch (d.hash.substring(0, 4)) {
+        const hash = d.hash ? d.hash : d.predicate.hash;
+        switch (hash.substring(0, 4)) {
           case 'edge': {
-            this._edges.has(d.hash) ? this._edges.delete(d.hash) : this._edges.set(d.hash, d);
+            if (this._edges.has(hash)) {
+              this.delEdge(d);
+            }
+            else {
+              this.addEdge(d);
+            }
             break;
           }
           case 'note': {
-            if (this._nodes.has(d.hash)) {
-              this._nodes.delete(d.hash);
-              d.class = d.class.replace(' highlight', '');
+            if (this._nodes.has(hash)) {
+              this.delNode(d);
             }
             else {
-              this._nodes.set(d.hash, d);
-              if (!d.class.includes('highlight')) {
-                d.class += ' highlight';
-              }
+              this.addNode(d);
             }
             break;
           }
@@ -127,46 +149,43 @@ export default class Selection {
    * clear edges in selection
    */
   clearEdges() {
-    this._edges.clear();
+    this.deselect([...this._edges.values()]);
   }
 
   merge(select) {
-    select._nodes.forEach((v, k) => {
-      this._nodes.set(k, v);
-      if (!v.class.includes('highlight')) {
-        v.class += ' highlight';
-      }
+    select._nodes.forEach((v) => {
+      this.addNode(v);
     });
-    select._edges.forEach((v, k) => {
-      this._edges.set(k, v);
+    select._edges.forEach((v) => {
+      this.addEdge(v);
     });
   }
 
   minus(select) {
-    select._nodes.forEach((v, k) => {
-      this._nodes.delete(k);
-      v.class = v.class.replace(' highlight', '');
+    select._nodes.forEach((v) => {
+      this.delNode(v);
     });
-    select._edges.forEach((v, k) => {
-      this._edges.delete(k);
+    select._edges.forEach((v) => {
+      this.delEdge(v);
     });
   }
 
   xor(select) {
     select._nodes.forEach((v, k) => {
       if (this._nodes.has(k)) {
-        this._nodes.delete(k);
-        v.class = v.class.replace(' highlight', '');
+        this.delNode(v);
       }
       else {
-        this._nodes.set(k, v);
-        if (!v.class.includes('highlight')) {
-          v.class += ' highlight';
-        }
+        this.addNode(v);
       }
     });
     select._edges.forEach((v, k) => {
-      this._edges.has(k) ? this._edges.delete(k) : this._edges.set(k, v);
+      if (this._edges.has(k)) {
+        this.delEdge(v);
+      }
+      else {
+        this.addEdge(v);
+      }
     });
   }
 

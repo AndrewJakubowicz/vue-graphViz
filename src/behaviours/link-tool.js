@@ -115,6 +115,7 @@ module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finish
                 predicate: {
                   type: 'arrow',
                   text: '',
+                  class: '',
                   hash: 'edge-' + uuid.v4(),
                   subject: currentState.startedDragAt,
                   object: currentState.currentNode.hash

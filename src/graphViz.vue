@@ -84,7 +84,7 @@
         colors: {
           hex: '#FFFFFF',
         },
-        palette:[
+        palette: [
           '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
           '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
           '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
@@ -858,6 +858,10 @@
             this.scale = scale;
           },
 
+          selection: () => {
+            return this.activeSelect;
+          },
+
           mouseOverBrush: (ev, element, node) => {
             me.dbClickCreateNode = false;
             me.ifColorPickerOpen = true;
@@ -1003,7 +1007,7 @@
               });
           },
 
-          canDrag: () => this.$data.mouseState === POINTER && !this.isResizing,
+          canDrag: () => this.$data.mouseState === POINTER || this.mouseState === SELECT && !this.isResizing,
 
           isSelect: () => {
             return this.$data.mouseState === SELECT;
@@ -1507,10 +1511,18 @@
 
           case SELECT: {
             const svg = this.graph.getSVGElement();
-            Rx.Observable.fromEvent(svg.node(), 'mousedown')
+            const mouseDown = Rx.Observable.fromEvent(svg.node(), 'mousedown')
               .takeWhile(() => this.mouseState === SELECT)
               .do(e => e.preventDefault())
-              .do(e => e.stopPropagation())
+              .do(e => e.stopPropagation());
+
+            const click = Rx.Observable.fromEvent(svg.node(), 'click')
+              .takeUntil(this.destroy$)
+              .takeWhile(() => this.mouseState === SELECT)
+              .do(e => e.preventDefault())
+              .do(e => e.stopPropagation());
+
+            mouseDown.filter(e => e.target.tagName === 'svg')
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey, alt: e.altKey }))
               .map(({ x, y, shift, alt }) => {
                 if (!shift && !alt) {
@@ -1557,11 +1569,9 @@
                   });
               });
 
-            Rx.Observable.fromEvent(svg.node(), 'click')
-              .takeUntil(this.destroy$)
-              .takeWhile(() => this.mouseState === SELECT)
-              .do(e => e.preventDefault())
-              .do(e => e.stopPropagation())
+            Rx.Observable.merge(
+              click,
+              mouseDown.filter(e => e.target.tagName !== 'svg'))
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey }))
               .map(({ x, y, shift }) => {
                 if (!shift) {

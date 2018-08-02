@@ -1751,6 +1751,7 @@
 
   .highlight {
     stroke: rgb(64, 158, 255);
+    filter: url('#highlight-glow')
   }
 
   .medium-editor-toolbar li button {

@@ -141,20 +141,26 @@
 
       const svg = this.graph.getSVGElement().node();
 
+      Rx.Observable.fromEvent(svg, 'focus')
+        .takeUntil(this.destroy$)
+        .subscribe(() => {
+        });
+
       const $paste = Rx.Observable.fromEvent(document, 'paste')
         .takeUntil(this.destroy$)
         .filter(() => this.clickedGraphViz)
         .filter(() => !this.ifColorPickerOpen)
-        .filter(() => this.mouseState === POINTER)
+        .filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
+        .filter(() => document.activeElement === svg)
         .subscribe((e) => {
+          this.changeMouseState(POINTER);
           this.rootObservable.next({
             type: CREATE,
             newNode: { text: e.clipboardData.getData('text/plain') },
           });
         });
 
-      const keyDown = Rx.Observable.fromEvent(document, 'keydown')
-        .filter(() => false)
+      const keyDown = Rx.Observable.fromEvent(svg, 'keydown')
         .takeUntil(this.destroy$);
       const ctrlDown = keyDown.filter(e => e.ctrlKey);
 
@@ -176,6 +182,24 @@
         .subscribe((e) => {
           e.preventDefault();
           this.changeMouseState(SAVE);
+        });
+
+      // ctrl + A select all
+      ctrlDown.filter(e => e.keyCode === 65)
+        .do(e => e.preventDefault())
+        .subscribe(() => {
+          const newSelect = this.graph.selectByCoords({
+            x: -Infinity,
+            X: Infinity,
+            y: -Infinity,
+            Y: Infinity
+          });
+          if (this.mouseState !== SELECT) {
+            this.changeMouseState(SELECT);
+          }
+          this.activeSelect.select(newSelect.nodes);
+          this.activeSelect.select(newSelect.edges);
+          this.graph.restart.styles();
         });
 
       // keyboard shortcuts to switch mouse tool
@@ -350,6 +374,8 @@
       // },
 
       updateFromPicker(value) {
+        const svg = this.graph.getSVGElement().node();
+        svg.focus();
         this.ifColorPickerOpen = false;
         this.colors = value;
         this.rootObservable.next({
@@ -1510,17 +1536,14 @@
           }
 
           case SELECT: {
-            const svg = this.graph.getSVGElement();
-            const mouseDown = Rx.Observable.fromEvent(svg.node(), 'mousedown')
-              .takeWhile(() => this.mouseState === SELECT)
-              .do(e => e.preventDefault())
-              .do(e => e.stopPropagation());
+            const svgSel = this.graph.getSVGElement();
+            const svg = svgSel.node();
+            const mouseDown = Rx.Observable.fromEvent(svg, 'mousedown')
+              .takeWhile(() => this.mouseState === SELECT);
 
-            const click = Rx.Observable.fromEvent(svg.node(), 'click')
+            const click = Rx.Observable.fromEvent(svg, 'click')
               .takeUntil(this.destroy$)
-              .takeWhile(() => this.mouseState === SELECT)
-              .do(e => e.preventDefault())
-              .do(e => e.stopPropagation());
+              .takeWhile(() => this.mouseState === SELECT);
 
             mouseDown.filter(e => e.target.tagName === 'svg')
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey, alt: e.altKey }))
@@ -1531,7 +1554,7 @@
                 return { x, y, addTo: !alt };
               })
               .map(({ x, y, addTo }) => {
-                const g = svg.select('.svg-graph');
+                const g = svgSel.select('.svg-graph');
                 const elem = g.append('path')
                   .attr('id', 'selector')
                   .attr('d', `M${x} ${y} H${x} V${y} H${x}Z`)
@@ -1586,8 +1609,7 @@
               });
 
             /** DEFINE KEYBOARD SHORTCUTS FOR SELECT TOOL **/
-            const keyDown = Rx.Observable.fromEvent(document, 'keydown')
-              .filter(() => false)
+            const keyDown = Rx.Observable.fromEvent(svg, 'keydown')
               .takeUntil(this.destroy$)
               .takeWhile(() => this.mouseState === SELECT);
 
@@ -1627,29 +1649,11 @@
               .subscribe(() => {
                 this.changeMouseState(BOLD);
               });
-            // ctrl + U underline
+            // ctrl + I italic
             ctrl.filter(e => e.keyCode === 73)
               .do(e => e.preventDefault())
               .subscribe(() => {
                 this.changeMouseState(ITALIC);
-              });
-
-            // ctrl + A select all
-            ctrl.filter(e => e.keyCode === 65)
-              .do(e => e.preventDefault())
-              .subscribe(() => {
-                const newSelect = this.graph.selectByCoords({
-                  x: -Infinity,
-                  X: Infinity,
-                  y: -Infinity,
-                  Y: Infinity
-                });
-                this.activeSelect.select(newSelect.nodes);
-                this.activeSelect.select(newSelect.edges);
-                // select all edges
-                const db = this.graph.getDB();
-
-                this.graph.restart.styles();
               });
             break;
           }
@@ -1708,6 +1712,8 @@
           default:
             break;
         }
+        const svg = this.graph.getSVGElement().node();
+        svg.focus();
       },
 
       transformCoordinates({ x, y }) {

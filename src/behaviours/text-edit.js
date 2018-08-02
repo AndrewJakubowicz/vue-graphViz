@@ -20,7 +20,6 @@ export default ($action, startCallback, endCallback) => {
       const restart = () => action.restart('NOUPDATE');
       const save = action.save;
       const textElem = action.textElem;
-      const clickedElem = action.clickedElem;
       let oldText;
       let defaultText;
       if (action.type === 'EDITNODE') {
@@ -131,7 +130,7 @@ export default ($action, startCallback, endCallback) => {
       });
 
       // Return the typing observable.
-      const $typingControls = Rx.Observable
+      return Rx.Observable
         .merge($paste, $input)
         .do(restart)
         .takeUntil($exit)
@@ -142,11 +141,10 @@ export default ($action, startCallback, endCallback) => {
             textElem.innerHTML = oldText;
             fullRestart();
           } else {
-            save && save(textElem.innerHTML.replace(/^<p>|<\/p>$/g, ""));
+            save && save(textElem.innerHTML.replace(/^<p>|<\/p>$/g, ''));
           }
           endCallback && endCallback();
         });
-      return $typingControls;
     })
     .switch()
     .subscribe(

@@ -1070,7 +1070,6 @@
               edge: edge,
               restart: this.graph.restart.layout,
               textElem: elem.node().querySelector('text'),
-              clickedElem: elem,
               save: (newText) => {
                 this.rootObservable.next({
                   type: EDGEEDIT,

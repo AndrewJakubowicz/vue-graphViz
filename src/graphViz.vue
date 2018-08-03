@@ -888,7 +888,7 @@
             return this.activeSelect;
           },
 
-          mouseOverBrush: (ev, element, node) => {
+          mouseOverBrush: (node, element, ev) => {
             me.dbClickCreateNode = false;
             me.ifColorPickerOpen = true;
             me.coloredEl = element._groups[0];

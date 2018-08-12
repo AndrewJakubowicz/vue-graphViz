@@ -1,7 +1,6 @@
 <template>
   <div id="graph-viz">
-    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css"/>
-    <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
+    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/all.css"/>
 
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram'
               @clickedNodeInList="addNode($event)"/>

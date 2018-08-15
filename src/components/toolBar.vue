@@ -7,7 +7,7 @@
         <li v-for="item in selectTools" :key="item.action" @click="clicked(item.action)"
             v-bind:class="{ active: item.toggled }">
         <span v-if="item.icon.length === 1" class="icon-alone tooltip">
-          <i :class="item.icon[0] + ' fa-fw'"></i>
+          <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
@@ -24,7 +24,7 @@
       <li v-for="item in tools" :key="item.action" @click="clicked(item.action)"
           v-bind:class="{ active: item.toggled }">
         <span v-if="item.icon.length === 1" class="icon-alone tooltip">
-          <i :class=" item.icon[0] + ' fa-fw'"></i>
+          <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
@@ -49,43 +49,43 @@
         tools: [
           {
             action: 'POINTER',
-            icon: ['fas fa-mouse-pointer'],
+            icon: ['mouse-pointer'],
             toggled: true,
             tip: 'Pointer (P)',
           },
           {
             action: 'SELECT',
-            icon: ['fas fa-expand'],
+            icon: ['fw'],
             toggled: false,
             tip: 'Select Tool (S)'
           },
           {
             action: 'ADDNOTE',
-            icon: ['far fa-plus-square'],
+            icon: ['plus-square-o'],
             toggled: false,
             tip: 'Add Node',
           },
           {
             action: 'IMPORTPROB',
-            icon: ['fas fa-percentage'],
+            icon: ['fas fa-percent'],
             toggled: false,
             tip: 'Import Probability Diagram',
           },
           {
             action: 'UNDO',
-            icon: ['fas fa-undo-alt'],
+            icon: ['undo'],
             toggled: false,
             tip: 'Undo (Ctrl+Z)',
           },
           {
             action: 'REDO',
-            icon: ['fas fa-redo-alt'],
+            icon: ['repeat'],
             toggled: false,
             tip: 'Redo (Ctrl+Y)',
           },
           {
             action: 'SAVE',
-            icon: ['far fa-save'],
+            icon: ['floppy-o'],
             toggled: false,
             tip: 'Save (Ctrl+S)',
           },
@@ -93,43 +93,43 @@
         selectTools: [
           {
             action: 'COLOR',
-            icon: ['fas fa-brush'],
+            icon: ['paint-brush'],
             toggled: false,
             tip: 'Color',
           },
           {
             action: 'PIN',
-            icon: ['fas fa-thumbtack'],
+            icon: ['thumb-tack'],
             toggled: false,
             tip: 'Pin'
           },
           {
             action: 'COPY',
-            icon: ['far fa-copy'],
+            icon: ['copy'],
             toggled: false,
             tip: 'Duplicate (Ctrl+C)',
           },
           {
             action: 'DELETE',
-            icon: ['far fa-trash-alt'],
+            icon: ['trash'],
             toggled: false,
             tip: 'Delete (Del)'
           },
           {
             action: 'BOLD',
-            icon: ['fas fa-bold'],
+            icon: ['bold'],
             toggled: false,
             tip: 'Bold  (Ctrl+B)'
           },
           {
             action: 'ITALIC',
-            icon: ['fas fa-italic'],
+            icon: ['italic'],
             toggled: false,
             tip: 'Italics  (Ctrl+I)'
           },
           {
             action: 'UNDERLINE',
-            icon: ['fas fa-underline'],
+            icon: ['underline'],
             toggled: false,
             tip: 'Underline (Ctrl+U)'
           },
@@ -264,6 +264,12 @@
 
   .fa-sm { /* Translates the stacked icons to the same size as the other ones */
     font-size: 0.75em;
+  }
+
+  .fa-fw {
+    width: 0.8em;
+    height: 0.8em;
+    border: dotted .1em;
   }
 
   .fa-stack { /* adjust the gap between the stacked icon and the next */

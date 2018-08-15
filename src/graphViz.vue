@@ -1520,11 +1520,11 @@
             this.changeMouseState(POINTER);
             this.deleteRadial();
 
-            this.destroy$.next(true);
-            this.destroy$.unsubscribe();
-
-            const text = 'Saving Graph...';
-            this.showLoadingMask(text);
+//            this.destroy$.next(true);
+//            this.destroy$.unsubscribe();
+//
+//            const text = 'Saving Graph...';
+//            this.showLoadingMask(text);
 
             setTimeout(() => {
               this.graph.saveGraph((savedData) => {

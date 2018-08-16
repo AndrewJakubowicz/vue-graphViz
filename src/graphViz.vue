@@ -65,7 +65,27 @@
 
 
   export default {
-    props: ['hypothesisId', 'nodes', 'highlightedNodeId', 'savedDiagram', 'width', 'height', 'textNodes', 'imgDropGraph', 'getDlist'],
+    props: {
+      hypothesisId: String,
+      nodes: {
+        type: Array,
+        default: function () {
+          return [];
+        }
+      },
+      highlightedNodeId: null,
+      savedDiagram: null,
+      width: Number,
+      height: Number,
+      textNodes: {
+        type: Array,
+        default: function () {
+          return [];
+        }
+      },
+      imgDropGraph: null,
+      getDlist: Function,
+    },
     name: 'graph-viz',
     components: {
       nodeList,
@@ -1035,7 +1055,7 @@
               });
           },
 
-          canDrag: () => this.$data.mouseState === POINTER || this.mouseState === SELECT && !this.isResizing,
+          canDrag: () => (this.$data.mouseState === POINTER || this.mouseState === SELECT) && !this.isResizing,
 
           isSelect: () => {
             return this.$data.mouseState === SELECT;

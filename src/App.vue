@@ -35,7 +35,7 @@
     },
     created() {
       this.$log.info('graph - created', this.w, this)
-      this.chunkId = this.chunk.id
+      this.chunkId = this.chunk ? this.chunk.id : undefined
       this.parse()
     },
     mounted() {

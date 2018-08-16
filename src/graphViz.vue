@@ -1,6 +1,7 @@
 <template>
   <div id="graph-viz">
-    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/all.css"/>
+    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css"/>
+    <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
 
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram'
               @clickedNodeInList="addNode($event)"/>
@@ -1521,11 +1522,11 @@
             this.changeMouseState(POINTER);
             this.deleteRadial();
 
-            this.destroy$.next(true);
-            this.destroy$.unsubscribe();
-
-            const text = 'Saving Graph...';
-            this.showLoadingMask(text);
+//            this.destroy$.next(true);
+//            this.destroy$.unsubscribe();
+//
+//            const text = 'Saving Graph...';
+//            this.showLoadingMask(text);
 
             setTimeout(() => {
               this.graph.saveGraph((savedData) => {

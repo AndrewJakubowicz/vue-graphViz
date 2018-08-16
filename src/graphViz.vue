@@ -998,7 +998,8 @@
             if (this.mouseState === TEXTEDIT) {
               return;
             }
-            this.changeMouseState(POINTER);
+            const prevMouseState = this.mouseState;
+            // this.changeMouseState(POINTER);
             this.isResizing = true;
             const initialX = event.clientX;
             const svgInitialX = this.transformCoordinates({ x: initialX, y: event.clientY }).x;
@@ -1029,6 +1030,7 @@
               .subscribe((x) => {
                 node.fixedWidth = x;
                 this.graph.restart.layout();
+                this.mouseState = prevMouseState;
               });
           },
 
@@ -1278,7 +1280,7 @@
             this.dbClickCreateNode = false;
             this.ifColorPickerOpen = true;
             this.coloredNodeId = [...this.activeSelect.nodes.keys()];
-            this.colors = '#FFFFFF';
+            this.colors.hex = '#FFFFFF';
             this.styleObject = {
               position: 'absolute !important',
               top: 70 + 'px !important',
@@ -1536,14 +1538,10 @@
           case SELECT: {
             const svgSel = this.graph.getSVGElement();
             const svg = svgSel.node();
-            const mouseDown = Rx.Observable.fromEvent(svg, 'mousedown')
-              .takeWhile(() => this.mouseState === SELECT);
 
-            const click = Rx.Observable.fromEvent(svg, 'click')
-              .takeUntil(this.destroy$)
-              .takeWhile(() => this.mouseState === SELECT);
-
-            mouseDown.filter(e => e.target.tagName === 'svg')
+            Rx.Observable.fromEvent(svg, 'mousedown')
+              .takeWhile(() => this.mouseState === SELECT)
+              .filter(e => e.target.tagName === 'svg')
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey, alt: e.altKey }))
               .map(({ x, y, shift, alt }) => {
                 if (!shift && !alt) {
@@ -1590,9 +1588,9 @@
                   });
               });
 
-            Rx.Observable.merge(
-              click,
-              mouseDown.filter(e => e.target.tagName !== 'svg'))
+            Rx.Observable.fromEvent(svg, 'click')
+              .takeUntil(this.destroy$)
+              .takeWhile(() => this.mouseState === SELECT)
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey }))
               .map(({ x, y, shift }) => {
                 if (!shift) {
@@ -1750,7 +1748,7 @@
 
   .highlight {
     stroke: rgb(64, 158, 255);
-    filter: url('#highlight-glow')
+    stroke-width: 3px;
   }
 
   .medium-editor-toolbar li button {

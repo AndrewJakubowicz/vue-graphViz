@@ -878,6 +878,10 @@
             }
           },
 
+          clickAway: () => {
+            this.closeHoverMenu();
+          },
+
           zoomScale: (scale) => {
             this.scale = scale;
           },

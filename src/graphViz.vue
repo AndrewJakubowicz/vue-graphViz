@@ -1,20 +1,29 @@
 <template>
   <div id="graph-viz">
     <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css"/>
-    <!-- <link v-once rel="stylesheet" href="./static/style.css" /> -->
 
+    <hover-menu-node :position="hoverPos"
+                     :pad="10"
+                     :color="hoverColor"
+                     :display="hoverDisplay"
+                     :fixed="hoverFixed"
+                     :shape="hoverShape"
+                     :data="hoverData"
+                     @exitHover="closeHoverMenu($event)"
+                     @clickedButton="hoverInteract($event)">
+    </hover-menu-node>
     <nodeList v-bind:nodesOutside='nodesOutsideDiagram'
               @clickedNodeInList="addNode($event)"/>
     <toolBar @clickedAction="changeMouseState($event)"
-             @mouseEnter="deleteRadial()"
-             :mouse="this.mouseState"/>
-    <photoshop-picker v-show="ifColorPickerOpen"
-                      :style="styleObject"
-                      :value="colors"
-                      :palette="palette"
-                      @input="updateFromPicker"
-                      ref="vueColorPicker">
-    </photoshop-picker>
+             @mouseEnter="closeHoverMenu()"
+             :mouse="mouseState"/>
+    <color-picker v-show="ifColorPickerOpen"
+                  :style="styleObject"
+                  :value="colors"
+                  :palette="palette"
+                  @input="updateFromPicker"
+                  ref="vueColorPicker">
+    </color-picker>
     <div id="graph" v-on:dblclick="dblClickOnPage"></div>
 
   </div>
@@ -32,9 +41,11 @@
   import Rx from 'rxjs/Rx';
   import nodeList from './components/nodeList';
   import toolBar from './components/toolBar';
+  import hoverMenuNode from './components/hoverMenuNode';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
   import Selection from './behaviours/selection';
+
 
   const ADDNOTE = 'ADDNOTE';
   const BOLD = 'BOLD';
@@ -46,10 +57,12 @@
   const CREATEEDGE = 'CREATEEDGE';
   const DELETE = 'DELETE';
   const EDGEEDIT = 'EDGEEDIT';
+  const GROUPDRAG = 'GROUPDRAG';
   const IMAGE = 'IMAGE';
   const IMPORTPROB = 'IMPORTPROB';
   const ITALIC = 'ITALIC';
   const NODEEDIT = 'NODEEDIT';
+  const NODERESIZE = 'NODERESIZE';
   const PIN = 'PIN';
   const REDO = 'REDO';
   const REMOVEARROWS = 'REMOVEARROWS';
@@ -90,7 +103,8 @@
     components: {
       nodeList,
       toolBar,
-      'photoshop-picker': Compact
+      'color-picker': Compact,
+      hoverMenuNode,
     },
     data() {
       return {
@@ -101,6 +115,12 @@
           left: '230px',
           position: 'absolute'
         },
+        hoverDisplay: false,
+        hoverPos: undefined,
+        hoverColor: undefined,
+        hoverFixed: undefined,
+        hoverData: undefined,
+        hoverShape: undefined,
         colors: {
           hex: '#FFFFFF',
         },
@@ -116,19 +136,21 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
-        dbClickCreateNode: true,
+        dbClickCreateNode: true, // TODO remove this after removing edge menu
         canKeyboardUndo: true,
         destroy$: new Rx.Subject(),
         rootObservable: undefined,
+        mouseDown$: undefined,
+        mouseOverNode$: undefined,
         scale: 1,
         activeSelect: new Selection(),
       };
     },
     mounted() {
       this.rootObservable = new Rx.Subject().takeUntil(this.destroy$);
+      this.mouseDown$ = new Rx.Subject().takeUntil(this.destroy$);
+      this.mouseOverNode$ = new Rx.Subject().takeUntil(this.destroy$);
       this.actions(this.rootObservable);
-      this.graphClicked = true;
-
 
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
@@ -199,6 +221,7 @@
         });
 
       ctrlDown.filter(e => e.keyCode === 83)
+        .filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
         .subscribe((e) => {
           e.preventDefault();
           this.changeMouseState(SAVE);
@@ -206,6 +229,7 @@
 
       // ctrl + A select all
       ctrlDown.filter(e => e.keyCode === 65)
+        .filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
         .do(e => e.preventDefault())
         .subscribe(() => {
           const newSelect = this.graph.selectByCoords({
@@ -235,6 +259,10 @@
         });
 
 
+    },
+    beforeDestroy() {
+      this.destroy$.next(true);
+      this.destroy$.unsubscribe();
     },
     watch: {
       imgDropGraph(current, old) {
@@ -305,16 +333,19 @@
           }
         }
       },
-      width(current, old) { // this appears to do nothing
+
+      width(current, old) {
         if (current !== old) {
           this.graph.canvasOptions.setWidth(current);
         }
       },
+
       height(current, old) {
         if (current !== old) {
           this.graph.canvasOptions.setHeight(current);
         }
       },
+
       textNodes(current, old) {
         // Remove any nodes that have been removed.
         const newIds = new Set(current.map(v => v.id));
@@ -326,6 +357,7 @@
         // Nodes that are passed in but aren't drawn go in the list.
         this.recalculateNodesOutside();
       },
+
       savedDiagram(current, old) {
         if (current === old) {
           return;
@@ -354,6 +386,7 @@
           });
         });
       },
+
     },
 
     methods: {
@@ -367,31 +400,13 @@
         this.responseLoadingMask = this.$loading(options);
         return await this.$nextTick();
       },
+
       hideLoadingMask() {
         let me = this;
         if (me.responseLoadingMask) {
           me.responseLoadingMask.close();
         }
       },
-      // onColorOk(ev) {
-      //   this.ifColorPickerOpen = false;
-      //   let newColor = '#FFFFFF';
-      //   if (!this.colors) {
-      //     return;
-      //   }
-      //   if (typeof this.colors === 'object') {
-      //     newColor = this.colors.hex;
-      //   } else if (typeof this.colors === 'string' && this.colors.startsWith('#')) {
-      //     newColor = this.colors;
-      //   }
-      //   this.coloredEl[0].setAttribute('fill', newColor);
-      //   this.rootObservable.next({
-      //     type: NODEEDIT,
-      //     prop: COLOR,
-      //     value: newColor,
-      //     id: this.coloredNode.id,
-      //   });
-      // },
 
       updateFromPicker(value) {
         const svg = this.graph.getSVGElement().node();
@@ -534,6 +549,7 @@
               }
 
               case DELETE: {
+                this.closeHoverMenu();
                 // get all edges attached to node
                 const db = this.graph.getDB();
                 let nodeIds;
@@ -761,16 +777,6 @@
           );
       },
 
-      deleteRadial() {
-        $('.menu-color').remove();
-        $('.menu-shape').remove();
-        $('.menu-action').remove();
-        $('.menu-trash').remove();
-        $('.menu-hover-box').remove();
-        $('.edge-hover-menu').remove();
-        $('.menu-resize').remove();
-      },
-
       clearScreen() {
         /**
          * Delete the graph and start a new one.
@@ -785,8 +791,8 @@
       },
 
       createGraph(callback) {
-        const $mouseOverNode = new Rx.Subject().takeUntil(this.destroy$);
-        const $mousedown = new Rx.Subject().takeUntil(this.destroy$);
+        const $mouseOverNode = this.mouseOverNode$;
+        const $mousedown = this.mouseDown$;
         let me = this;
         const currentState = {
           currentNode: {
@@ -817,24 +823,6 @@
             return (d.fixed === true || d.fixed % 2 === 1);
           },
 
-          updateNodeColor: (node, color) => {
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: COLOR,
-              value: color,
-              id: node.id,
-            });
-          },
-
-          updateNodeShape: (node, shape) => {
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: SHAPE,
-              value: shape,
-              id: node.id,
-            });
-          },
-
           nodeShape: 'capsule',
 
           // Shapes defined: rect, circle, capsule
@@ -846,16 +834,6 @@
               case 'circle': {
                 return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
               }
-              // case 'capsule': {
-              //   const X = 37;
-              //   const Y = -13;
-              //   const p1x = 25 + X;
-              //   const p1y = 25 + Y;
-              //   const p2x = 75 + X;
-              //   const p3x = 100 + X;
-              //   const p4y = 50 + Y;
-              //   return `M ${p1x} ${p1y} L ${p2x} ${p1y} C ${p3x} ${p1y} ${p3x} ${p4y} ${p2x} ${p4y} L ${p1x} ${p4y} C ${X} ${p4y} ${X} ${p1y} ${p1x} ${p1y} `;
-              // }
               case 'capsule': {
                 const width = d.width;
                 const height = d.height;
@@ -908,49 +886,12 @@
             return this.activeSelect;
           },
 
-          mouseOverBrush: (node, element, ev) => {
-            me.dbClickCreateNode = false;
-            me.ifColorPickerOpen = true;
-            me.coloredEl = element._groups[0];
-            me.coloredNodeId = node.id;
-            me.colors = node.color;
-            me.$refs.vueColorPicker.currentColor = node.color;
-
-            let grapgEditor = document.getElementById('graph').getBoundingClientRect();
-            let graphEditorX = grapgEditor.x;
-            let graphEditorY = grapgEditor.y;
-            let graphEditorW = grapgEditor.width;
-            let graphEditorH = grapgEditor.height;
-            let posX = ev.clientX - graphEditorX;
-            let posY = ev.clientY + 50 - graphEditorY;
-
-            if (posX + 250 > graphEditorW) {
-              posX = posX - 250;
-            }
-            if (posY < 0) {
-              posY = 0;
-            }
-            if (posY + 70 > graphEditorH) {
-              posY = posY - (posY + 80 - graphEditorH);
-            }
-            this.styleObject = {
-              position: 'absolute !important',
-              top: posY + 'px !important',
-              left: posX + 'px !important',
-              'z-index': '9999'
-            };
-            const svgElem = this.graph.getSVGElement().node();
-            Rx.Observable.fromEvent(svgElem, 'click')
-              .takeWhile(() => this.ifColorPickerOpen === true)
-              .take(1)
-              .do(e => e.stopPropagation())
-              .do(e => e.preventDefault())
-              .subscribe(() => {
-                this.ifColorPickerOpen = false;
-              });
+          nodeSizeChange: () => {
+            this.updateHoverMenu();
           },
 
-          mouseOverNode: (node, selection) => {
+          mouseOverNode: (node, selection, e) => {
+            this.createHoverMenu(node, selection, e);
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
             if (currentState.currentNode.mouseOverNode) return;
@@ -980,30 +921,7 @@
             this.$emit('mouseoutnode');
           },
 
-          startArrow: (node, selection) => {
-            this.mouseState = CREATEEDGE;
-            this.currentNode = node;
-            $mousedown.next({ type: 'CREATEEDGE', clickedNode: node, selection });
-          },
-
-          clickPin: (node, element) => {
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: PIN,
-              id: node.id,
-              value: !node.fixed,
-            });
-          },
-
-          nodeRemove: (node) => {
-            this.changeMouseState(POINTER);
-            this.rootObservable.next({
-              type: DELETE,
-              nodeId: node.id,
-            });
-          },
-
-          edgeRemove: (edge) => {
+          edgeRemove: (edge, selection, e) => {
             this.changeMouseState(POINTER);
             this.rootObservable.next({
               type: DELETE,
@@ -1015,53 +933,12 @@
             this.isResizing = bool;
           },
 
-          resizeDrag: (node, selection, event) => {
-            if (this.mouseState === TEXTEDIT) {
-              return;
-            }
-            const prevMouseState = this.mouseState;
-            // this.changeMouseState(POINTER);
-            this.isResizing = true;
-            const initialX = event.clientX;
-            const svgInitialX = this.transformCoordinates({ x: initialX, y: event.clientY }).x;
-            const initWidth = node.width;
-
-            Rx.Observable.fromEvent(document, 'mousemove')
-              .do(e => e.stopPropagation())
-              .map(e => this.transformCoordinates({ x: e.clientX, y: event.clientY }).x)
-              .map(moveX => moveX - svgInitialX)
-              .map(dx => initWidth + (dx * 2))
-              .filter((width) => {
-                const img = selection.node().parentNode.querySelector('image');
-                const imgWidth = img ? img.getBBox().width : 0;
-                const minWidth = imgWidth + 30;
-                return width > minWidth;
-              })
-              .debounceTime(10)
-              .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
-              .finally(() => {
-                this.isResizing = false;
-                this.rootObservable.next({
-                  type: NODEEDIT,
-                  prop: WIDTH,
-                  id: node.id,
-                  value: node.fixedWidth,
-                });
-              })
-              .subscribe((x) => {
-                node.fixedWidth = x;
-                this.graph.restart.layout();
-                this.mouseState = prevMouseState;
-              });
-          },
-
           canDrag: () => (this.$data.mouseState === POINTER || this.mouseState === SELECT) && !this.isResizing,
 
           isSelect: () => {
             return this.$data.mouseState === SELECT;
           },
         });
-
 
         /**
          Edge link tool
@@ -1129,7 +1006,7 @@
         // Initiate the text edit function - for both nodes and edges
         textEdit($mousedown, () => {
           this.canKeyboardUndo = false;
-          this.deleteRadial();
+          // this.closeHoverMenu();
           this.mouseState = TEXTEDIT;
         }, () => {
           this.canKeyboardUndo = true;
@@ -1190,8 +1067,124 @@
         this.graph.restart.layout();
       },
 
+      nodeShapeChange(node, shape) {
+        this.rootObservable.next({
+          type: NODEEDIT,
+          prop: SHAPE,
+          value: shape,
+          id: node.id,
+        });
+      },
+
+      nodeRemove(node) {
+        this.closeHoverMenu();
+        this.changeMouseState(POINTER);
+        this.rootObservable.next({
+          type: DELETE,
+          nodeId: node.id,
+        });
+      },
+
+      mouseOverBrush(node, element, ev) {
+        this.dbClickCreateNode = false;
+        this.ifColorPickerOpen = true;
+        // this.coloredEl = element._groups[0];
+        this.coloredNodeId = node.id;
+        this.colors = node.color;
+        this.$refs.vueColorPicker.currentColor = node.color;
+
+        let grapgEditor = document.getElementById('graph').getBoundingClientRect();
+        let graphEditorX = grapgEditor.x;
+        let graphEditorY = grapgEditor.y;
+        let graphEditorW = grapgEditor.width;
+        let graphEditorH = grapgEditor.height;
+        let posX = ev.clientX - graphEditorX;
+        let posY = ev.clientY + 50 - graphEditorY;
+
+        if (posX + 250 > graphEditorW) {
+          posX = posX - 250;
+        }
+        if (posY < 0) {
+          posY = 0;
+        }
+        if (posY + 70 > graphEditorH) {
+          posY = posY - (posY + 80 - graphEditorH);
+        }
+        this.styleObject = {
+          position: 'absolute !important',
+          top: posY + 'px !important',
+          left: posX + 'px !important',
+          'z-index': '9999'
+        };
+        const svgElem = this.graph.getSVGElement().node();
+        Rx.Observable.fromEvent(svgElem, 'click')
+          .takeWhile(() => this.ifColorPickerOpen === true)
+          .take(1)
+          .do(e => e.stopPropagation())
+          .do(e => e.preventDefault())
+          .subscribe(() => {
+            this.ifColorPickerOpen = false;
+          });
+      },
+
+      nodePinToggle(node) {
+        this.rootObservable.next({
+          type: NODEEDIT,
+          prop: PIN,
+          id: node.id,
+          value: !node.fixed,
+        });
+      },
+
+      startArrow(node, elem) {
+        this.mouseState = CREATEEDGE;
+        this.currentNode = node;
+        this.mouseDown$.next({ type: 'CREATEEDGE', clickedNode: node, selection: elem });
+      },
+
+      resizeDrag(node, elem, event) {
+        if (this.mouseState === TEXTEDIT) {
+          return;
+        }
+        const prevMouseState = this.mouseState;
+        // this.changeMouseState(POINTER);
+        this.isResizing = true;
+        const initialX = event.clientX;
+        const svgInitialX = this.transformCoordinates({ x: initialX, y: event.clientY }).x;
+        const initWidth = node.width;
+
+        Rx.Observable.fromEvent(document, 'mousemove')
+          .do(e => e.stopPropagation())
+          .map(e => this.transformCoordinates({ x: e.clientX, y: event.clientY }).x)
+          .map(moveX => moveX - svgInitialX)
+          .map(dx => initWidth + (dx * 2))
+          .filter((width) => {
+            const img = elem.parentNode.querySelector('image');
+            const imgWidth = img ? img.getBBox().width : 0;
+            const minWidth = imgWidth + 30;
+            return width > minWidth;
+          })
+          .debounceTime(10)
+          .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
+          .finally(() => {
+            this.isResizing = false;
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: WIDTH,
+              id: node.id,
+              value: node.fixedWidth,
+            });
+          })
+          .subscribe((x) => {
+            node.fixedWidth = x;
+            this.graph.restart.layout();
+            this.mouseState = prevMouseState;
+          });
+      },
+
       dblClickOnPage(e) {
         if (!this.dbClickCreateNode
+          || this.hoverDisplay
           || this.ifColorPickerOpen
           || this.mouseState === TEXTEDIT
           || e.target.tagName !== 'svg') return;
@@ -1211,6 +1204,82 @@
         this.nodesOutsideDiagram = this.textNodes.filter((v) => {
           return !this.graph.hasNode(`${v.id}`);
         });
+      },
+
+      createHoverMenu(d, selection, e) {
+        this.dbClickCreateNode = false;
+        const elem = selection.node();
+        const pos = elem.getBoundingClientRect();
+        this.hoverPos = { x: pos.x, y: pos.y, width: pos.width, height: pos.height };
+        this.hoverColor = d.color;
+        this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
+        this.hoverDisplay = true;
+        this.hoverShape = d.nodeShape;
+        this.hoverData = { data: d, el: elem };
+      },
+
+      updateHoverMenu() {
+        if (this.hoverData) {
+          const d = this.hoverData.data;
+          const pos = this.hoverData.el.getBoundingClientRect();
+          this.hoverPos = { x: pos.x, y: pos.y, width: pos.width, height: pos.height };
+          this.hoverColor = d.color;
+          this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
+          this.hoverShape = d.nodeShape;
+        }
+      },
+
+      closeHoverMenu(event) {
+        if (!this.ifColorPickerOpen) {
+          this.dbClickCreateNode = true;
+        }
+        this.hoverDisplay = false;
+        this.hoverPos = undefined;
+        this.hoverData = undefined;
+      },
+
+      hoverInteract(event) {
+        const node = event.data.data;
+        const elem = event.data.el;
+        const payload = event.payload;
+        const e = event.e;
+        switch (event.type) {
+          case COLOR: {
+            this.mouseOverBrush(node, elem, event.e);
+            break;
+          }
+          case CREATEEDGE: {
+            this.startArrow(node, elem);
+            break;
+          }
+          case DELETE: {
+            this.nodeRemove(node);
+            break;
+          }
+          case GROUPDRAG: {
+            break;
+          }
+          case NODERESIZE: {
+            this.resizeDrag(node, elem, event.e);
+            break;
+          }
+          case PIN: {
+            this.nodePinToggle(node);
+            this.hoverFixed = (node.fixed === true || node.fixed % 2 === 1);
+            break;
+          }
+          case SHAPE: {
+            if (node.nodeShape !== payload) {
+              this.nodeShapeChange(node, payload);
+              this.hoverShape = node.nodeShape;
+            }
+            break;
+          }
+          default: {
+            console.warn('Unrecognised event ', event.type, ' on ', event.data);
+          }
+        }
+
       },
 
       changeMouseState(state) {
@@ -1540,7 +1609,7 @@
           case SAVE: {
             this.activeSelect.clear();
             this.changeMouseState(POINTER);
-            this.deleteRadial();
+            this.closeHoverMenu();
 
 //            this.destroy$.next(true);
 //            this.destroy$.unsubscribe();
@@ -1575,7 +1644,7 @@
                 const elem = g.append('path')
                   .attr('id', 'selector')
                   .attr('d', `M${x} ${y} H${x} V${y} H${x}Z`)
-                  .attr('style', 'stroke:rgba(78, 140, 233);stroke-width:1')
+                  .attr('style', 'stroke:rgb(78, 140, 233);stroke-width:1')
                   .attr('shape-rendering', 'crispEdges')
                   .attr('fill', 'rgba(78,168,233,0.1)')
                   .attr('stroke-dasharray', '4 3');

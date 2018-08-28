@@ -16,7 +16,7 @@ export default {
     };
   },
   methods: {
-    clicked(id) {
+    interact(id) {
       this.$emit('clickedNodeInList', id);
     },
     classObject(spaceSeparatedClasses) {

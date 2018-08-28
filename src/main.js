@@ -5,6 +5,7 @@ import App from './App.vue'
 import * as log from 'loglevel'
 
 Vue.config.productionTip = false;
+// Vue.config.performance = true
 
 log.setLevel('info')
 Object.defineProperty(Vue.prototype, '$log', { value: log })

@@ -1,9 +1,9 @@
 # graphviz
 
-[DEMO](http://vue-test-component.surge.sh/)
-
-Click nodes on the left to commit them to the graph.
-Use the tools on the right to draw out your graph.
+Use the toolbar on the right to draw out your graph.
+You can double click to create nodes easily.
+Multiple objects can be selected and manipulated at once through the selection tool (second from top in toolbar)
+Typical keyboard shortcuts are supported
 
 > networkVizJs component
 

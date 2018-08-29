@@ -41,9 +41,13 @@
     <!--LEFT ICONS-->
     <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}">
       <!--<div class="icon-wrapper">-->
-      <!--TODO check FA5 license-->
       <!--<svg style="width: 15px" viewBox="0 0 539 512" class="custom-icon"-->
       <!--@mousedown="interact('GROUPDRAG', $event)">-->
+      <!--
+        Icon By FontAwesome - modified by Yusuf Ades
+        available: https://fontawesome.com/icons/sign-in-alt?style=solid
+        license: CC BY 4.0 - https://fontawesome.com/license/free
+      -->
       <!--<path fill="#575959" d="M443,448h-84c-6.6,0-12-5.4-12-12v-40c0-6.6,5.4-12,12-12h84c17.7,0,32-14.3,32-32V160c0-17.7-14.3-32-32-32h-84-->
       <!--c-6.6,0-12-5.4-12-12V76c0-6.6,5.4-12,12-12h84c53,0,96,43,96,96v192C539,405,496,448,443,448z M454.5,250.3l-133.6-135-->
       <!--c-11.9-12.1-32.6-3.6-32.6,13.7v77.1H180.1c-10.6,0-19.1,8.6-19.1,19.3v77.1c0,10.7,8.5,19.3,19.1,19.3h108.1V399-->
@@ -55,6 +59,11 @@
       <div class="icon-wrapper">
         <svg class="custom-icon" viewBox="0 0 512 512" @mouseenter="timerStart" @mouseleave="timerCancel"
              style="padding: 3px; width: 22px; height: 22px;">
+          <!--
+            Icon By FontAwesome
+            available: https://fontawesome.com/icons/shapes?style=solid
+            license: CC BY 4.0 - https://fontawesome.com/license/free
+          -->
           <path fill="#575959"
                 d="M512 320v160c0 17.67-14.33 32-32 32H320c-17.67 0-32-14.33-32-32V320c0-17.67 14.33-32 32-32h160c17.67 0 32 14.33 32 32zm-384-64C57.31 256 0 313.31 0 384s57.31 128 128 128 128-57.31 128-128-57.31-128-128-128zm351.03-32c25.34 0 41.18-26.67 28.51-48L412.51 16c-12.67-21.33-44.35-21.33-57.02 0l-95.03 160c-12.67 21.33 3.17 48 28.51 48h190.06z"></path>
         </svg>

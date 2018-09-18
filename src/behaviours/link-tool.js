@@ -63,12 +63,12 @@ module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finish
       .flatMap(function (obj) {
         // Set current selection to the start dragged node.
         currentState.startedDragAt = obj.clickedNode.hash;
-        const bbox = obj.selection.getBBox(),
+        const bbox = obj.selection.node().getBBox(),
           middleX = bbox.x + (bbox.width / 2),
           middleY = bbox.y + (bbox.height / 2);
 
         // generate a conversion function
-        const convert = makeAbsoluteContext(obj.selection, document.body);
+        const convert = makeAbsoluteContext(obj.selection.node(), document.body);
 
         // use it to calculate the absolute center of the element with SVG canvas.
         const absoluteCenter = convert(middleX, middleY);

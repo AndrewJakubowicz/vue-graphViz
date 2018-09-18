@@ -8,6 +8,7 @@ export default class Selection {
   constructor(select) {
     this._nodes = new Map();
     this._edges = new Map();
+    this._groups = new Map();
     select && this.select(select);
   }
 
@@ -60,6 +61,18 @@ export default class Selection {
   delEdge(d) {
     this._edges.delete(d.predicate.hash);
     d.predicate.class = d.predicate.class.replace(' highlight', '');
+  }
+
+  addGroup(d) {
+    this._groups.set(d.id, d);
+    if (!d.class.includes('highlight')) {
+      d.class += ' highlight';
+    }
+  }
+
+  delGroup(d) {
+    this._groups.delete(d.id);
+    d.class = d.class.replace(' highlight', '');
   }
 
   /**

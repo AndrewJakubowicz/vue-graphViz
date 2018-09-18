@@ -133,6 +133,12 @@
             toggled: false,
             tip: 'Underline (Ctrl+U)'
           },
+          {
+            action: 'GROUP',
+            icon: ['fas fa-object-group'],
+            toggled: false,
+            tip: 'Group',
+          },
         ],
       };
     },
@@ -157,6 +163,7 @@
           || action === 'COLOR'
           || action === 'BOLD'
           || action === 'ITALIC'
+          || action === 'GROUP'
           || action === 'UNDERLINE') {
           // For the above actions, default to mouse select state.
           newAction = 'SELECT';

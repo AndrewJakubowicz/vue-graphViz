@@ -21,7 +21,7 @@
     </div>
 
     <!--RIGHT ICONS-->
-    <div class="icon-position v-center-align hand" :style="{left: `${posPad.width / 2}px`}">
+    <div class="icon-position v-center-align hand" :style="{left: `${posPad.width / 2}px`}" v-show="type==='note'">
       <div class="icon-wrapper">
         <i class="fa fa-arrow-right custom-icon" @mousedown="interact('CREATEEDGE', $event)"></i>
       </div>
@@ -31,7 +31,7 @@
     </div>
 
     <!--Resize Drag // TODO better solution-->
-    <div class="icon-position" :style="{left: `${position.width / 2-5}px`, top:`${position.height/2-10}px`}">
+    <div class="icon-position" :style="{left: `${position.width / 2-5}px`, top:`${position.height/2-10}px`}" v-show="type==='note'">
       <svg width="8" height="8">
         <rect x="0" y="0" width="8" height="8" fill="white" stroke="black" stroke-width="2" style="cursor: ew-resize;"
               @mousedown="interact('NODERESIZE', $event)"></rect>
@@ -39,23 +39,23 @@
     </div>
 
     <!--LEFT ICONS-->
-    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}">
-      <!--<div class="icon-wrapper">-->
-      <!--<svg style="width: 15px" viewBox="0 0 539 512" class="custom-icon"-->
-      <!--@mousedown="interact('GROUPDRAG', $event)">-->
-      <!--
-        Icon By FontAwesome - modified by Yusuf Ades
-        available: https://fontawesome.com/icons/sign-in-alt?style=solid
-        license: CC BY 4.0 - https://fontawesome.com/license/free
-      -->
-      <!--<path fill="#575959" d="M443,448h-84c-6.6,0-12-5.4-12-12v-40c0-6.6,5.4-12,12-12h84c17.7,0,32-14.3,32-32V160c0-17.7-14.3-32-32-32h-84-->
-      <!--c-6.6,0-12-5.4-12-12V76c0-6.6,5.4-12,12-12h84c53,0,96,43,96,96v192C539,405,496,448,443,448z M454.5,250.3l-133.6-135-->
-      <!--c-11.9-12.1-32.6-3.6-32.6,13.7v77.1H180.1c-10.6,0-19.1,8.6-19.1,19.3v77.1c0,10.7,8.5,19.3,19.1,19.3h108.1V399-->
-      <!--c0,17.3,20.7,25.7,32.6,13.7l133.6-135C461.8,270.1,461.8,257.9,454.5,250.3z"></path>-->
-      <!--<path fill="#575959" d="M8.5,250l133.6-133.6c12-11.9,32.6-3.5,32.6,13.5v76.3h108.2c10.6,0,19.1,8.5,19.1,19.1v76.3c0,10.6-8.5,19.1-19.1,19.1-->
-      <!--H174.8v76.3c0,17.1-20.7,25.4-32.6,13.5L8.5,277C1.2,269.6,1.2,257.5,8.5,250z"></path>-->
-      <!--</svg>-->
-      <!--</div>-->
+    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}" v-show="type==='note'">
+      <div class="icon-wrapper">
+        <svg style="width: 22px; height: 22px;" viewBox="0 0 539 512" class="custom-icon"
+             @mousedown="interact('GROUPDRAG', $event)">
+          <!--
+            Icon By FontAwesome - modified by Yusuf Ades
+            available: https://fontawesome.com/icons/sign-in-alt?style=solid
+            license: CC BY 4.0 - https://fontawesome.com/license/free
+          -->
+          <path fill="#575959" d="M443,448h-84c-6.6,0-12-5.4-12-12v-40c0-6.6,5.4-12,12-12h84c17.7,0,32-14.3,32-32V160c0-17.7-14.3-32-32-32h-84
+      c-6.6,0-12-5.4-12-12V76c0-6.6,5.4-12,12-12h84c53,0,96,43,96,96v192C539,405,496,448,443,448z M454.5,250.3l-133.6-135
+      c-11.9-12.1-32.6-3.6-32.6,13.7v77.1H180.1c-10.6,0-19.1,8.6-19.1,19.3v77.1c0,10.7,8.5,19.3,19.1,19.3h108.1V399
+      c0,17.3,20.7,25.7,32.6,13.7l133.6-135C461.8,270.1,461.8,257.9,454.5,250.3z"></path>
+          <path fill="#575959" d="M8.5,250l133.6-133.6c12-11.9,32.6-3.5,32.6,13.5v76.3h108.2c10.6,0,19.1,8.5,19.1,19.1v76.3c0,10.6-8.5,19.1-19.1,19.1
+      H174.8v76.3c0,17.1-20.7,25.4-32.6,13.5L8.5,277C1.2,269.6,1.2,257.5,8.5,250z"></path>
+        </svg>
+      </div>
       <div class="icon-wrapper">
         <svg class="custom-icon" viewBox="0 0 512 512" @mouseenter="timerStart" @mouseleave="timerCancel"
              style="padding: 3px; width: 22px; height: 22px;">
@@ -126,6 +126,12 @@
       },
       data: {},
       shape: {},
+      type: {
+        type: String,
+        default: function () {
+          return 'note';
+        },
+      },
     },
     data() {
       return {

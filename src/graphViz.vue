@@ -9,6 +9,7 @@
                      :fixed="hoverFixed"
                      :shape="hoverShape"
                      :data="hoverData"
+                     :type="hoverType"
                      @exitHover="closeHoverMenu($event)"
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
@@ -57,6 +58,7 @@
   const CREATEEDGE = 'CREATEEDGE';
   const DELETE = 'DELETE';
   const EDGEEDIT = 'EDGEEDIT';
+  const GROUP = 'GROUP';
   const GROUPDRAG = 'GROUPDRAG';
   const IMAGE = 'IMAGE';
   const IMPORTPROB = 'IMPORTPROB';
@@ -74,6 +76,7 @@
   const TEXTEDIT = 'TEXTEDIT';
   const UNDERLINE = 'UNDERLINE';
   const UNDO = 'UNDO';
+  const UNGROUP = 'UNGROUP';
   const WIDTH = 'WIDTH';
 
 
@@ -121,6 +124,9 @@
         hoverFixed: undefined,
         hoverData: undefined,
         hoverShape: undefined,
+        hoverType: undefined,
+        hoverAwait: false,
+        hoverQueue$: undefined,
         colors: {
           hex: '#FFFFFF',
         },
@@ -138,6 +144,7 @@
         noteObjs: [],
         dbClickCreateNode: true, // TODO remove this after removing edge menu
         canKeyboardUndo: true,
+        groupDrag: false,
         destroy$: new Rx.Subject(),
         rootObservable: undefined,
         mouseDown$: undefined,
@@ -150,6 +157,17 @@
       this.rootObservable = new Rx.Subject().takeUntil(this.destroy$);
       this.mouseDown$ = new Rx.Subject().takeUntil(this.destroy$);
       this.mouseOverNode$ = new Rx.Subject().takeUntil(this.destroy$);
+
+      this.hoverQueue$ = new Rx.Subject()
+        .takeUntil(this.destroy$)
+        .debounceTime(100);
+      this.hoverQueue$.subscribe(callback => {
+        if (callback && typeof(callback) === 'function') {
+          callback();
+        }
+      });
+
+
       this.actions(this.rootObservable);
 
       this.createGraph(() => {
@@ -765,6 +783,37 @@
                 break;
               }
 
+              case GROUP: {
+                let group = action.group;
+                const leaves = action.children.nodes;
+                // const groups = action.children.groups;
+                if (!group) {
+                  group = {
+                    id: `grup-${uuid.v4()}`,
+                    color: '#F6ECAF',
+                  };
+                }
+                this.graph.addToGroup(group, leaves);
+
+                undoStack.push({
+                  type: UNGROUP,
+                  group: this.graph.getGroup(group.id),
+                  children: action.children,
+                });
+                break;
+              }
+
+              case UNGROUP: {
+                const nodes = action.children.nodes;
+                this.graph.unGroup(nodes);
+                undoStack.push({
+                  type: GROUP,
+                  group: action.group,
+                  children: action.children,
+                });
+                break;
+              }
+
               default: {
                 console.log('Unknown action:', action.type);
               }
@@ -788,6 +837,119 @@
         }
         this.createGraph();
         this.recalculateNodesOutside();
+      },
+
+      mouseDownGroup(d, d3Selection, e) {
+        this.groupDrag = true;
+        const svgSel = this.graph.getSVGElement();
+        const g = svgSel.select('g.svg-graph')
+          .append('g')
+          .attr('transform', 'translate(10,10),scale(0.75)');
+        let translate = [...g.node().transform.baseVal].filter(t => t.type === SVGTransform.SVG_TRANSFORM_TRANSLATE)[0];
+        // const translate = g.node().createSVGTransform();
+
+        let nodes = [];
+        if (this.mouseState === SELECT) {
+          nodes = [...this.activeSelect.nodes.values()];
+        }
+        nodes = nodes.filter(node => node.id !== d.id).concat(d);
+
+        const firstNodes = nodes.slice(0, 3);
+        const chosenNodes = firstNodes.filter(node => node.id !== d.id).concat(d);
+        const vizNodes = chosenNodes.map((d, i) =>
+          g.append('path')
+            .attr('fill', d.color)
+            .attr('d', this.nodeShapeToPath(d))
+            .attr('stroke', 'grey')
+            .attr('transform', `translate(${-8 * i},${-8 * i})`)
+        );
+
+        const { x, y } = { ...this.transformCoordinates({ x: e.clientX, y: e.clientY }) };
+        translate.setTranslate(x - d.width + 15, y - d.height + 15);
+
+        const move = Rx.Observable.fromEvent(document, 'mousemove')
+          .map(e => this.transformCoordinates({ x: e.x, y: e.y }))
+          .finally(() => {
+            g.node().remove();
+          })
+          .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'));
+        move.subscribe(coords => {
+          const dx = coords.x - d.x;
+          const dy = coords.y - d.y;
+          translate.setTranslate(d.x + dx - d.width + 15, d.y + dy - d.height + 15);
+        });
+        move.takeLast(1)
+          .subscribe((e) => {
+            const { x, y } = this.transformCoordinates({ x: e.x, y: e.y });
+            const target = this.graph.selectByCoords({ x: x, X: x, y: y, Y: y });
+            let targetGroup;
+            if (target.groups.length > 0) {
+              targetGroup = target.groups[0];
+            } else {
+              if (target.nodes.length > 0) {
+                nodes = nodes.filter(node => node.id !== target.nodes[0].id).concat(target.nodes[0]);
+              }
+            }
+
+            const nodesIDs = nodes.map(node => node.id);
+
+            if (d.parent && target.groups.length === 0 && target.nodes.length === 0) {
+              this.rootObservable.next({
+                type: UNGROUP,
+                group: d.parent,
+                children: { nodes: nodesIDs },
+              });
+            } else {
+              this.rootObservable.next({
+                type: GROUP,
+                group: targetGroup,
+                children: { nodes: nodesIDs },
+              });
+            }
+          });
+
+      },
+
+      nodeShapeToPath(d) {
+        switch (d.nodeShape) {
+          case 'rect': {
+            return 'M16 48 L48 48 L48 16 L16 16 Z';
+          }
+          case 'circle': {
+            return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
+          }
+          case 'capsule': {
+            const width = d.width;
+            const height = d.height;
+            if (width && height) {
+              const x = width / 2;
+              const y = height / 2;
+              const r = Math.round(Math.min(width, height) / 8);
+              const v0 = { x: x, y: y };
+              const v1 = { x: x, y: y + height };
+              const v2 = { x: x + width, y: y + height };
+              const v3 = { x: x + width, y: y };
+              return [`M${v0.x} ${v0.y + r}`,
+                `V${v1.y - r}`,
+                `C${v1.x} ${v1.y} ${v1.x + r} ${v1.y} ${v1.x + r} ${v1.y}`,
+                `H${v2.x - r}`,
+                `C${v2.x} ${v2.y} ${v2.x} ${v2.y - r} ${v2.x} ${v2.y - r}`,
+                `V${v3.y + r}`,
+                `C${v3.x} ${v3.y} ${v3.x - r} ${v3.y} ${v3.x - r} ${v3.y}`,
+                `H${v0.x + r}`,
+                `C${v0.x} ${v0.y} ${v0.x} ${v0.y + r} ${v0.x} ${v0.y + r} Z`]
+                .join(' ');
+            } else {
+              return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z';
+            }
+
+
+          }
+          default : {
+            // Return rect by default
+            return 'M16 48 L48 48 L48 16 L16 16 Z';
+          }
+        }
       },
 
       createGraph(callback) {
@@ -868,6 +1030,10 @@
             }
           },
 
+          groupFillColor: (g) => {
+            return g.color ? g.color : '#F6ECAF';
+          },
+
           mouseOverRadial: (node) => {
             this.dbClickCreateNode = false;
           },
@@ -894,8 +1060,23 @@
             this.updateHoverMenu();
           },
 
+          endGroupDrag: (d) => {
+            this.groupDrag = false;
+          },
+
+          mouseOverGroup: (group, selection, e) => {
+            if (!this.hoverDisplay) {
+              this.hoverQueue$.next(() => this.createHoverMenu(group, selection, e));
+            } else {
+              this.hoverAwait = [group, selection, e];
+            }
+          },
+          mouseOutGroup: (group, selection, e) => {
+            this.hoverQueue$.next(false);
+          },
+
           mouseOverNode: (node, selection, e) => {
-            this.createHoverMenu(node, selection, e);
+            this.hoverQueue$.next(() => this.createHoverMenu(node, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
             if (currentState.currentNode.mouseOverNode) return;
@@ -917,6 +1098,7 @@
           },
 
           mouseOutNode: (node, selection, e) => {
+            this.hoverQueue$.next(false);
             me.dbClickCreateNode = true;
             me.clickedGraphViz = true;
             const tempNode = { ...node, mouseOverNode: false };
@@ -1089,7 +1271,7 @@
         });
       },
 
-      mouseOverBrush(node, element, ev) {
+      mouseOverBrush(node, ev) {
         this.dbClickCreateNode = false;
         this.ifColorPickerOpen = true;
         // this.coloredEl = element._groups[0];
@@ -1140,10 +1322,10 @@
         });
       },
 
-      startArrow(node, elem) {
+      startArrow(node, selection) {
         this.mouseState = CREATEEDGE;
         this.currentNode = node;
-        this.mouseDown$.next({ type: 'CREATEEDGE', clickedNode: node, selection: elem });
+        this.mouseDown$.next({ type: 'CREATEEDGE', clickedNode: node, selection: selection });
       },
 
       resizeDrag(node, elem, event) {
@@ -1163,7 +1345,7 @@
           .map(moveX => moveX - svgInitialX)
           .map(dx => initWidth + (dx * 2))
           .filter((width) => {
-            const img = elem.parentNode.querySelector('image');
+            const img = elem.node().parentNode.querySelector('image');
             const imgWidth = img ? img.getBBox().width : 0;
             const minWidth = imgWidth + 30;
             return width > minWidth;
@@ -1219,13 +1401,14 @@
         this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
         this.hoverDisplay = true;
         this.hoverShape = d.nodeShape;
-        this.hoverData = { data: d, el: elem };
+        this.hoverType = d.id.slice(0, 4);
+        this.hoverData = { data: d, el: selection };
       },
 
       updateHoverMenu() {
         if (this.hoverData) {
           const d = this.hoverData.data;
-          const pos = this.hoverData.el.getBoundingClientRect();
+          const pos = this.hoverData.el.node().getBoundingClientRect();
           this.hoverPos = { x: pos.x, y: pos.y, width: pos.width, height: pos.height };
           this.hoverColor = d.color;
           this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
@@ -1240,20 +1423,24 @@
         this.hoverDisplay = false;
         this.hoverPos = undefined;
         this.hoverData = undefined;
+        if (this.hoverAwait) {
+          this.createHoverMenu(...this.hoverAwait);
+          this.hoverAwait = false;
+        }
       },
 
       hoverInteract(event) {
         const node = event.data.data;
-        const elem = event.data.el;
+        const d3Selection = event.data.el;
         const payload = event.payload;
         const e = event.e;
         switch (event.type) {
           case COLOR: {
-            this.mouseOverBrush(node, elem, event.e);
+            this.mouseOverBrush(node, e);
             break;
           }
           case CREATEEDGE: {
-            this.startArrow(node, elem);
+            this.startArrow(node, d3Selection);
             break;
           }
           case DELETE: {
@@ -1261,10 +1448,11 @@
             break;
           }
           case GROUPDRAG: {
+            this.mouseDownGroup(node, d3Selection, e);
             break;
           }
           case NODERESIZE: {
-            this.resizeDrag(node, elem, event.e);
+            this.resizeDrag(node, d3Selection, e);
             break;
           }
           case PIN: {
@@ -1293,6 +1481,7 @@
           || state === COPY
           || state === COLOR
           || state === DELETE
+          || state === GROUP
           || state === IMPORTPROB
           || state === ITALIC
           || state === PIN
@@ -1308,6 +1497,15 @@
           this.mouseState = state;
         }
         switch (state) {
+
+          case GROUP : {
+            this.mouseState = SELECT;
+            this.rootObservable.next({
+              type: GROUP,
+              children: { nodes: [...this.activeSelect.nodes.keys()] }
+            });
+            break;
+          }
 
           case ADDNOTE: {
             this.changeMouseState(POINTER);

@@ -31,7 +31,8 @@
     </div>
 
     <!--Resize Drag // TODO better solution-->
-    <div class="icon-position" :style="{left: `${position.width / 2-5}px`, top:`${position.height/2-10}px`}" v-show="type==='note'">
+    <div class="icon-position" :style="{left: `${position.width / 2-5}px`, top:`${position.height/2-10}px`}"
+         v-show="type==='note'">
       <svg width="8" height="8">
         <rect x="0" y="0" width="8" height="8" fill="white" stroke="black" stroke-width="2" style="cursor: ew-resize;"
               @mousedown="interact('NODERESIZE', $event)"></rect>

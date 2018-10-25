@@ -13,8 +13,6 @@
                      @exitHover="closeHoverMenu($event)"
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
-    <nodeList v-bind:nodesOutside='nodesOutsideDiagram'
-              @clickedNodeInList="addNode($event)"/>
     <toolBar @clickedAction="changeMouseState($event)"
              @mouseEnter="closeHoverMenu()"
              :mouse="mouseState"/>
@@ -40,7 +38,6 @@
   import {Compact} from 'vue-color';
   import networkViz from 'networkvizjs';
   import Rx from 'rxjs/Rx';
-  import nodeList from './components/nodeList';
   import toolBar from './components/toolBar';
   import hoverMenuNode from './components/hoverMenuNode';
   import linkTool from './behaviours/link-tool';
@@ -60,6 +57,7 @@
   const EDGEEDIT = 'EDGEEDIT';
   const GROUP = 'GROUP';
   const GROUPDRAG = 'GROUPDRAG';
+  const GROUPEDIT = 'GROUPEDIT';
   const IMAGE = 'IMAGE';
   const IMPORTPROB = 'IMPORTPROB';
   const ITALIC = 'ITALIC';
@@ -78,6 +76,7 @@
   const UNDO = 'UNDO';
   const UNGROUP = 'UNGROUP';
   const WIDTH = 'WIDTH';
+  const POS = 'POS';
 
 
   export default {
@@ -104,7 +103,6 @@
     },
     name: 'graph-viz',
     components: {
-      nodeList,
       toolBar,
       'color-picker': Compact,
       hoverMenuNode,
@@ -167,9 +165,6 @@
         }
       });
 
-
-      this.actions(this.rootObservable);
-
       this.createGraph(() => {
         // Create initial diagram from createDiagram.
         if (this.savedDiagram) {
@@ -196,17 +191,25 @@
               predicate: x.predicate,
             });
           });
+          //create groups
+          const groups = savedGraph.groups;
+          if (groups) {
+            groups.forEach((g) => {
+              this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups });
+            });
+          }
         }
       });
 
-      const svg = this.graph.getSVGElement().node();
+      this.actions(this.rootObservable);
 
+      const svg = this.graph.getSVGElement().node();
       Rx.Observable.fromEvent(svg, 'focus')
         .takeUntil(this.destroy$)
         .subscribe(() => {
         });
 
-      const $paste = Rx.Observable.fromEvent(document, 'paste')
+      Rx.Observable.fromEvent(document, 'paste')
         .takeUntil(this.destroy$)
         .filter(() => this.clickedGraphViz)
         .filter(() => !this.ifColorPickerOpen)
@@ -426,17 +429,85 @@
         }
       },
 
+      createFromSave(save, textNodes) {
+        // Create from saved.
+        const savedGraph = save;
+        const nodes = savedGraph.nodes;
+
+        nodes.forEach((v) => {
+          // Append x and y co-ordinates to the nodes passed in.
+          this.addNodeHelper(v.hash, v.x, v.y);
+        });
+        const triplets = savedGraph.triplets;
+        triplets.forEach((x) => {
+          // Create the triplets between the nodes.
+          const indexOfSubject = textNodes.map(v => v && v.id).indexOf(x.subject);
+          const indexOfObject = textNodes.map(v => v && v.id).indexOf(x.object);
+          if (indexOfSubject === -1 || indexOfObject === -1) {
+            return;
+          }
+          // Create the triplet
+          this.graph.addTriplet({
+            subject: this.toNode(textNodes[indexOfSubject]),
+            object: this.toNode(textNodes[indexOfObject]),
+            predicate: x.predicate,
+          });
+        });
+        //create groups
+        const groups = savedGraph.groups;
+        if (groups) {
+          groups.forEach((g) => {
+            this.graph.addToGroup({ id: g.id, data: g.data }, g.nodes, g.groups);
+          });
+        }
+      },
+
       updateFromPicker(value) {
         const svg = this.graph.getSVGElement().node();
         svg.focus();
         this.ifColorPickerOpen = false;
         this.colors = value;
-        this.rootObservable.next({
-          type: NODEEDIT,
-          prop: COLOR,
-          value: value.hex,
-          id: this.coloredNodeId,
+        const idArray = Array.isArray(this.coloredNodeId) ? this.coloredNodeId : [this.coloredNodeId];
+        const groups = [];
+        const edges = [];
+        const nodes = [];
+        if (typeof this.coloredNodeId === 'string' && this.activeSelect.includes(this.coloredNodeId) > 0) {
+          [...this.activeSelect.nodes.keys()].forEach(id => nodes.push(id));
+          [...this.activeSelect.groups.keys()].forEach(id => groups.push(id));
+          [...this.activeSelect.edges.keys()].forEach(id => edges.push(id));
+        }
+        idArray.forEach(id => {
+          switch (id.slice(0, 4)) {
+            case 'note': {
+              nodes.push(id);
+              break;
+            }
+            case 'grup': {
+              groups.push(id);
+              break;
+            }
+            case 'edge': {
+              edges.push(id);
+              break;
+            }
+          }
         });
+        if (groups.length > 0) {
+          this.rootObservable.next({
+            type: GROUPEDIT,
+            prop: 'color',
+            value: value.hex,
+            id: groups,
+          });
+        }
+        if (nodes.length > 0) {
+          this.rootObservable.next({
+            type: NODEEDIT,
+            prop: COLOR,
+            value: value.hex,
+            id: nodes,
+          });
+        }
       },
 
       actions($action) {
@@ -448,8 +519,6 @@
             if (!(action.type === UNDO || action.type === REDO)) {
               redoStack = [];
             }
-          })
-          .do((action) => {
             switch (action.type) {
               // each action MUST push an action to the undo stack.
 
@@ -533,6 +602,16 @@
                   nodes = nodes.concat(newNodes);
                 }
 
+                if (action.groups) {
+                  const groups = [...action.groups.entries()];
+                  groups.forEach(g => {
+                    const id = g[0];
+                    const saved = g[1];
+                    this.graph.addToGroup({ id, data: saved.data }, saved.children, undefined, true);
+                  });
+                }
+
+
                 // add edges
                 let triplet;
                 if (action.triplet) {
@@ -577,12 +656,26 @@
                 } else {
                   nodeIds = [];
                 }
+
                 if (action.triplet) {
                   edgeArray = Array.isArray(action.triplet) ? action.triplet : [action.triplet];
                 } else {
                   edgeArray = [];
                 }
                 const nodeArray = nodeIds.map(id => this.graph.getNode(id));
+
+                // get groups they belong to
+                const groupMap = new Map();
+                nodeArray.forEach(d => {
+                  if (d.parent) {
+                    const g = d.parent;
+                    if (groupMap.has(g.id)) {
+                      groupMap.get(g.id).children.nodes.push(g.id);
+                    } else {
+                      groupMap.set(d.parent.id, { data: g.data, children: { nodes: [d.id] } });
+                    }
+                  }
+                });
                 // promise containing all subject edges form DB
                 const subjectEdges = nodeIds.map(id => {
                   return new Promise((resolve, reject) => {
@@ -651,6 +744,7 @@
                           type: CREATE,
                           triplet: edges,
                           existingNode: nodeArray,
+                          groups: groupMap,
                         });
                       });
                   })
@@ -740,6 +834,31 @@
                     break;
                   }
 
+                  case POS: {
+                    oldValues = idArray.map(id => this.graph.getNode(id)).map(d => ({ x: d.x, y: d.y }));
+                    nodeIndices.forEach((nodeIndex, i) => {
+                      if (multipleValues) {
+                        this.textNodes[nodeIndex]['x'] = values[i].x;
+                        this.textNodes[nodeIndex]['y'] = values[i].y;
+                      } else {
+                        this.textNodes[nodeIndex]['x'] = values[0].x;
+                        this.textNodes[nodeIndex]['y'] = values[0].y;
+                      }
+                    });
+
+                    this.graph.editNode({
+                      property: 'x',
+                      id: idArray,
+                      value: values.map(p => p.x),
+                    });
+                    this.graph.editNode({
+                      property: 'y',
+                      id: idArray,
+                      value: values.map(p => p.y),
+                    });
+                    break;
+                  }
+
                   default : {
                     console.log('Unknown property:', action.prop);
                   }
@@ -785,16 +904,14 @@
 
               case GROUP: {
                 let group = action.group;
-                const leaves = action.children.nodes;
                 // const groups = action.children.groups;
                 if (!group) {
                   group = {
                     id: `grup-${uuid.v4()}`,
-                    color: '#F6ECAF',
+                    data: { color: '#F6ECAF' },
                   };
                 }
-                this.graph.addToGroup(group, leaves);
-
+                this.graph.addToGroup(group, action.children);
                 undoStack.push({
                   type: UNGROUP,
                   group: this.graph.getGroup(group.id),
@@ -805,12 +922,32 @@
 
               case UNGROUP: {
                 const nodes = action.children.nodes;
-                this.graph.unGroup(nodes);
+                this.graph.unGroup(action.children);
                 undoStack.push({
                   type: GROUP,
                   group: action.group,
                   children: action.children,
                 });
+                break;
+              }
+
+              case GROUPEDIT: {
+                let oldValues;
+                const idArray = Array.isArray(action.id) ? action.id : [action.id];
+                const values = Array.isArray(action.value) ? action.value : [action.value];
+                const groups = idArray.map(id => this.graph.getGroup(id));
+                const property = action.prop;
+                oldValues = groups.map(g => g.data[property]);
+                groups.forEach((g, i) => {
+                  g.data[property] = values[i];
+                });
+                undoStack.push({
+                  type: GROUPEDIT,
+                  prop: property,
+                  value: oldValues,
+                  id: action.id,
+                });
+                this.graph.restart.styles();
                 break;
               }
 
@@ -820,7 +957,7 @@
             }
           })
           .subscribe(
-            action => console.log('action', action, undoStack, redoStack),
+            action => console.log('action', action, undoStack.length, redoStack.length),
             console.error,
             () => console.log('FINISH'),
           );
@@ -842,56 +979,61 @@
       mouseDownGroup(d, d3Selection, e) {
         this.groupDrag = true;
         const svgSel = this.graph.getSVGElement();
+        const scale = 1.25;
+        const centreOffset = 32 * scale;
+        const damping = 4;
+
         const g = svgSel.select('g.svg-graph')
           .append('g')
-          .attr('transform', 'translate(10,10),scale(0.75)');
-        let translate = [...g.node().transform.baseVal].filter(t => t.type === SVGTransform.SVG_TRANSFORM_TRANSLATE)[0];
-        // const translate = g.node().createSVGTransform();
+          .attr('transform', `translate(0,0),scale(${scale})`);
 
         let nodes = [];
         if (this.mouseState === SELECT) {
           nodes = [...this.activeSelect.nodes.values()];
         }
-        nodes = nodes.filter(node => node.id !== d.id).concat(d);
+        nodes = [d].concat(nodes.filter(node => node.id !== d.id));
 
-        const firstNodes = nodes.slice(0, 3);
-        const chosenNodes = firstNodes.filter(node => node.id !== d.id).concat(d);
-        const vizNodes = chosenNodes.map((d, i) =>
-          g.append('path')
+        const elemArr = [];
+        let coordArr = [];
+        nodes.forEach((d) => {
+          const coord = { x: (d.x - centreOffset), y: (d.y - centreOffset) };
+          coordArr.push(coord);
+          const elem = g.append('path')
             .attr('fill', d.color)
-            .attr('d', this.nodeShapeToPath(d))
+            .attr('d', this.nodeShapeToPath({ nodeShape: d.nodeShape }))
             .attr('stroke', 'grey')
-            .attr('transform', `translate(${-8 * i},${-8 * i})`)
-        );
+            .attr('transform', `translate(${coord.x / scale},${coord.y / scale})`);
+          elemArr.push(elem);
+        });
+        elemArr.slice(0, 2).reverse().forEach(sel => sel.raise());
 
-        const { x, y } = { ...this.transformCoordinates({ x: e.clientX, y: e.clientY }) };
-        translate.setTranslate(x - d.width + 15, y - d.height + 15);
+
+        const { x: xi, y: yi } = this.transformCoordinates({ x: e.clientX, y: e.clientY });
+
+        const end = Rx.Observable.fromEvent(document, 'mouseup');
 
         const move = Rx.Observable.fromEvent(document, 'mousemove')
           .map(e => this.transformCoordinates({ x: e.x, y: e.y }))
           .finally(() => {
             g.node().remove();
           })
-          .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'));
-        move.subscribe(coords => {
-          const dx = coords.x - d.x;
-          const dy = coords.y - d.y;
-          translate.setTranslate(d.x + dx - d.width + 15, d.y + dy - d.height + 15);
-        });
+          .takeUntil(end);
         move.takeLast(1)
-          .subscribe((e) => {
-            const { x, y } = this.transformCoordinates({ x: e.x, y: e.y });
-            const target = this.graph.selectByCoords({ x: x, X: x, y: y, Y: y });
+          .subscribe(({ x: xf, y: yf }) => {
+            const target = this.graph.selectByCoords({ x: xf, X: xf, y: yf, Y: yf });
             let targetGroup;
+            let draggedNodes;
             if (target.groups.length > 0) {
               targetGroup = target.groups[0];
             } else {
               if (target.nodes.length > 0) {
-                nodes = nodes.filter(node => node.id !== target.nodes[0].id).concat(target.nodes[0]);
+                draggedNodes = nodes.filter(node => node.id !== target.nodes[0].id);
+                nodes = draggedNodes.concat(target.nodes[0]);
               }
             }
 
             const nodesIDs = nodes.map(node => node.id);
+            const draggednodesIDs = draggedNodes.map(node => node.id);
 
             if (d.parent && target.groups.length === 0 && target.nodes.length === 0) {
               this.rootObservable.next({
@@ -906,8 +1048,34 @@
                 children: { nodes: nodesIDs },
               });
             }
+            //TODO grey out, mix of grouped and ungrouped in selection
+            const dx = xf - d.x;
+            const dy = yf - d.y;
+
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: POS,
+              value: draggedNodes.map(d => ({ x: d.x + dx, y: d.y + dy })),
+              id: draggednodesIDs
+            });
           });
 
+        Rx.Observable.combineLatest(Rx.Observable.merge(move, Rx.Observable.of({
+          x: xi,
+          y: yi
+        })), Rx.Observable.interval(25))
+          .takeUntil(end)
+          .subscribe(([{ x, y }, ..._]) => {
+            coordArr = coordArr.map(({ x: xpp, y: ypp }, i) => ({
+              x: xpp + (x - centreOffset + 5 * Math.min(2, i) - xpp) / (damping + Math.min(2, i)),
+              y: ypp + (y - centreOffset + 5 * Math.min(2, i) - ypp) / (damping + Math.min(2, i)),
+            }));
+
+            elemArr.forEach((e, i) => {
+              e.attr('transform', `translate(${(coordArr[i].x) / scale},${coordArr[i].y / scale})`);
+
+            });
+          });
       },
 
       nodeShapeToPath(d) {
@@ -916,7 +1084,7 @@
             return 'M16 48 L48 48 L48 16 L16 16 Z';
           }
           case 'circle': {
-            return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
+            return 'M16,34a16,16 0 1,0 34,0a16,16 0 1,0 -34,0';
           }
           case 'capsule': {
             const width = d.width;
@@ -1031,7 +1199,7 @@
           },
 
           groupFillColor: (g) => {
-            return g.color ? g.color : '#F6ECAF';
+            return g && g.data.color ? g.data.color : '#F6ECAF';
           },
 
           mouseOverRadial: (node) => {
@@ -1271,12 +1439,21 @@
         });
       },
 
+      groupRemove(group) {
+        this.closeHoverMenu();
+        this.rootObservable.next({
+          type: UNGROUP,
+          group: group,
+          children: { nodes: group.leaves.map(d => d.id) },
+        });
+      },
+
       mouseOverBrush(node, ev) {
         this.dbClickCreateNode = false;
         this.ifColorPickerOpen = true;
         // this.coloredEl = element._groups[0];
         this.coloredNodeId = node.id;
-        this.colors = node.color;
+        this.colors = node.color ? node.color : node.data.color;
         this.$refs.vueColorPicker.currentColor = node.color;
 
         let grapgEditor = document.getElementById('graph').getBoundingClientRect();
@@ -1351,7 +1528,7 @@
             return width > minWidth;
           })
           .debounceTime(10)
-          .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
+          .takeUntil(Rx.Observable.fromEvent(document, 'mouseup').take(1))
           .finally(() => {
             this.isResizing = false;
             this.rootObservable.next({
@@ -1397,7 +1574,7 @@
         const elem = selection.node();
         const pos = elem.getBoundingClientRect();
         this.hoverPos = { x: pos.x, y: pos.y, width: pos.width, height: pos.height };
-        this.hoverColor = d.color;
+        this.hoverColor = d.color || d.data.color;
         this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
         this.hoverDisplay = true;
         this.hoverShape = d.nodeShape;
@@ -1410,7 +1587,7 @@
           const d = this.hoverData.data;
           const pos = this.hoverData.el.node().getBoundingClientRect();
           this.hoverPos = { x: pos.x, y: pos.y, width: pos.width, height: pos.height };
-          this.hoverColor = d.color;
+          this.hoverColor = d.color || d.data.color;
           this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
           this.hoverShape = d.nodeShape;
         }
@@ -1444,7 +1621,11 @@
             break;
           }
           case DELETE: {
-            this.nodeRemove(node);
+            if (node.id.slice(0, 4) === 'grup') {
+              this.groupRemove(node);
+            } else {
+              this.nodeRemove(node);
+            }
             break;
           }
           case GROUPDRAG: {
@@ -1819,10 +2000,9 @@
 //            const text = 'Saving Graph...';
 //            this.showLoadingMask(text);
 
-            setTimeout(() => {
-              this.graph.saveGraph((savedData) => {
-                this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
-              });
+            setTimeout(async () => {
+              const savedData = await this.graph.saveGraph();
+              this.$emit('save', savedData, this.graph.getSVGElement().node(), this.textNodes);
             }, 50);
             break;
           }
@@ -1864,7 +2044,7 @@
                     return [...selection.nodes, ...selection.edges];
                   })
                   .pairwise()
-                  .takeUntil(Rx.Observable.fromEvent(document, 'mouseup'))
+                  .takeUntil(Rx.Observable.fromEvent(document, 'mouseup').take(1))
                   .finally(() => {
                     elem.remove();
                   })
@@ -2159,7 +2339,7 @@
   }
 
   text {
-    font-family: "Source Sans Pro", sans-serif !important;
+    font-family: "Helvetica Neue", "Source Sans Pro", sans-serif !important;
     font-weight: 100 !important;
   }
 
@@ -2222,459 +2402,6 @@
     width: 22px;
     height: 22px;
     vertical-align: bottom;
-  }
-
-  .colpick {
-    position: absolute;
-    width: 346px;
-    height: 170px;
-    overflow: hidden;
-    display: none;
-    font-family: Arial, Helvetica, sans-serif;
-    background: #EBEBEB;
-    border: 1px solid #BBB;
-    border-radius: 5px;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
-  }
-
-  .colpick_color {
-    position: absolute;
-    left: 7px;
-    top: 7px;
-    width: 156px;
-    height: 156px;
-    overflow: hidden;
-    outline: 1px solid #AAA;
-    cursor: crosshair;
-  }
-
-  .colpick_color_overlay1,
-  .colpick_color_overlay2 {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 156px;
-    height: 156px;
-  }
-
-  .colpick_color_overlay1 {
-    background: linear-gradient(to right, white 0%, rgba(255, 255, 255, 0) 100%);
-  }
-
-  .colpick_color_overlay2 {
-    background: linear-gradient(to bottom, transparent 0%, black 100%);
-  }
-
-  .colpick_selector_outer {
-    background: none;
-    position: absolute;
-    width: 11px;
-    height: 11px;
-    margin: -6px 0 0 -6px;
-    border: 1px solid #000;
-    border-radius: 50%;
-  }
-
-  .colpick_selector_inner {
-    position: absolute;
-    width: 9px;
-    height: 9px;
-    border: 1px solid #FFF;
-    border-radius: 50%;
-  }
-
-  .colpick_hue {
-    position: absolute;
-    top: 6px;
-    left: 175px;
-    width: 19px;
-    height: 156px;
-    border: 1px solid #AAA;
-    cursor: n-resize;
-  }
-
-  .colpick_hue_arrs {
-    position: absolute;
-    left: -8px;
-    width: 35px;
-    height: 7px;
-    margin: -7px 0 0 0;
-  }
-
-  .colpick_hue_larr,
-  .colpick_hue_rarr {
-    position: absolute;
-    width: 0;
-    height: 0;
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
-  }
-
-  .colpick_hue_larr {
-    border-left: 7px solid #858585;
-  }
-
-  .colpick_hue_rarr {
-    right: 0;
-    border-right: 7px solid #858585;
-  }
-
-  .colpick_new_color,
-  .colpick_current_color {
-    position: absolute;
-    top: 6px;
-    width: 60px;
-    height: 27px;
-    background: #F00;
-    border: 1px solid #8F8F8F;
-  }
-
-  .colpick_new_color {
-    left: 207px;
-  }
-
-  .colpick_current_color {
-    left: 277px;
-  }
-
-  .colpick_field,
-  .colpick_hex_field {
-    position: absolute;
-    height: 20px;
-    width: 60px;
-    overflow: hidden;
-    background: #F3F3F3;
-    color: #B8B8B8;
-    font-size: 12px;
-    border: 1px solid #BDBDBD;
-    border-radius: 3px;
-  }
-
-  .colpick_rgb_r,
-  .colpick_rgb_g,
-  .colpick_rgb_b,
-  .colpick_hex_field {
-    left: 207px;
-  }
-
-  .colpick_hsb_h,
-  .colpick_hsb_s,
-  .colpick_hsb_b {
-    left: 277px;
-  }
-
-  .colpick_rgb_r,
-  .colpick_hsb_h {
-    top: 40px;
-  }
-
-  .colpick_rgb_g,
-  .colpick_hsb_s {
-    top: 67px;
-  }
-
-  .colpick_rgb_b,
-  .colpick_hsb_b {
-    top: 94px;
-  }
-
-  .colpick_hex_field {
-    width: 68px;
-    top: 121px;
-  }
-
-  .colpick_focus {
-    border-color: #999;
-  }
-
-  .colpick_field_letter {
-    position: absolute;
-    width: 12px;
-    height: 20px;
-    line-height: 20px;
-    padding-left: 4px;
-    background: #EFEFEF;
-    border-right: 1px solid #BDBDBD;
-    font-weight: bold;
-    color: #777;
-  }
-
-  .colpick_field input,
-  .colpick_hex_field input {
-    position: absolute;
-    right: 11px;
-    margin: 0;
-    padding: 0;
-    height: 20px;
-    line-height: 20px;
-    background: transparent;
-    border: none;
-    font-size: 12px;
-    font-family: Arial, Helvetica, sans-serif;
-    color: #555;
-    text-align: right;
-    outline: none;
-  }
-
-  .colpick_hex_field input {
-    outline: none;
-    right: 4px;
-  }
-
-  .colpick_field_arrs,
-  .colpick_field_uarr,
-  .colpick_field_darr {
-    position: absolute;
-  }
-
-  .colpick_field_arrs {
-    top: 0;
-    right: 0;
-    width: 9px;
-    height: 21px;
-    cursor: n-resize;
-  }
-
-  .colpick_field_uarr {
-    top: 5px;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 4px solid #959595;
-  }
-
-  .colpick_field_darr {
-    bottom: 5px;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 4px solid #959595;
-  }
-
-  .colpick_submit {
-    position: absolute;
-    left: 207px;
-    top: 146px;
-    width: 130px;
-    height: 18px;
-    line-height: 18px;
-    background: #EFEFEF;
-    text-align: center;
-    color: #555;
-    font-size: 12px;
-    font-weight: bold;
-    border: 1px solid #BDBDBD;
-    border-radius: 3px;
-  }
-
-  .colpick_submit:hover {
-    background: #F3F3F3;
-    border-color: #999;
-    cursor: pointer;
-  }
-
-  .colpick_full_ns .colpick_submit,
-  .colpick_full_ns .colpick_current_color {
-    display: none;
-  }
-
-  .colpick_full_ns .colpick_new_color {
-    width: 130px;
-    height: 25px;
-  }
-
-  .colpick_full_ns .colpick_rgb_r,
-  .colpick_full_ns .colpick_hsb_h {
-    top: 42px;
-  }
-
-  .colpick_full_ns .colpick_rgb_g,
-  .colpick_full_ns .colpick_hsb_s {
-    top: 73px;
-  }
-
-  .colpick_full_ns .colpick_rgb_b,
-  .colpick_full_ns .colpick_hsb_b {
-    top: 104px;
-  }
-
-  .colpick_full_ns .colpick_hex_field {
-    top: 135px;
-  }
-
-  .colpick_rgbhex {
-    width: 282px;
-  }
-
-  .colpick_rgbhex .colpick_hsb_h,
-  .colpick_rgbhex .colpick_hsb_s,
-  .colpick_rgbhex .colpick_hsb_b {
-    display: none;
-  }
-
-  .colpick_rgbhex .colpick_field,
-  .colpick_rgbhex .colpick_submit {
-    width: 68px;
-  }
-
-  .colpick_rgbhex .colpick_new_color {
-    width: 34px;
-    border-right: none;
-  }
-
-  .colpick_rgbhex .colpick_current_color {
-    width: 34px;
-    left: 240px;
-    border-left: none;
-  }
-
-  .colpick_rgbhex_ns .colpick_submit,
-  .colpick_rgbhex_ns .colpick_current_color {
-    display: none;
-  }
-
-  .colpick_rgbhex_ns .colpick_new_color {
-    width: 68px;
-    border: 1px solid #8F8F8F;
-  }
-
-  .colpick_rgbhex_ns .colpick_rgb_r {
-    top: 42px;
-  }
-
-  .colpick_rgbhex_ns .colpick_rgb_g {
-    top: 73px;
-  }
-
-  .colpick_rgbhex_ns .colpick_rgb_b {
-    top: 104px;
-  }
-
-  .colpick_rgbhex_ns .colpick_hex_field {
-    top: 135px;
-  }
-
-  .colpick_hex {
-    width: 206px;
-    height: 201px;
-  }
-
-  .colpick_hex .colpick_hsb_h,
-  .colpick_hex .colpick_hsb_s,
-  .colpick_hex .colpick_hsb_b,
-  .colpick_hex .colpick_rgb_r,
-  .colpick_hex .colpick_rgb_g,
-  .colpick_hex .colpick_rgb_b {
-    display: none;
-  }
-
-  .colpick_hex .colpick_hex_field {
-    width: 72px;
-    height: 25px;
-    top: 168px;
-    left: 80px;
-  }
-
-  .colpick_hex .colpick_hex_field div,
-  .colpick_hex .colpick_hex_field input {
-    height: 25px;
-    line-height: 25px;
-  }
-
-  .colpick_hex .colpick_new_color,
-  .colpick_hex .colpick_current_color,
-  .colpick_hex .colpick_submit {
-    top: 168px;
-    width: 30px;
-  }
-
-  .colpick_hex .colpick_new_color {
-    left: 9px;
-    border-right: none;
-  }
-
-  .colpick_hex .colpick_current_color {
-    left: 39px;
-    border-left: none;
-  }
-
-  .colpick_hex .colpick_submit {
-    left: 164px;
-    height: 25px;
-    line-height: 25px;
-  }
-
-  .colpick_hex_ns .colpick_submit,
-  .colpick_hex_ns .colpick_current_color {
-    display: none;
-  }
-
-  .colpick_hex_ns .colpick_hex_field {
-    width: 80px;
-  }
-
-  .colpick_hex_ns .colpick_new_color {
-    width: 60px;
-    border: 1px solid #8F8F8F;
-  }
-
-  .colpick_dark {
-    background: #161616;
-    border-color: #2A2A2A;
-  }
-
-  .colpick_dark .colpick_color {
-    outline-color: #333;
-  }
-
-  .colpick_dark .colpick_hue {
-    border-color: #555;
-  }
-
-  .colpick_dark .colpick_field,
-  .colpick_dark .colpick_hex_field {
-    background: #101010;
-    border-color: #2D2D2D;
-  }
-
-  .colpick_dark .colpick_field_letter {
-    background: #131313;
-    border-color: #2D2D2D;
-    color: #696969;
-  }
-
-  .colpick_dark .colpick_field input,
-  .colpick_dark .colpick_hex_field input {
-    color: #7A7A7A;
-  }
-
-  .colpick_dark .colpick_field_uarr {
-    border-bottom-color: #696969;
-  }
-
-  .colpick_dark .colpick_field_darr {
-    border-top-color: #696969;
-  }
-
-  .colpick_dark .colpick_focus {
-    border-color: #444;
-  }
-
-  .colpick_dark .colpick_submit {
-    background: #131313;
-    border-color: #2D2D2D;
-    color: #7A7A7A;
-  }
-
-  .colpick_dark .colpick_submit:hover {
-    background-color: #101010;
-    border-color: #444;
   }
 
   /*Ghazal End*/

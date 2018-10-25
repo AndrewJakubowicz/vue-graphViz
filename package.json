@@ -18,7 +18,7 @@
     "d3": "4.9.1",
     "interactjs": "^1.3.4",
     "medium-editor": "^5.23.3",
-    "networkvizjs": "git+https://github.com/AndrewJakubowicz/networkVizJS.git#167980ab7d0021f1ca37249545e0156c559a0655",
+    "networkvizjs": "git+https://github.com/AndrewJakubowicz/networkVizJS.git#90fa17acc3bfc6abc2d996516bdc666988a40ed3",
     "rxjs": "5.4.1",
     "uuid": "^3.3.2",
     "vue": "^2.5.15",

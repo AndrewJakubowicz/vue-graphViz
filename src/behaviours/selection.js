@@ -202,8 +202,12 @@ export default class Selection {
     });
   }
 
+  includes(id) {
+    return this._nodes.has(id) || this._edges.has(id) || this._groups.has(id);
+  }
+
   get size() {
-    return this._nodes.size + this.edges.size;
+    return this._nodes.size + this._edges.size + this._groups.size;
   }
 
   set size(_) {
@@ -221,6 +225,13 @@ export default class Selection {
   }
 
   set edges(_) {
+  }
+
+  get groups() {
+    return this._groups;
+  }
+
+  set groups(_) {
   }
 
 };

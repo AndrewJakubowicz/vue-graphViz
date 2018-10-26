@@ -987,12 +987,14 @@
           .append('g')
           .attr('transform', `translate(0,0),scale(${scale})`);
 
+        //get nodes to be changed
         let nodes = [];
         if (this.mouseState === SELECT) {
           nodes = [...this.activeSelect.nodes.values()];
         }
         nodes = [d].concat(nodes.filter(node => node.id !== d.id));
 
+        // get elements involved in drag animation
         const elemArr = [];
         let coordArr = [];
         nodes.forEach((d) => {
@@ -1007,35 +1009,37 @@
         });
         elemArr.slice(0, 2).reverse().forEach(sel => sel.raise());
 
-
+        // initial coords
         const { x: xi, y: yi } = this.transformCoordinates({ x: e.clientX, y: e.clientY });
-
+        // end event
         const end = Rx.Observable.fromEvent(document, 'mouseup');
-
+        // move event
         const move = Rx.Observable.fromEvent(document, 'mousemove')
           .map(e => this.transformCoordinates({ x: e.x, y: e.y }))
           .finally(() => {
+            // on end remove elements in drag animation
             g.node().remove();
           })
           .takeUntil(end);
         move.takeLast(1)
           .subscribe(({ x: xf, y: yf }) => {
+            // get mouse target
             const target = this.graph.selectByCoords({ x: xf, X: xf, y: yf, Y: yf });
             let targetGroup;
-            let draggedNodes;
-            if (target.groups.length > 0) {
+            let draggedNodes = nodes; // nodes that are in the drag selection
+            if (target.groups.length > 0) { // mouse target is a group
               targetGroup = target.groups[0];
             } else {
-              if (target.nodes.length > 0) {
-                draggedNodes = nodes.filter(node => node.id !== target.nodes[0].id);
+              if (target.nodes.length > 0) { // mouse target is another node
+                draggedNodes = draggedNodes.filter(node => node.id !== target.nodes[0].id);
                 nodes = draggedNodes.concat(target.nodes[0]);
               }
             }
-
+            // map nodes to IDs
             const nodesIDs = nodes.map(node => node.id);
             const draggednodesIDs = draggedNodes.map(node => node.id);
-
-            if (d.parent && target.groups.length === 0 && target.nodes.length === 0) {
+            // if node interacted with is in a group and target is nothing ungroup all nodes
+            if (target.groups.length === 0 && target.nodes.length === 0) {
               this.rootObservable.next({
                 type: UNGROUP,
                 group: d.parent,
@@ -1049,6 +1053,7 @@
               });
             }
             //TODO grey out, mix of grouped and ungrouped in selection
+            // move "dragged" nodes to their destination they were dragged to
             const dx = xf - d.x;
             const dy = yf - d.y;
 
@@ -1060,6 +1065,9 @@
             });
           });
 
+        // drag animation - causes the "trails"
+        // updates every 25ms moving a part of the way between the previous position and the mouse position.
+        // nodes "behind" have an offset to their target position
         Rx.Observable.combineLatest(Rx.Observable.merge(move, Rx.Observable.of({
           x: xi,
           y: yi

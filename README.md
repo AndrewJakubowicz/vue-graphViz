@@ -1,7 +1,7 @@
 # graphviz
 
-###Try it [here](https://andrewjakubowicz.github.io/vue-graphViz/)
-####https://andrewjakubowicz.github.io/vue-graphViz
+### Try it [here](https://andrewjakubowicz.github.io/vue-graphViz/)
+#### https://andrewjakubowicz.github.io/vue-graphViz
 
 Use the toolbar on the right to draw out your graph.
 You can double click to create nodes easily.

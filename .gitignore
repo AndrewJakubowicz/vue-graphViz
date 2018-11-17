@@ -9,4 +9,3 @@ test/e2e/reports
 selenium-debug.log
 .idea/
 /vue-graphViz.iml
-/docs/

@@ -581,7 +581,7 @@
                   const newNodes = Array.isArray(action.newNode) ? action.newNode : [action.newNode];
                   const newNodeArr = newNodes.map(n => {
                     const defaultNode = {
-                      id: 'note-' + uuid.v4(),
+                      id: 'note-' + uuid(),
                       class: 'b-no-snip',
                       nodeShape: 'capsule',
                       text: 'New',
@@ -923,7 +923,7 @@
                 // const groups = action.children.groups;
                 if (!group) {
                   group = {
-                    id: `grup-${uuid.v4()}`,
+                    id: `grup-${uuid()}`,
                     data: { color: '#F6ECAF' },
                   };
                 }
@@ -1814,7 +1814,7 @@
             const newNodes = [...this.activeSelect.nodes.values()]
               .map(d => {
                 const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname, id, x, y, width, height } = d;
-                const newId = 'note-' + uuid.v4();
+                const newId = 'note-' + uuid();
                 const newX = x + 100 + width / 2 > editorBounds.x ? x - 20 - width / 2 : x + 20 + width / 2;
                 const newY = y + 160 + height > editorBounds.y ? y - 15 - height : y + 15 + height;
                 const newnode = {
@@ -1849,7 +1849,7 @@
                   const newPredicate = Object.assign({}, predicate);
                   newPredicate.subject = subject.id;
                   newPredicate.object = object.id;
-                  newPredicate.hash = 'edge-' + uuid.v4();
+                  newPredicate.hash = 'edge-' + uuid();
                   newPredicate.class = newPredicate.class.replace(' highlight', '');
                   return { subject, predicate: newPredicate, object };
                 }
@@ -1887,7 +1887,7 @@
             const objOfNodes = {};
             const listOfEdges = [];
             Object.keys(Dlist).forEach((D) => {
-              const id = 'note-' + uuid.v4();
+              const id = 'note-' + uuid();
               objOfNodes[D] = {
                 id: id,
                 nodeShape: 'circle',
@@ -1904,7 +1904,7 @@
                   predicate: {
                     type: 'arrow',
                     text: '',
-                    hash: 'edge-' + uuid.v4(),
+                    hash: 'edge-' + uuid(),
                     subject: objOfNodes[n].id,
                     object: objOfNodes[key].id,
                     class: '',

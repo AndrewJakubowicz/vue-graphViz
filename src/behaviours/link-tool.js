@@ -123,7 +123,7 @@ export default (graph, mousedown, $lastNode, toNode, saveEdge, finishDrag) => {
                   type: 'arrow',
                   text: '',
                   class: '',
-                  hash: 'edge-' + uuid.v4(),
+                  hash: 'edge-' + uuid(),
                   subject: currentState.startedDragAt,
                   object: currentState.currentNode.hash
                 },

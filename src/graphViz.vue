@@ -238,7 +238,7 @@
         });
 
       const keyDown = fromEvent(svg, 'keydown').pipe(takeUntil(this.destroy$));
-      const ctrlDown = keyDown.pipe(filter(e => e.ctrlKey));
+      const ctrlDown = keyDown.pipe(filter(e => e.ctrlKey || e.metaKey));
 
       ctrlDown.pipe(
         filter(e => e.keyCode === 90 && !e.shiftKey && !e.altKey),
@@ -284,12 +284,12 @@
       });
 
       // keyboard shortcuts to switch mouse tool
-      keyDown.pipe(filter(e => (e.keyCode === 80 && this.mouseState === SELECT && !e.ctrlKey && !e.shiftKey && !e.altKey)))
+      keyDown.pipe(filter(e => (e.keyCode === 80 && this.mouseState === SELECT && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey)))
         .subscribe((e) => {
           e.preventDefault();
           this.changeMouseState(POINTER);
         });
-      keyDown.pipe(filter(e => (e.keyCode === 83 && this.mouseState === POINTER && !e.ctrlKey && !e.shiftKey && !e.altKey)))
+      keyDown.pipe(filter(e => (e.keyCode === 83 && this.mouseState === POINTER && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey)))
         .subscribe((e) => {
           e.preventDefault();
           this.changeMouseState(SELECT);
@@ -2134,7 +2134,7 @@
               takeWhile(() => this.mouseState === SELECT),
             );
 
-            const ctrl = keyDown.pipe(filter(e => (e.ctrlKey && !e.shiftKey && !e.altKey)));
+            const ctrl = keyDown.pipe(filter(e => (e.ctrlKey || e.metaKey && !e.shiftKey && !e.altKey)));
 
             // ESC clear selection or exit if nothing selected
             keyDown.pipe(

@@ -1314,8 +1314,8 @@
           this.changeMouseState(POINTER);
         });
         this.linkToolDispose = this.linkTool(this.textNodes);
-        // Set the action of clicking the edge:
-        this.graph.edgeOptions.setClickEdge((edge, elem, e) => {
+        // Set the action of double clicking the edge:
+        this.graph.edgeOptions.setDblClickEdge((edge, elem, e) => {
           if (this.mouseState === SELECT) {
             if (e.shiftKey) {
               this.activeSelect.selectExclusive(edge);
@@ -1344,9 +1344,17 @@
         });
 
         // Set the action of clicking the node:
-        this.graph.nodeOptions.setClickNode((node, elem) => {
+        this.graph.nodeOptions.setClickNode((node) => {
+          if (this.mouseState === POINTER) {
+            this.changeMouseState(SELECT);
+            this.activeSelect.selectExclusive(node);
+          }
+        });
+
+        // Set the action of double clicking the node:
+        this.graph.nodeOptions.setDblClickNode((node, elem) => {
           // If the mouse is a pointer and a note is clicked on set edit mode.
-          if (this.mouseState === POINTER && node.hash.slice(0, 5) === 'note-') {
+          if (node.hash.slice(0, 5) === 'note-') {
             this.currentNode = node;
             $mousedown.next({
               type: 'EDITNODE',
@@ -2019,17 +2027,20 @@
             const svgSel = this.graph.getSVGElement();
             const svg = svgSel.node();
 
+            // detect mouse down and drag, filters for events that start over background only.
             Rx.Observable.fromEvent(svg, 'mousedown')
               .takeWhile(() => this.mouseState === SELECT)
               .filter(e => e.target.tagName === 'svg')
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey, alt: e.altKey }))
               .map(({ x, y, shift, alt }) => {
+                // number of selected items prior to clicking
+                const preSize = this.activeSelect.size;
                 if (!shift && !alt) {
                   this.activeSelect.clear();
                 }
-                return { x, y, addTo: !alt };
+                return { x, y, addTo: !alt, preSize };
               })
-              .map(({ x, y, addTo }) => {
+              .map(({ x, y, addTo, preSize }) => {
                 const g = svgSel.select('.svg-graph');
                 const elem = g.append('path')
                   .attr('id', 'selector')
@@ -2038,9 +2049,23 @@
                   .attr('shape-rendering', 'crispEdges')
                   .attr('fill', 'rgba(78,168,233,0.1)')
                   .attr('stroke-dasharray', '4 3');
-                return { x, y, addTo, elem };
+                return { x, y, addTo, elem, preSize };
               })
-              .subscribe(({ x, y, addTo, elem }) => {
+              .subscribe(({ x, y, addTo, elem, preSize }) => {
+                const mouseUp = Rx.Observable.fromEvent(document, 'mouseup').take(1);
+
+                mouseUp
+                  .map(e => this.transformCoordinates({ x: e.x, y: e.y }))
+                  .map(e => ({ X: e.x, Y: e.y }))
+                  .subscribe(({ X, Y }) => {
+                    // if mouse has not moved between mouse down and mouse up and
+                    // and target is SVG and nothing was selected before interaction
+                    // exit select tool
+                    if (X === x && Y === y && preSize === 0 && this.activeSelect.size === 0) {
+                      this.changeMouseState(POINTER);
+                    }
+                  });
+
                 Rx.Observable.fromEvent(document, 'mousemove')
                   .do(e => e.preventDefault())
                   .do(e => e.stopPropagation())
@@ -2052,7 +2077,7 @@
                     return [...selection.nodes, ...selection.edges];
                   })
                   .pairwise()
-                  .takeUntil(Rx.Observable.fromEvent(document, 'mouseup').take(1))
+                  .takeUntil(mouseUp)
                   .finally(() => {
                     elem.remove();
                   })
@@ -2073,13 +2098,16 @@
               .takeWhile(() => this.mouseState === SELECT)
               .map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey }))
               .map(({ x, y, shift }) => {
+                // if not shift key, clear current selection
                 if (!shift) {
                   this.activeSelect.clear();
                 }
                 return { x, y };
               })
               .subscribe(({ x, y }) => {
+                // get the items available at the location clicked on
                 const newSelect = this.graph.selectByCoords({ x, X: x, y, Y: y }).nodes;
+                // add clicked item to selection
                 this.activeSelect.selectExclusive(newSelect);
                 this.graph.restart.styles();
               });
@@ -2091,12 +2119,16 @@
 
             const ctrl = keyDown.filter(e => (e.ctrlKey && !e.shiftKey && !e.altKey));
 
-            // ESC clear selection
+            // ESC clear selection or exit if nothing selected
             keyDown.filter(e => e.keyCode === 27)
               .do(e => e.preventDefault())
               .subscribe(() => {
-                this.activeSelect.clear();
-                this.graph.restart.styles();
+                if (this.activeSelect.size > 0) {
+                  this.activeSelect.clear();
+                  this.graph.restart.styles();
+                } else {
+                  this.changeMouseState(POINTER);
+                }
               });
 
             // DEL delete

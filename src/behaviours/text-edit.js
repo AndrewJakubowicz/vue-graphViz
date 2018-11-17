@@ -3,7 +3,17 @@
  * Text edit utility.
  * Deals with the text edit capability of the note nodes.
  */
-const Rx = require('rxjs');
+import {fromEvent, fromEventPattern, concat, merge} from 'rxjs';
+import {
+  map,
+  filter,
+  tap,
+  finalize,
+  take,
+  takeUntil,
+  switchAll,
+} from 'rxjs/operators';
+
 const MediumEditor = require('medium-editor');
 require('medium-editor/dist/css/medium-editor.css');
 require('medium-editor/dist/css/themes/beagle.css');
@@ -12,9 +22,9 @@ require('medium-editor/dist/css/themes/beagle.css');
  * Takes an action observable.
  */
 export default ($action, startCallback, endCallback) => {
-  $action
-    .filter(action => (action.type === 'EDITNODE' || action.type === 'EDITEDGE'))
-    .map((action) => {
+  $action.pipe(
+    filter(action => (action.type === 'EDITNODE' || action.type === 'EDITEDGE')),
+    map((action) => {
       startCallback && startCallback();
       const fullRestart = action.restart;
       const restart = () => action.restart(undefined, true);
@@ -83,46 +93,49 @@ export default ($action, startCallback, endCallback) => {
       restart();
 
       // Input handling
-      const $input = Rx.Observable.fromEventPattern(
+      const $input = fromEventPattern(
         handler => editor.subscribe('editableInput', handler),
         handler => editor.unsubscribe('editableInput', handler),
       );
       // correct behaviour on paste
-      const $paste = Rx.Observable.fromEvent(textElem, 'paste')
-        .do((e) => {
+      const $paste = fromEvent(textElem, 'paste').pipe(
+        tap((e) => {
           e.preventDefault();
           const HTMLText = e.clipboardData.getData('text/html').replace(/[\n\r]+/g, '\n');
           const plaintext = e.clipboardData.getData('text/plain');
           editor.cleanPaste(HTMLText || plaintext);
-        });
+        })
+      );
 
       // Exit Handling
       // On "esc" keypress cancel changes
-      const $esc = Rx.Observable.concat(
-        Rx.Observable.fromEvent(document, 'keyup')
-          .filter(e => e.keyCode === 27)
-          .do(() => {
+      const $esc = concat(
+        fromEvent(document, 'keyup').pipe(
+          filter(e => e.keyCode === 27),
+          tap(() => {
             textElem.innerHTML = oldText;
-          }));
+          }),
+        ));
       // On mouseclick
-      const $mouseClick = Rx.Observable.concat(
-        Rx.Observable.fromEvent(document, 'click')
-          .filter(e => e.target !== textElem)
-          .map(e => ({ e, descendants: Array.from(textElem.querySelectorAll('*')) }))
-          .filter(({ e, descendants }) => !descendants.includes(e.target)));
+      const $mouseClick = concat(
+        fromEvent(document, 'click').pipe(
+          filter(e => e.target !== textElem),
+          map(e => ({ e, descendants: Array.from(textElem.querySelectorAll('*')) })),
+          filter(({ e, descendants }) => !descendants.includes(e.target)),
+        ));
       // Exit on focus lost
-      const $editorBlur = Rx.Observable.fromEventPattern(
+      const $editorBlur = fromEventPattern(
         handler => editor.subscribe('blur', handler),
         handler => editor.unsubscribe('blur', handler),
       );
-      const $windowBlur = Rx.Observable.fromEvent(window, 'blur');
+      const $windowBlur = fromEvent(window, 'blur');
       // on exit
-      const $exit = Rx.Observable.merge(
+      const $exit = merge(
         $esc,
         $mouseClick,
         $windowBlur,
         $editorBlur,
-      ).do(() => {
+      ).pipe(tap(() => {
         // remove selection
         if (window.getSelection) {
           window.getSelection().removeAllRanges();
@@ -135,22 +148,21 @@ export default ($action, startCallback, endCallback) => {
         textElem.classList.remove('allowSelection');
         // remove pointer events
         textElem.style.pointerEvents = 'none';
-      });
+      }));
 
       // watch to see if text gets edited.
-      $input
-        .takeUntil($exit)
-        .take(1)
-        .subscribe(() => {
-          unedited = false;
-        });
+      $input.pipe(
+        takeUntil($exit),
+        take(1),
+      ).subscribe(() => {
+        unedited = false;
+      });
 
       // Return the typing observable.
-      return Rx.Observable
-        .merge($paste, $input)
-        .do(restart)
-        .takeUntil($exit)
-        .finally(() => {
+      return merge($paste, $input).pipe(
+        tap(restart),
+        takeUntil($exit),
+        finalize(() => {
           editor.destroy();
           // if text is unedited, reset edge text to blank
           if (action.type === 'EDITEDGE' && unedited) {
@@ -164,12 +176,13 @@ export default ($action, startCallback, endCallback) => {
             save && save(textElem.innerHTML.replace(/^<p>|<\/p>$/g, ''));
           }
           endCallback && endCallback();
-        });
-    })
-    .switch()
-    .subscribe(
-      () => undefined,
-      console.error,
-      () => console.log('FINISH'),
-    );
+        }),
+      );
+    }),
+    switchAll(),
+  ).subscribe(
+    () => undefined,
+    console.error,
+    () => console.log('FINISH'),
+  );
 };

@@ -5,10 +5,15 @@
  * Edge link tool.
  * Connects nodes together.
  */
-// import uuid from 'uuid'
-const Rx = require('rxjs');
-// const d3 = require('d3');
-const uuid = require('uuid');
+import {fromEvent} from 'rxjs';
+import {
+  map,
+  takeUntil,
+  finalize,
+  filter,
+  flatMap
+} from 'rxjs/operators';
+import uuid from 'uuid/v4';
 
 const makeAbsoluteContext = (element, documentNode) => {
   return function (x, y) {
@@ -21,7 +26,7 @@ const makeAbsoluteContext = (element, documentNode) => {
   };
 };
 
-module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finishDrag) {
+export default (graph, mousedown, $lastNode, toNode, saveEdge, finishDrag) => {
   return (nodesList) => {
     let tempDrawingArrow = {
       start: { x: 0, y: 0 },
@@ -52,15 +57,15 @@ module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finish
 
     let d3Data = [tempDrawingArrow];
 
-    const mousemove = Rx.Observable.fromEvent(document, 'mousemove'),
-      mouseUpOnNodeObservable = Rx.Observable.fromEvent(document, 'mouseup');
+    const mousemove = fromEvent(document, 'mousemove'),
+      mouseUpOnNodeObservable = fromEvent(document, 'mouseup');
 
     // Mousedown subscription with handlers.
-    const mousedrag = mousedown
-      .filter(action => {
+    const mousedrag = mousedown.pipe(
+      filter(action => {
         return action.type === 'CREATEEDGE';
-      })
-      .flatMap(function (obj) {
+      }),
+      flatMap(function (obj) {
         // Set current selection to the start dragged node.
         currentState.startedDragAt = obj.clickedNode.hash;
         const bbox = obj.selection.node().getBBox(),
@@ -85,20 +90,22 @@ module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finish
         tempDrawingArrow.start = { x: _pt.x, y: _pt.y };
 
         // Reference: http://stackoverflow.com/a/10298843/6421793
-        return mousemove.map(function (mm) {
-          mm.preventDefault();
-          const pt = svg.createSVGPoint();
+        return mousemove.pipe(
+          map(function (mm) {
+            mm.preventDefault();
+            const pt = svg.createSVGPoint();
 
-          function cursorPoint(evt) {
-            pt.x = evt.clientX;
-            pt.y = evt.clientY;
-            return pt.matrixTransform(svg.getScreenCTM().inverse());
-          }
+            function cursorPoint(evt) {
+              pt.x = evt.clientX;
+              pt.y = evt.clientY;
+              return pt.matrixTransform(svg.getScreenCTM().inverse());
+            }
 
 
-          return cursorPoint(mm);
-        }).takeUntil(mouseUpOnNodeObservable)
-          .finally(() => {
+            return cursorPoint(mm);
+          }),
+          takeUntil(mouseUpOnNodeObservable),
+          finalize(() => {
             // This is called when the sequence "completes".
             // Here we make the arrow disappear by moving it to the corner.
             // We also add the triplet.
@@ -124,8 +131,11 @@ module.exports = function (graph, mousedown, $lastNode, toNode, saveEdge, finish
               });
             }
             finishDrag();
-          });
-      });
+          }),
+        );
+      }),
+    );
+
 
     const sub = mousedrag.subscribe(function (d) {
         tempDrawingArrow.end = { x: d.x, y: d.y };

@@ -9,10 +9,17 @@
               @save="save"
               :width="width" :height="height"
     ></graphViz>
+    <save-modal :display="saveDisplay"
+                :svgData="svgData"
+                @close="closeSave"
+    ></save-modal>
+
   </div>
 </template>
 <script>
-  import graphViz from './graphViz.vue'
+  import graphViz from './graphViz.vue';
+  import saveModal from './components/saveModal.vue';
+
   export default {
     props: ['snippets', 'w', 'graphChunk', 'chunk'],
     data() {
@@ -24,49 +31,51 @@
         h: 0,
         nodes: [],
         textNodes: [],
-        savedDiagram: ''
-      }
+        savedDiagram: '',
+        saveDisplay: false,
+        svgData: undefined,
+      };
     },
     watch: {
       w() {
-        this.$log.info('graph - width changed', this.w)
-        this.width = this.w
+        this.$log.info('graph - width changed', this.w);
+        this.width = this.w;
       }
     },
     created() {
-      this.$log.info('graph - created', this.w, this)
-      this.chunkId = this.chunk ? this.chunk.id : undefined
-      this.parse()
+      this.$log.info('graph - created', this.w, this);
+      this.chunkId = this.chunk ? this.chunk.id : undefined;
+      this.parse();
     },
     mounted() {
-      this.height = document.getElementById('xb-arg-map').clientHeight
-      this.width = document.getElementById('xb-arg-map').clientWidth
-      this.$log.info('graph - height changed', this.height)
+      this.height = document.getElementById('xb-arg-map').clientHeight;
+      this.width = document.getElementById('xb-arg-map').clientWidth;
+      this.$log.info('graph - height changed', this.height);
     },
     methods: {
 
       parse() {
-        let saved = null
-        let textNodes = []
-        let graph = this.graphChunk && this.graphChunk.content
+        let saved = null;
+        let textNodes = [];
+        let graph = this.graphChunk && this.graphChunk.content;
 
-        if (graph && this.graphChunk.deleted) graph = null
+        if (graph && this.graphChunk.deleted) graph = null;
         else if (graph && !graph.deleted && graph.length > 0) {
           try {
-            graph = JSON.parse(graph)
-            saved = graph.saved
-            textNodes = graph.textNodes
+            graph = JSON.parse(graph);
+            saved = graph.saved;
+            textNodes = graph.textNodes;
           } catch (e) {
             // pass
           }
         }
-        this.savedDiagram = saved || '{"triplets":[{"subject":"0","predicate":"arrow","object":"1"}],"nodes":[{"hash":"0","x":223.3129297153952,"y":46.94835315445652},{"hash":"1","x":414.12654824652196,"y":106.86632193726514},{"hash":"2","x":393.53570556640625,"y":182.36602783203125}]}'
-        this.nodes = this.snippets
+        this.savedDiagram = saved || '{"triplets":[{"subject":"0","predicate":"arrow","object":"1"}],"nodes":[{"hash":"0","x":223.3129297153952,"y":46.94835315445652},{"hash":"1","x":414.12654824652196,"y":106.86632193726514},{"hash":"2","x":393.53570556640625,"y":182.36602783203125}]}';
+        this.nodes = this.snippets;
 
         if (!textNodes || textNodes.length === 0) {
-          this.textNodes = this.nodes
+          this.textNodes = this.nodes;
         } else {
-          this.textNodes = textNodes
+          this.textNodes = textNodes;
         }
       },
       save(savedDiagram, svg, textNodes) {
@@ -74,19 +83,26 @@
           saved: savedDiagram,
           svg: svg.outerHTML,
           textNodes: textNodes
-        })
+        });
         let payload = {
           graphChunk: this.graphChunk,
           chunk: this.chunk,
           id: this.chunkId,
           graph: graph
-        }
-        this.$log.info('graph - saved', payload, JSON.parse(savedDiagram))
-        this.$emit('save', payload)
-      }
+        };
+        this.$log.info('graph - saved', payload, JSON.parse(savedDiagram));
+        this.$emit('save', payload);
+
+        this.saveDisplay = true;
+        this.svgData = svg;
+
+      },
+      closeSave() {
+        this.saveDisplay = false;
+      },
     },
-    components: {graphViz}
-  }
+    components: { graphViz, saveModal }
+  };
 
 </script>
 

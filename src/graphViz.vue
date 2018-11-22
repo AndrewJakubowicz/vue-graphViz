@@ -75,6 +75,7 @@
   const ITALIC = 'ITALIC';
   const NODEEDIT = 'NODEEDIT';
   const NODERESIZE = 'NODERESIZE';
+  const OPEN = 'OPEN';
   const PIN = 'PIN';
   const REDO = 'REDO';
   const REMOVEARROWS = 'REMOVEARROWS';
@@ -174,44 +175,18 @@
       );
 
       this.hoverQueue$.subscribe(callback => {
-        if (callback && typeof(callback) === 'function') {
+        if (callback && typeof (callback) === 'function') {
           callback();
         }
       });
 
-      this.createGraph(() => {
+      this.createGraph().then(() => {
         // Create initial diagram from createDiagram.
         if (this.savedDiagram) {
           // Create from saved.
           const savedGraph = JSON.parse(this.savedDiagram);
-          const nodes = savedGraph.nodes;
+          this.loadFromSaved(savedGraph);
 
-          nodes.forEach((v) => {
-            // Append x and y co-ordinates to the nodes passed in.
-            this.addNodeHelper(v.hash, v.x, v.y);
-          });
-          const triplets = savedGraph.triplets;
-          triplets.forEach((x) => {
-            // Create the triplets between the nodes.
-            const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
-            const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
-            if (indexOfSubject === -1 || indexOfObject === -1) {
-              return;
-            }
-            // Create the triplet
-            this.graph.addTriplet({
-              subject: this.toNode(this.textNodes[indexOfSubject]),
-              object: this.toNode(this.textNodes[indexOfObject]),
-              predicate: x.predicate,
-            });
-          });
-          //create groups
-          const groups = savedGraph.groups;
-          if (groups) {
-            groups.forEach((g) => {
-              this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups });
-            });
-          }
         }
       });
 
@@ -240,6 +215,7 @@
       const keyDown = fromEvent(svg, 'keydown').pipe(takeUntil(this.destroy$));
       const ctrlDown = keyDown.pipe(filter(e => e.ctrlKey || e.metaKey));
 
+      // undo keyboard shortcut
       ctrlDown.pipe(
         filter(e => e.keyCode === 90 && !e.shiftKey && !e.altKey),
         filter(() => this.canKeyboardUndo)
@@ -248,6 +224,7 @@
         this.rootObservable.next({ type: UNDO });
       });
 
+      // redo keyboard shortcut
       ctrlDown.pipe(
         filter(e => (e.keyCode === 89 && !e.shiftKey && !e.altKey) || (e.keyCode === 90 && e.shiftKey && !e.altKey)),
         filter(() => this.canKeyboardUndo)
@@ -256,6 +233,7 @@
         this.rootObservable.next({ type: REDO });
       });
 
+      // save file keyboard shortcut
       ctrlDown.pipe(
         filter(e => e.keyCode === 83),
         filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
@@ -264,7 +242,16 @@
         this.changeMouseState(SAVE);
       });
 
-      // ctrl + A select all
+      // open file keyboard shortcut
+      ctrlDown.pipe(
+        filter(e => e.keyCode === 79),
+        filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
+      ).subscribe((e) => {
+        e.preventDefault();
+        this.changeMouseState(OPEN);
+      });
+
+      // ctrl + A select all keyboard shortcut
       ctrlDown.pipe(filter(e => e.keyCode === 65),
         filter(() => this.mouseState === POINTER || this.mouseState === SELECT),
         tap(e => e.preventDefault())
@@ -990,6 +977,7 @@
         }
         this.createGraph();
         this.recalculateNodesOutside();
+        return Promise.resolve();
       },
 
       mouseDownGroup(d, d3Selection, e) {
@@ -1411,7 +1399,7 @@
         // TODO find permanent solution to nodes created wrong size upon loading
         setTimeout(this.graph.restart.layout, 50);
 
-        if (callback !== undefined) callback();
+        return Promise.resolve();
       },
 
       toNode(nodeProtocolObject) {
@@ -1687,6 +1675,63 @@
 
       },
 
+      loadFromSaved(savedGraph) {
+        // debugger;
+        const nodes = savedGraph.nodes;
+
+        nodes.forEach((v) => {
+          // Append x and y co-ordinates to the nodes passed in.
+          this.addNodeHelper(v.hash, v.x, v.y);
+        });
+        const triplets = savedGraph.triplets;
+        triplets.forEach((x) => {
+          // Create the triplets between the nodes.
+          const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+          const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+          if (indexOfSubject === -1 || indexOfObject === -1) {
+            return;
+          }
+          // Create the triplet
+          this.graph.addTriplet({
+            subject: this.toNode(this.textNodes[indexOfSubject]),
+            object: this.toNode(this.textNodes[indexOfObject]),
+            predicate: x.predicate,
+          });
+        });
+        //create groups
+        const groups = savedGraph.groups;
+        if (groups) {
+          groups.forEach((g) => {
+            this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups });
+          });
+        }
+      },
+
+      readFile(event) {
+        const file = event.target.files[0];
+        if (file.type === 'image/svg+xml') {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const parser = new DOMParser();
+            const svg = parser.parseFromString(reader.result, 'text/xml');
+            const desc = svg.querySelector('#graphJSONData');
+            if (desc && desc.innerHTML) {
+              const graphData = JSON.parse(desc.innerHTML);
+              graphData.textNodes.forEach(x => this.textNodes.push(x));
+              this.clearScreen().then(() => {
+                this.rootObservable.next({ type: CLEARHISTORY });
+                this.loadFromSaved(graphData.saved);
+              });
+            } else {
+              console.warn('No saved data found');
+            }
+          };
+          reader.readAsText(file);
+        } else {
+          console.warn('unrecoginsed file type.');
+        }
+      },
+
       changeMouseState(state) {
         if (!(state === ADDNOTE
           || state === BOLD
@@ -1697,6 +1742,7 @@
           || state === GROUP
           || state === IMPORTPROB
           || state === ITALIC
+          || state === OPEN
           || state === PIN
           || state === POINTER
           || state === REDO
@@ -1967,6 +2013,17 @@
                 value: edges,
               });
             }
+            break;
+          }
+
+          case OPEN: {
+            this.changeMouseState(POINTER);
+            const fileInput = document.createElement('input');
+            fileInput.setAttribute('type', 'file');
+            fileInput.click();
+            fileInput.onchange = (e) => {
+              this.readFile(e);
+            };
             break;
           }
 

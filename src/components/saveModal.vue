@@ -41,6 +41,7 @@
         }
       },
       svgData: {},
+      graphData: {},
     },
     data() {
       return {
@@ -51,7 +52,6 @@
       display(displayed) {
         // on display create PNG preview
         if (displayed) {
-
           const svgString = new XMLSerializer().serializeToString(this.svgData);
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -87,10 +87,17 @@
     },
     methods: {
       saveSVG() {
-        const svgString = new XMLSerializer().serializeToString(this.svgData);
+        //add JSON structure to svg
+        const svg = this.svgData.cloneNode(true);
+        const desc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
+        desc.setAttribute('id', 'graphJSONData');
+        desc.innerHTML = this.graphData;
+        svg.appendChild(desc);
+        // save as file
+        const svgString = new XMLSerializer().serializeToString(svg);
         const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
         saveAs(svgBlob, `${this.filename}.svg`);
-        this.exit();
+        // this.exit();
       },
       exit() {
         this.$refs.savePNG.disabled = true;

@@ -11,6 +11,7 @@
     ></graphViz>
     <save-modal :display="saveDisplay"
                 :svgData="svgData"
+                :graphData="graphData"
                 @close="closeSave"
     ></save-modal>
 
@@ -34,6 +35,7 @@
         savedDiagram: '',
         saveDisplay: false,
         svgData: undefined,
+        graphData: undefined,
       };
     },
     watch: {
@@ -95,10 +97,16 @@
 
         this.saveDisplay = true;
         this.svgData = svg;
+        this.graphData = JSON.stringify({
+          saved: JSON.parse(savedDiagram),
+          textNodes: textNodes,
+        });
 
       },
       closeSave() {
         this.saveDisplay = false;
+        this.svgData = undefined;
+        this.graphData = undefined;
       },
     },
     components: { graphViz, saveModal }

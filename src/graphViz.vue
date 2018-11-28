@@ -13,6 +13,15 @@
                      @exitHover="closeHoverMenu($event)"
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
+    <hover-menu-edge :position="hoverEdgePos"
+                     :pad="10"
+                     :color="hoverEdgeColor"
+                     :display="hoverEdgeDisplay"
+                     :data="hoverEdgeData"
+                     :type="hoverEdgeType"
+                     @exitHover="closeHoverMenu($event)"
+                     @clickedButton="hoverInteract($event)">
+    </hover-menu-edge>
     <toolBar @clickedAction="changeMouseState($event)"
              @mouseEnter="closeHoverMenu()"
              :mouse="mouseState"/>
@@ -52,6 +61,7 @@
   } from 'rxjs/operators';
   import toolBar from './components/toolBar';
   import hoverMenuNode from './components/hoverMenuNode';
+  import hoverMenuEdge from './components/hoverMenuEdge';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
   import Selection from './behaviours/selection';
@@ -82,6 +92,8 @@
   const SAVE = 'SAVE';
   const SELECT = 'SELECT';
   const SHAPE = 'SHAPE';
+  const WEIGHT = 'WEIGHT';
+  const DASH = 'DASH';
   const TEXT = 'TEXT';
   const TEXTEDIT = 'TEXTEDIT';
   const UNDERLINE = 'UNDERLINE';
@@ -137,6 +149,11 @@
         hoverType: undefined,
         hoverAwait: false,
         hoverQueue$: undefined,
+        hoverEdgePos: undefined,
+        hoverEdgeColor: undefined,
+        hoverEdgeDisplay: undefined,
+        hoverEdgeData: undefined,
+        hoverEdgeType: undefined,
         colors: {
           hex: '#FFFFFF',
         },
@@ -427,6 +444,20 @@
     },
 
     methods: {
+// edgeclick(event){
+//   const value = event.payload
+//   switch (event.type){
+//     case WEIGHT: {
+//       this.rootObservable.next({
+//         type: EDGEEDIT,
+//         prop: "weight",
+//         value: event.payload
+//         id: event.data.predicate.id
+//       })
+//     }
+//   }
+// },
+
       async showLoadingMask(text) {
         const target = this.$el;
         const options = {
@@ -1678,6 +1709,10 @@
               this.nodeShapeChange(node, payload);
               this.hoverShape = node.nodeShape;
             }
+            break;
+          }
+          case WEIGHT: {
+            // TODO: logic of changing the weight of the line
             break;
           }
           default: {

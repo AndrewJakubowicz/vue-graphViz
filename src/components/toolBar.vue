@@ -84,6 +84,12 @@
             tip: 'Redo (Ctrl+Y)',
           },
           {
+            action: 'OPEN',
+            icon: ['folder-open-o'],
+            toggled: false,
+            tip: 'Save (Ctrl+O)',
+          },
+          {
             action: 'SAVE',
             icon: ['floppy-o'],
             toggled: false,
@@ -155,6 +161,7 @@
           || action === 'IMPORTPROB'
           || action === 'UNDO'
           || action === 'COPY'
+          || action === 'OPEN'
           || action === 'REDO') {
           // For the above actions, default to mouse pointer state.
           newAction = 'POINTER';

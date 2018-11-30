@@ -54,7 +54,7 @@
   import hoverMenuNode from './components/hoverMenuNode';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
-  import Selection from './behaviours/selection';
+  import HighlightSelection from './behaviours/selection';
 
 
   const ADDNOTE = 'ADDNOTE';
@@ -161,13 +161,15 @@
         mouseDown$: undefined,
         mouseOverNode$: undefined,
         scale: 1,
-        activeSelect: new Selection(),
+        activeSelect: new HighlightSelection(),
+        mouseStateObs$: undefined,
       };
     },
     mounted() {
       this.rootObservable = new Subject().pipe(takeUntil(this.destroy$));
       this.mouseDown$ = new Subject().pipe(takeUntil(this.destroy$));
       this.mouseOverNode$ = new Subject().pipe(takeUntil(this.destroy$));
+      this.mouseStateObs$ = new Subject().pipe(takeUntil(this.destroy$));
 
       this.hoverQueue$ = new Subject().pipe(
         takeUntil(this.destroy$),
@@ -1676,7 +1678,6 @@
       },
 
       loadFromSaved(savedGraph) {
-        // debugger;
         const nodes = savedGraph.nodes;
 
         nodes.forEach((v) => {
@@ -1753,6 +1754,7 @@
           || state === UNDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
+          this.mouseStateObs$.next(state);
           this.mouseState = state;
         }
         switch (state) {
@@ -2099,10 +2101,11 @@
           case SELECT: {
             const svgSel = this.graph.getSVGElement();
             const svg = svgSel.node();
+            const endSelect = this.mouseStateObs$.pipe(filter(e => e !== SELECT));
 
             // detect mouse down and drag, filters for events that start over background only.
             fromEvent(svg, 'mousedown').pipe(
-              takeWhile(() => this.mouseState === SELECT),
+              takeUntil(endSelect),
               filter(e => e.target.tagName === 'svg'),
               map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey, alt: e.altKey })),
               map(({ x, y, shift, alt }) => {
@@ -2188,7 +2191,7 @@
             /** DEFINE KEYBOARD SHORTCUTS FOR SELECT TOOL **/
             const keyDown = fromEvent(svg, 'keydown').pipe(
               takeUntil(this.destroy$),
-              takeWhile(() => this.mouseState === SELECT),
+              takeUntil(endSelect),
             );
 
             const ctrl = keyDown.pipe(filter(e => (e.ctrlKey || e.metaKey && !e.shiftKey && !e.altKey)));

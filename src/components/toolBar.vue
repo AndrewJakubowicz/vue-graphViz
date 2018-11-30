@@ -1,17 +1,17 @@
 <template>
   <div>
     <transition name="slide-fade">
-      <ul class="graph-unorderedList" @mouseenter="mouseEnter()"
+      <ul @mouseenter="mouseEnter()" class="graph-unorderedList"
           id="graph-select-tool"
           v-show="tools[tools.reduce((acc,curr, i) => (curr.action === 'SELECT'? i: acc), -1)].toggled">
-        <li v-for="item in selectTools" :key="item.action" @click="clicked(item.action)"
-            v-bind:class="{ active: item.toggled }">
-        <span v-if="item.icon.length === 1" class="icon-alone tooltip">
+        <li :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }"
+            v-for="item in selectTools">
+        <span class="icon-alone tooltip" v-if="item.icon.length === 1">
           <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
-          <span v-else class="fa-stack fa-sm tooltip">
+          <span class="fa-stack fa-sm tooltip" v-else>
             <i :class="item.icon[0]"></i>
             <i :class="item.icon[1]"></i>
             <span class="screen-reader-text">{{ item.action }}</span>
@@ -20,15 +20,15 @@
         </li>
       </ul>
     </transition>
-    <ul class="graph-unorderedList" @mouseenter="mouseEnter()" id="graph-main-tool">
-      <li v-for="item in tools" :key="item.action" @click="clicked(item.action)"
-          v-bind:class="{ active: item.toggled }">
-        <span v-if="item.icon.length === 1" class="icon-alone tooltip">
+    <ul @mouseenter="mouseEnter()" class="graph-unorderedList" id="graph-main-tool">
+      <li :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }"
+          v-for="item in tools">
+        <span class="icon-alone tooltip" v-if="item.icon.length === 1">
           <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
-        <span v-else class="fa-stack fa-sm tooltip">
+        <span class="fa-stack fa-sm tooltip" v-else>
             <i :class="item.icon[0]"></i>
             <i :class="item.icon[1]"></i>
             <span class="screen-reader-text">{{ item.action }}</span>
@@ -288,5 +288,9 @@
 
   .fa-stack { /* adjust the gap between the stacked icon and the next */
     height: 1em;
+  }
+
+  .graph-unorderedList {
+    background: white;
   }
 </style>

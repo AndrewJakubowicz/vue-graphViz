@@ -1443,15 +1443,6 @@
         this.graph.restart.layout();
       },
 
-      nodeShapeChange(node, shape) {
-        this.rootObservable.next({
-          type: NODEEDIT,
-          prop: SHAPE,
-          value: shape,
-          id: node.id,
-        });
-      },
-
       nodeRemove(node) {
         this.closeHoverMenu();
         this.changeMouseState(POINTER);
@@ -1509,15 +1500,6 @@
           tap(e => e.preventDefault()),
         ).subscribe(() => {
           this.ifColorPickerOpen = false;
-        });
-      },
-
-      nodePinToggle(node) {
-        this.rootObservable.next({
-          type: NODEEDIT,
-          prop: PIN,
-          id: node.id,
-          value: !node.fixed,
         });
       },
 
@@ -1629,44 +1611,72 @@
       },
 
       hoverInteract(event) {
-        const node = event.data.data;
+        const target = event.data.data;
+        const nodes = [];
+        const groups = [];
+        if (target && this.activeSelect.includes(target.id)) {
+          [...this.activeSelect.nodes.values()].forEach(d => nodes.push(d));
+          [...this.activeSelect.groups.values()].forEach(d => groups.push(d));
+        } else {
+          if (target.id.slice(0, 4) === 'note') {
+            nodes.push(target);
+          } else if (target.id.slice(0, 4) === 'grup') {
+            groups.push(target);
+          }
+        }
         const d3Selection = event.data.el;
         const payload = event.payload;
         const e = event.e;
         switch (event.type) {
           case COLOR: {
-            this.mouseOverBrush(node, e);
+            this.mouseOverBrush(target, e);
             break;
           }
           case CREATEEDGE: {
-            this.startArrow(node, d3Selection);
+            this.startArrow(target, d3Selection);
             break;
           }
           case DELETE: {
-            if (node.id.slice(0, 4) === 'grup') {
-              this.groupRemove(node);
+            if (target.id.slice(0, 4) === 'grup') {
+              this.groupRemove(target);
             } else {
-              this.nodeRemove(node);
+              this.closeHoverMenu();
+              this.changeMouseState(POINTER);
+              this.rootObservable.next({
+                type: DELETE,
+                nodeId: nodes.map(d => d.id),
+              });
             }
             break;
           }
           case GROUPDRAG: {
-            this.mouseDownGroup(node, d3Selection, e);
+            this.mouseDownGroup(target, d3Selection, e);
             break;
           }
           case NODERESIZE: {
-            this.resizeDrag(node, d3Selection, e);
+            this.resizeDrag(target, d3Selection, e);
             break;
           }
           case PIN: {
-            this.nodePinToggle(node);
-            this.hoverFixed = (node.fixed === true || node.fixed % 2 === 1);
+            this.rootObservable.next({
+              type: NODEEDIT,
+              prop: PIN,
+              id: nodes.map(d => d.id),
+              value: !target.fixed,
+            });
+            this.hoverFixed = (target.fixed === true || target.fixed % 2 === 1);
             break;
           }
           case SHAPE: {
-            if (node.nodeShape !== payload) {
-              this.nodeShapeChange(node, payload);
-              this.hoverShape = node.nodeShape;
+            if (!nodes.every(d => d.nodeShape === payload)) {
+              this.rootObservable.next({
+                type: NODEEDIT,
+                prop: SHAPE,
+                value: payload,
+                id: nodes.map(d => d.id),
+              });
+              this.nodeShapeChange(nodes, payload);
+              this.hoverShape = target.nodeShape;
             }
             break;
           }

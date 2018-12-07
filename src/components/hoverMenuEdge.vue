@@ -1,6 +1,6 @@
 <template>
   <div id="edge-hover-menu" ref="parent"
-       :style="{top:`${posPad.y+posPad.height/2}px`, left:`${posPad.x+posPad.width/2}px`}"
+       :style="{top:`${posPad.y+posPad.height/2-20}px`, left:`${posPad.x+posPad.width/2-20}px`}"
        v-show="display">
 
     <!--SVG to detect mouse leave-->
@@ -24,41 +24,41 @@
 
     <!--RIGHT ICONS-->
     <!-- weights -->
-    <div class="icon-position v-center-align hand" :style="{left: `${posPad.width / 2}px`}" v-show="type==='note'">
+    <div class="icon-position v-center-align hand" :style="{left:`${posPad.width/2}px`}" v-show="type==='edge'">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mouseenter="weightsTimerStart" @mouseleave="weightsTimerCancel">
-          <line class="weight-icon" x1="1" y1="1" x2="21" y2="1" stroke-width="3.5"></line>
-          <line class="weight-icon" x1="1" y1="6.5" x2="21" y2="6.5" stroke-width="5"></line>
-          <line class="weight-icon" x1="1" y1="14" x2="21" y2="14" stroke-width="6.5"></line>
+          <line class="weight-icon" x1="0" y1="2.5" x2="15" y2="2.5" stroke-width="2"></line>
+          <line class="weight-icon" x1="0" y1="6" x2="15" y2="6" stroke-width="3"></line>
+          <line class="weight-icon" x1="0" y1="10.5" x2="15" y2="10.5" stroke-width="4"></line>
         </svg>
       </div>
     </div>
 
     <!--Change weight menu-->
-    <div class="icon-position v-center-align" :style="{right: `${posPad.width/2+24+4}px`}" v-show="weightsToggle">
+    <div class="icon-position v-center-align" :style="{left:`${posPad.width/2+24+4}px`}" v-show="weightsToggle">
       <svg width="26" height="23">
-        <line class="weight-icon" x1="1" y1="12" x2="25" y2="12" stroke-width="5" 
+        <line class="weight-icon" x1="2" y1="12" x2="26" y2="12" stroke-width="2" 
               @mousedown="interact('WEIGHT', $event, 2)"></line>
       </svg>
       <svg width="26" height="23">
-        <line class="weight-icon" x1="1" y1="12" x2="25" y2="12" stroke-width="10"
+        <line class="weight-icon" x1="2" y1="12" x2="26" y2="12" stroke-width="4"
               @mousedown="interact('WEIGHT', $event, 4)"></line>
       </svg>
       <svg width="26" height="23">
-        <line class="weight-icon" x1="1" y1="12" x2="25" y2="12" stroke-width="15"
+        <line class="weight-icon" x1="2" y1="12" x2="26" y2="12" stroke-width="6"
               @mousedown="interact('WEIGHT', $event, 6)"></line>
       </svg>
     </div>
 
     <!--LEFT ICONS-->
     <!-- dashes -->
-    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}" v-show="type==='note'">
+    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}" v-show="type==='edge'">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mouseenter="dashesTimerStart" @mouseleave="dashesTimerCancel">
-          <line class="dash-icon" x1="1" y1="5" x2="21" y2="7.5" stroke-dasharray=""></line>
-          <line class="dash-icon" x1="1" y1="14.5" x2="21" y2="14.5" stroke-dasharray="1"></line>
+          <line class="dash-icon" x1="0" y1="4" x2="15" y2="4" stroke-dasharray="0"></line>
+          <line class="dash-icon" x1="0" y1="11" x2="15" y2="11" stroke-dasharray="3"></line>
         </svg>
       </div>
     </div>
@@ -66,12 +66,12 @@
     <!--Change dash menu-->
     <div class="icon-position v-center-align" :style="{right: `${posPad.width/2+24+4}px`}" v-show="dashesToggle">
       <svg width="26" height="23">
-        <line class="dash-icon" x1="1" y1="12" x2="25" y2="12" stroke-dasharray=""
+        <line class="dash-icon" x1="0" y1="12" x2="24" y2="12" stroke-dasharray="0"
               @mousedown="interact('DASH', $event, 0)"></line>
       </svg>
       <svg width="26" height="23">
-        <line class="dash-icon" x1="1" y1="12" x2="25" y2="12" stroke-dasharray="1"
-              @mousedown="interact('DASH', $event, 1)"></line>
+        <line class="dash-icon" x1="0" y1="12" x2="24" y2="12" stroke-dasharray="3"
+              @mousedown="interact('DASH', $event, 3)"></line>
       </svg>
     </div>
 
@@ -144,7 +144,7 @@
       // },
       mouseLimit: function () {
         const yMargin = 80;
-        if (this.shapesToggle) {
+        if (this.dashesToggle) {
           const xMargin = 115;
           return {
             x: this.position.x - xMargin * 0.58,
@@ -220,28 +220,16 @@
           this.exit(event);
         }
       },
-      weightExit(payload) {
+      exit(payload) {
         this.weightsToggle = false;
         this.weightsTimerId = false;
-        this.exit(payload);
-      },
-      dashExit(payload) {
         this.dashesToggle = false;
         this.dashesTimerId = false;
-        this.exit(payload);
-      },
-      exit(payload) {
         this.$emit('exitHover', payload)
       },
       interact(message, event, payload) {
         this.$emit('clickedButton', { type: message, data: this.data, e: event, payload: payload });
-        if (message === 'WEIGHT') {
-          this.weightExit(event);
-        }
-        else if (message === 'DASH') {
-          this.dashExit(event);
-        }
-        else if (message === 'DELETE') {
+        if (message === 'WEIGHT' || message === 'DASH' || message === 'DELETE') {
           this.exit(event)
         }
       },
@@ -317,7 +305,7 @@
     transform: translateY(-50%);
   }
 
-  #graph-hover-menu {
+  #edge-hover-menu {
     position: fixed;
   }
 

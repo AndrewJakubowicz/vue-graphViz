@@ -1,8 +1,8 @@
 'use strict';
 
-export default class Selection {
+export default class HighlightSelection {
   /**
-   * Creates a selection object.
+   * Creates a HighlightSelection object.
    * @param select - a selection, array of nodes/edges or node/edge
    */
   constructor(select) {
@@ -17,7 +17,7 @@ export default class Selection {
    * @param select - a selection, array of nodes/edges or node/edge
    */
   select(select) {
-    if (select instanceof Selection) {
+    if (select instanceof HighlightSelection) {
       this.merge(select);
     }
     else {
@@ -80,7 +80,7 @@ export default class Selection {
    * @param select - a selection, array of nodes/edges or node/edge
    */
   deselect(select) {
-    if (select instanceof Selection) {
+    if (select instanceof HighlightSelection) {
       this.minus(select);
     }
     else {
@@ -109,7 +109,7 @@ export default class Selection {
    * @param select - a selection, array of nodes/edges or node/edge
    */
   selectExclusive(select) {
-    if (select instanceof Selection) {
+    if (select instanceof HighlightSelection) {
       this.xor(select);
     }
     else {

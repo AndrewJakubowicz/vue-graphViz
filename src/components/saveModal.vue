@@ -17,8 +17,8 @@
           </div>
 
           <div class="button-wrapper">
-            <button ref="savePNG" class="save-button" :disabled="true">Save Image</button>
-            <button class="save-button" @click="saveSVG">Export SVG</button>
+            <button class="save-button" @click="saveSVG">Save SVG</button>
+            <button ref="savePNG" class="save-button" :disabled="true">Export Image</button>
             <button class="exit-button" @click="exit">Cancel</button>
           </div>
 
@@ -97,7 +97,7 @@
         const svgString = new XMLSerializer().serializeToString(svg);
         const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
         saveAs(svgBlob, `${this.filename}.svg`);
-        // this.exit();
+        this.exit();
       },
       exit() {
         this.$refs.savePNG.disabled = true;

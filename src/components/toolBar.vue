@@ -97,12 +97,12 @@
           },
         ],
         selectTools: [
-          {
-            action: 'COLOR',
-            icon: ['paint-brush'],
-            toggled: false,
-            tip: 'Color',
-          },
+          // {
+          //   action: 'COLOR',
+          //   icon: ['paint-brush'],
+          //   toggled: false,
+          //   tip: 'Color',
+          // },
           {
             action: 'PIN',
             icon: ['thumb-tack'],

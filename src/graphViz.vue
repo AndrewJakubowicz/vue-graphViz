@@ -559,7 +559,7 @@
                     const textNode = Object.assign({}, defaultNode, n);
                     const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
                     if (indexOfNode === -1) this.textNodes.push(textNode);
-                    this.addNodeHelper(textNode.id);
+                    this.addNodeHelper(textNode.id, undefined, undefined, true);
                     this.notes += 1;
                     this.noteObjs = [...this.noteObjs, textNode];
                     this.resetTools();
@@ -574,7 +574,7 @@
                 if (action.existingNode) {
                   const newNodes = Array.isArray(action.existingNode) ? action.existingNode : [action.existingNode];
                   newNodes.forEach(n => {
-                    this.graph.addNode(this.toNode(n));
+                    this.graph.addNode(this.toNode(n), true);
                     this.recalculateNodesOutside();
                     if (n.fixedWidth) {
                       fixedWidthNodePresent = true;
@@ -618,7 +618,7 @@
                   .catch((err) => {
                     console.log(err);
                   });
-
+                this.graph.restart.layout();
                 // TODO fixed width nodes on addition size incorrectly. 2nd restart required
                 if (fixedWidthNodePresent) {
                   this.graph.restart.layout();
@@ -714,7 +714,7 @@
                   })
                   // delete all edges
                   .then((edges) => {
-                    return Promise.all(edges.map(t => this.graph.removeTriplet(t)))
+                    return Promise.all(edges.map(t => this.graph.removeTriplet(t, true)))
                     // delete all nodes
                       .then(() => {
                         nodeIds.forEach(id => this.graph.removeNode(id, this.recalculateNodesOutside));
@@ -731,6 +731,7 @@
                   })
                   // perform callbacks
                   .then(() => {
+                    this.graph.restart.layout();
                     if (action.callback) {
                       action.callback();
                     }
@@ -1464,7 +1465,7 @@
         this.textNodes.forEach(v => this.graph.addNode(this.toNode(v)));
       },
 
-      addNodeHelper(nodeId, x, y) {
+      addNodeHelper(nodeId, x, y, preventLayout) {
         // Adds nodes, and ignores the node if it can't be found.
         // This lets us optimistically create the diagram.
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(nodeId);
@@ -1473,7 +1474,7 @@
           if (x && y) {
             node = { x, y, ...node };
           }
-          this.graph.addNode(node);
+          this.graph.addNode(node, preventLayout);
         }
         this.recalculateNodesOutside();
 
@@ -1772,9 +1773,10 @@
         const groups = savedGraph.groups;
         if (groups) {
           groups.forEach((g) => {
-            this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups });
+            this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups }, true);
           });
         }
+        this.graph.restart.layout();
       },
 
       readFile(event) {

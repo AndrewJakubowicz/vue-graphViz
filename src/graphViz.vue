@@ -651,9 +651,9 @@
                   if (d.parent) {
                     const g = d.parent;
                     if (groupMap.has(g.id)) {
-                      groupMap.get(g.id).children.nodes.push(g.id);
+                      groupMap.get(g.id).children.nodes.push(d.id);
                     } else {
-                      groupMap.set(d.parent.id, { data: g.data, children: { nodes: [d.id] } });
+                      groupMap.set(g.id, { data: g.data, children: { nodes: [d.id] } });
                     }
                   }
                 });
@@ -1828,15 +1828,6 @@
         }
         switch (state) {
 
-          case GROUP : {
-            this.mouseState = SELECT;
-            this.rootObservable.next({
-              type: GROUP,
-              children: { nodes: [...this.activeSelect.nodes.keys()] }
-            });
-            break;
-          }
-
           case ADDNOTE: {
             this.changeMouseState(POINTER);
             this.rootObservable.next({
@@ -1991,6 +1982,18 @@
               nodeId: nodes,
               triplet: edges,
             });
+            break;
+          }
+
+          case GROUP : {
+            this.mouseState = SELECT;
+            const nodes = [...this.activeSelect.nodes.keys()];
+            if (nodes.length > 0) {
+              this.rootObservable.next({
+                type: GROUP,
+                children: { nodes }
+              });
+            }
             break;
           }
 

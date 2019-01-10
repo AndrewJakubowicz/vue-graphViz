@@ -1986,13 +1986,13 @@
           }
 
           case GROUP : {
-            this.mouseState = SELECT;
             const nodes = [...this.activeSelect.nodes.keys()];
             if (nodes.length > 0) {
               this.rootObservable.next({
                 type: GROUP,
                 children: { nodes }
               });
+              this.changeMouseState(POINTER);
             }
             break;
           }

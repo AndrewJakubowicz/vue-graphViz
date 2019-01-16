@@ -714,7 +714,7 @@
                   })
                   // delete all edges
                   .then((edges) => {
-                    return Promise.all(edges.map(t => this.graph.removeTriplet(t, true)))
+                    return Promise.all(edges.map(t => this.graph.removeTriplet(t)))
                     // delete all nodes
                       .then(() => {
                         nodeIds.forEach(id => this.graph.removeNode(id, this.recalculateNodesOutside));

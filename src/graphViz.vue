@@ -532,6 +532,14 @@
             id: nodes,
           });
         }
+        if (edges.length > 0) {
+          this.rootObservable.next({
+            type: EDGEEDIT,
+            prop: COLOR,
+            value: value.hex,
+            hash: edges,
+          })
+        }
       },
 
       actions($action) {
@@ -926,6 +934,16 @@
                     oldValues = predicates.map(p => p.strokeDasharray);
                     this.graph.editEdge({
                       property: 'dash',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case COLOR: {
+                    oldValues = predicates.map(p => p.stroke);
+                    this.graph.editEdge({
+                      property: 'color',
                       id: idArray,
                       value: values,
                     });
@@ -1331,6 +1349,10 @@
             this.hoverQueue$.next(false);
           },
 
+          edgeColor: (predicate) => {
+            return predicate ? (predicate.stroke ? predicate.stroke.substring(1) : "000000") : "000000";
+          },
+
           edgeRemove: (edge, selection, e) => {
             this.changeMouseState(POINTER);
             this.rootObservable.next({
@@ -1511,11 +1533,11 @@
         this.colors = node.color ? node.color : node.data.color;
         this.$refs.vueColorPicker.currentColor = node.color;
 
-        let grapgEditor = document.getElementById('graph').getBoundingClientRect();
-        let graphEditorX = grapgEditor.x;
-        let graphEditorY = grapgEditor.y;
-        let graphEditorW = grapgEditor.width;
-        let graphEditorH = grapgEditor.height;
+        let graphEditor = document.getElementById('graph').getBoundingClientRect();
+        let graphEditorX = graphEditor.x;
+        let graphEditorY = graphEditor.y;
+        let graphEditorW = graphEditor.width;
+        let graphEditorH = graphEditor.height;
         let posX = ev.clientX - graphEditorX;
         let posY = ev.clientY + 50 - graphEditorY;
 
@@ -1734,7 +1756,7 @@
         // const pos = elem.getBoundingClientRect();
         this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
         // this.hoverEdgeColor = d.color || d.data.color;
-        this.hoverEdgeColor = '#FFFFFF';
+        this.hoverEdgeColor = '#000000';
         // this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
         this.hoverEdgeDisplay = true;
         // this.hoverShape = d.nodeShape;
@@ -1753,14 +1775,14 @@
         this.ifColorPickerOpen = true;
         // this.coloredEl = element._groups[0];
         this.coloredNodeId = predicate.hash;
-        this.colors.hex = predicate.color ? predicate.color : '#FFFFFF';
+        this.colors.hex = predicate.stroke ? predicate.stroke : '#000000';
         this.$refs.vueColorPicker.currentColor = this.colors;
 
-        let grapgEditor = document.getElementById('graph').getBoundingClientRect();
-        let graphEditorX = grapgEditor.x;
-        let graphEditorY = grapgEditor.y;
-        let graphEditorW = grapgEditor.width;
-        let graphEditorH = grapgEditor.height;
+        let graphEditor = document.getElementById('graph').getBoundingClientRect();
+        let graphEditorX = graphEditor.x;
+        let graphEditorY = graphEditor.y;
+        let graphEditorW = graphEditor.width;
+        let graphEditorH = graphEditor.height;
         let posX = e.clientX - graphEditorX;
         let posY = e.clientY + 50 - graphEditorY;
 

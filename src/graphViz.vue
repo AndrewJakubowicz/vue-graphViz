@@ -103,6 +103,11 @@
   const WIDTH = 'WIDTH';
   const POS = 'POS';
 
+  const palette = [
+          '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
+          '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
+          '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
+        ];
 
   export default {
     props: {
@@ -160,11 +165,7 @@
         colors: {
           hex: '#FFFFFF',
         },
-        palette: [
-          '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
-          '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
-          '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
-        ],
+        palette: palette,
         graph: undefined,
         nodesOutsideDiagram: [],
         mouseState: POINTER,
@@ -1211,6 +1212,7 @@
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
           edgeSmoothness: 15,
+          palette: palette,
 
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : ' "#ffffff"';
@@ -1343,6 +1345,8 @@
 
           mouseOverEdge: (edge, selection, e) => {
             this.hoverQueue$.next(() => this.createEdgeHoverMenu(edge, selection, e));
+            me.dbClickCreateNode = false;
+            me.clickedGraphViz = false;
           },
 
           mouseOutEdge: () => {
@@ -1351,6 +1355,14 @@
 
           edgeColor: (predicate) => {
             return predicate ? (predicate.stroke ? predicate.stroke.substring(1) : "000000") : "000000";
+          },
+
+          edgeStroke: (predicate) => {
+            return predicate ? (predicate.strokeWidth ? predicate.strokeWidth : 2) : 2;
+          },
+
+          edgeDasharray: (predicate) => {
+            return predicate ? (predicate.strokeDasharray ? predicate.strokeDasharray : 0) : 0;
           },
 
           edgeRemove: (edge, selection, e) => {
@@ -1755,9 +1767,7 @@
         // const elem = selection.node();
         // const pos = elem.getBoundingClientRect();
         this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
-        // this.hoverEdgeColor = d.color || d.data.color;
-        this.hoverEdgeColor = '#000000';
-        // this.hoverFixed = (d.fixed === true || d.fixed % 2 === 1);
+        this.hoverEdgeColor = d.predicate.stroke || "#000000";
         this.hoverEdgeDisplay = true;
         // this.hoverShape = d.nodeShape;
         this.hoverEdgeType = d.predicate.hash.slice(0, 4);
@@ -1768,14 +1778,18 @@
         this.hoverEdgeDisplay = false;
         this.hoverEdgePos = undefined;
         this.hoverEdgeData = undefined;
+        if (this.hoverAwait) {
+          this.createEdgeHoverMenu(...this.hoverAwait);
+          this.hoverAwait = false;
+        }
       },
 
       edgeColorChange(predicate, e) {
-        // this.dbClickCreateNode = false;
+        this.dbClickCreateNode = false;
         this.ifColorPickerOpen = true;
         // this.coloredEl = element._groups[0];
         this.coloredNodeId = predicate.hash;
-        this.colors.hex = predicate.stroke ? predicate.stroke : '#000000';
+        this.colors = predicate.stroke ? predicate.stroke : '#000000';
         this.$refs.vueColorPicker.currentColor = this.colors;
 
         let graphEditor = document.getElementById('graph').getBoundingClientRect();
@@ -2153,6 +2167,9 @@
                       rightID: objOfNodes[key].id,
                       gap: 170,
                     },
+                    stroke: "#000000",
+                    strokeWidth: 2,
+                    strokeDasharray: 0,
                   },
                   object: objOfNodes[key],
                 });

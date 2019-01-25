@@ -12,19 +12,19 @@
 
     <!--TOP ICONS-->
     <!-- paint brush -->
-    <div class="icon-position h-center-align menu-color hand" :style="{bottom:`${posPad.height/2}px`}">
+    <div class="icon-position h-center-align menu-color hand" :style="{bottom:`${posPad.height/2 - 8}px`}">
       <i class="fa fa-paint-brush" id="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></i>
     </div>
 
     <!--BOTTOM ICONS-->
     <!-- trash -->
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{top:`${posPad.height/2}px`}">
+    <div class="icon-wrapper icon-position h-center-align hand" :style="{top:`${posPad.height/2 - 14}px`}">
       <i class="fa fa-trash-o custom-icon" @click="interact('DELETE', $event)"></i>
     </div>
 
     <!--RIGHT ICONS-->
     <!-- weights -->
-    <div class="icon-position v-center-align hand" :style="{left:`${posPad.width/2}px`}" v-show="type==='edge'">
+    <div class="icon-position v-center-align hand" :style="{left:`${posPad.width/2 - 10}px`}" v-show="type==='edge'">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mouseenter="weightsTimerStart" @mouseleave="weightsTimerCancel">
@@ -36,7 +36,7 @@
     </div>
 
     <!--Change weight menu-->
-    <div class="icon-position v-center-align" :style="{left:`${posPad.width/2+24+4}px`}" v-show="weightsToggle">
+    <div class="icon-position v-center-align" :style="{left:`${posPad.width/2 + 20}px`}" v-show="weightsToggle">
       <svg width="26" height="23">
         <line class="weight-icon" x1="2" y1="12" x2="26" y2="12" stroke-width="2" 
               @mousedown="interact('WEIGHT', $event, 2)"></line>
@@ -53,7 +53,7 @@
 
     <!--LEFT ICONS-->
     <!-- dashes -->
-    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}" v-show="type==='edge'">
+    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2 - 10}px`}" v-show="type==='edge'">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mouseenter="dashesTimerStart" @mouseleave="dashesTimerCancel">
@@ -64,7 +64,7 @@
     </div>
 
     <!--Change dash menu-->
-    <div class="icon-position v-center-align" :style="{right: `${posPad.width/2+24+4}px`}" v-show="dashesToggle">
+    <div class="icon-position v-center-align" :style="{right: `${posPad.width/2 + 20}px`}" v-show="dashesToggle">
       <svg width="26" height="23">
         <line class="dash-icon" x1="0" y1="12" x2="24" y2="12" stroke-dasharray="0"
               @mousedown="interact('DASH', $event, 0)"></line>

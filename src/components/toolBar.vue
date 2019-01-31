@@ -87,7 +87,7 @@
             action: 'OPEN',
             icon: ['folder-open-o'],
             toggled: false,
-            tip: 'Save (Ctrl+O)',
+            tip: 'Open (Ctrl+O)',
           },
           {
             action: 'SAVE',
@@ -97,12 +97,12 @@
           },
         ],
         selectTools: [
-          {
-            action: 'COLOR',
-            icon: ['paint-brush'],
-            toggled: false,
-            tip: 'Color',
-          },
+          // {
+          //   action: 'COLOR',
+          //   icon: ['paint-brush'],
+          //   toggled: false,
+          //   tip: 'Color',
+          // },
           {
             action: 'PIN',
             icon: ['thumb-tack'],

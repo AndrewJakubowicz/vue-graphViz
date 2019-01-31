@@ -493,44 +493,20 @@
         this.ifColorPickerOpen = false;
         this.colors = value;
         const idArray = Array.isArray(this.coloredNodeId) ? this.coloredNodeId : [this.coloredNodeId];
-        const groups = [];
-        const edges = [];
-        const nodes = [];
-        if (typeof this.coloredNodeId === 'string' && this.activeSelect.includes(this.coloredNodeId) > 0) {
-          [...this.activeSelect.nodes.keys()].forEach(id => nodes.push(id));
-          [...this.activeSelect.groups.keys()].forEach(id => groups.push(id));
-          [...this.activeSelect.edges.keys()].forEach(id => edges.push(id));
-        }
-        idArray.forEach(id => {
-          switch (id.slice(0, 4)) {
-            case 'note': {
-              nodes.push(id);
-              break;
-            }
-            case 'grup': {
-              groups.push(id);
-              break;
-            }
-            case 'edge': {
-              edges.push(id);
-              break;
-            }
-          }
-        });
-        if (groups.length > 0) {
+        if (idArray[0].slice(0, 4) === 'grup') {
           this.rootObservable.next({
             type: GROUPEDIT,
             prop: 'color',
             value: value.hex,
-            id: groups,
+            id: idArray,
           });
         }
-        if (nodes.length > 0) {
+        if (idArray[0].slice(0, 4) === 'note') {
           this.rootObservable.next({
             type: NODEEDIT,
             prop: COLOR,
             value: value.hex,
-            id: nodes,
+            id: idArray,
           });
         }
         if (edges.length > 0) {
@@ -611,7 +587,7 @@
                     const textNode = Object.assign({}, defaultNode, n);
                     const indexOfNode = this.textNodes.map(v => v.id).indexOf(textNode.id);
                     if (indexOfNode === -1) this.textNodes.push(textNode);
-                    this.addNodeHelper(textNode.id);
+                    this.addNodeHelper(textNode.id, undefined, undefined, true);
                     this.notes += 1;
                     this.noteObjs = [...this.noteObjs, textNode];
                     this.resetTools();
@@ -626,7 +602,7 @@
                 if (action.existingNode) {
                   const newNodes = Array.isArray(action.existingNode) ? action.existingNode : [action.existingNode];
                   newNodes.forEach(n => {
-                    this.graph.addNode(this.toNode(n));
+                    this.graph.addNode(this.toNode(n), true);
                     this.recalculateNodesOutside();
                     if (n.fixedWidth) {
                       fixedWidthNodePresent = true;
@@ -640,7 +616,7 @@
                   groups.forEach(g => {
                     const id = g[0];
                     const saved = g[1];
-                    this.graph.addToGroup({ id, data: saved.data }, saved.children, undefined, true);
+                    this.graph.addToGroup({ id, data: saved.data }, saved.children, true);
                   });
                 }
 
@@ -670,7 +646,7 @@
                   .catch((err) => {
                     console.log(err);
                   });
-
+                this.graph.restart.layout();
                 // TODO fixed width nodes on addition size incorrectly. 2nd restart required
                 if (fixedWidthNodePresent) {
                   this.graph.restart.layout();
@@ -703,9 +679,9 @@
                   if (d.parent) {
                     const g = d.parent;
                     if (groupMap.has(g.id)) {
-                      groupMap.get(g.id).children.nodes.push(g.id);
+                      groupMap.get(g.id).children.nodes.push(d.id);
                     } else {
-                      groupMap.set(d.parent.id, { data: g.data, children: { nodes: [d.id] } });
+                      groupMap.set(g.id, { data: g.data, children: { nodes: [d.id] } });
                     }
                   }
                 });
@@ -783,6 +759,7 @@
                   })
                   // perform callbacks
                   .then(() => {
+                    this.graph.restart.layout();
                     if (action.callback) {
                       action.callback();
                     }
@@ -965,30 +942,57 @@
               }
 
               case GROUP: {
-                let group = action.group;
-                // const groups = action.children.groups;
-                if (!group) {
-                  group = {
-                    id: `grup-${uuid()}`,
-                    data: { color: '#F6ECAF' },
-                  };
+                const initGroup = () => ({
+                  id: `grup-${uuid()}`,
+                  data: { color: '#F6ECAF', class: '' },
+                });
+                let groups = action.group;
+                // if undefined create 1 initial group
+                if (!groups) {
+                  groups = [initGroup()];
+                } else if (!Array.isArray(groups)) {
+                  // if groups is not an array turn into an array
+                  groups = [groups];
                 }
-                this.graph.addToGroup(group, action.children);
+                const children = Array.isArray(action.children) ? action.children : [action.children];
+                // take array of children and match children to each group. if there are less groups than children create new group
+                children.forEach((child, i) => {
+                  // if group does not exist for this set of children create new group
+                  if (!groups[i]) {
+                    groups.push(initGroup());
+                  }
+                  this.graph.addToGroup(groups[i], children[i], true);
+                });
+                this.graph.restart.layout();
+
                 undoStack.push({
                   type: UNGROUP,
-                  group: this.graph.getGroup(group.id),
-                  children: action.children,
+                  children: children,
                 });
                 break;
               }
 
               case UNGROUP: {
-                const nodes = action.children.nodes;
-                this.graph.unGroup(action.children);
+                const groupMap = new Map();
+                const children = Array.isArray(action.children) ? action.children : [action.children];
+                children.forEach((child) => {
+                  child.nodes.forEach(id => {
+                    const d = this.graph.getNode(id);
+                    const g = this.graph.getGroup(d.parent.id);
+                    if (groupMap.has(g)) {
+                      groupMap.get(g).nodes.push(id);
+                    } else {
+                      groupMap.set(g, { nodes: [id] });
+                    }
+                  });
+                });
+                const groups = [...groupMap.keys()];
+                const childs = [...groupMap.values()];
+                this.graph.unGroup(children);
                 undoStack.push({
                   type: GROUP,
-                  group: action.group,
-                  children: action.children,
+                  group: groups,
+                  children: childs,
                 });
                 break;
               }
@@ -1000,9 +1004,15 @@
                 const groups = idArray.map(id => this.graph.getGroup(id));
                 const property = action.prop;
                 oldValues = groups.map(g => g.data[property]);
-                groups.forEach((g, i) => {
-                  g.data[property] = values[i];
-                });
+                if (values.length > 1 && values.length === idArray.length) {
+                  groups.forEach((g, i) => {
+                    g.data[property] = values[i];
+                  });
+                } else {
+                  groups.forEach((g) => {
+                    g.data[property] = values[0];
+                  });
+                }
                 undoStack.push({
                   type: GROUPEDIT,
                   prop: property,
@@ -1061,6 +1071,10 @@
         const elemArr = [];
         let coordArr = [];
         nodes.forEach((d) => {
+          // add semi transparent effect to nodes
+          if (!d.class.includes('translucent')) {
+            d.class += ' translucent';
+          }
           const coord = { x: (d.x - centreOffset), y: (d.y - centreOffset) };
           coordArr.push(coord);
           const elem = g.append('path')
@@ -1070,6 +1084,7 @@
             .attr('transform', `translate(${coord.x / scale},${coord.y / scale})`);
           elemArr.push(elem);
         });
+        this.graph.restart.styles();
         elemArr.slice(0, 2).reverse().forEach(sel => sel.raise());
 
         // initial coords
@@ -1082,6 +1097,10 @@
           finalize(() => {
             // on end remove elements in drag animation
             g.node().remove();
+            // remove translucency effect
+            nodes.forEach(d => {
+              d.class = d.class.replace(' translucent', '');
+            });
           }),
           takeUntil(end),
         );
@@ -1101,20 +1120,21 @@
               }
             }
             // map nodes to IDs
-            const nodesIDs = nodes.map(node => node.id);
             const draggednodesIDs = draggedNodes.map(node => node.id);
             // if node interacted with is in a group and target is nothing ungroup all nodes
             if (target.groups.length === 0 && target.nodes.length === 0) {
-              this.rootObservable.next({
-                type: UNGROUP,
-                group: d.parent,
-                children: { nodes: nodesIDs },
-              });
+              const nodeIDs = nodes.filter(d => d.parent).map(node => node.id);
+              if (nodeIDs.length > 0) {
+                this.rootObservable.next({
+                  type: UNGROUP,
+                  children: { nodes: nodeIDs },
+                });
+              }
             } else {
               this.rootObservable.next({
                 type: GROUP,
                 group: targetGroup,
-                children: { nodes: nodesIDs },
+                children: { nodes: nodes.map(node => node.id) },
               });
             }
             //TODO grey out, mix of grouped and ungrouped in selection
@@ -1205,7 +1225,7 @@
           nodeMap: new Map(),
         };
 
-        this.graph = networkViz('graph', {
+        const layoutOptions = {
           layoutType: 'jaccardLinkLengths',
           edgeLength: 170,
           jaccardModifier: 0.9,
@@ -1382,7 +1402,19 @@
           isSelect: () => {
             return this.$data.mouseState === SELECT;
           },
-        });
+
+          clickGroup: (d, selection, e) => {
+            if (this.mouseState === POINTER || this.mouseState === SELECT) {
+              if (this.mouseState === POINTER) {
+                this.changeMouseState(SELECT);
+              }
+              this.activeSelect.selectExclusive(d);
+              this.graph.restart.styles();
+            }
+          }
+        };
+
+        this.graph = networkViz('graph', layoutOptions);
 
         /**
          Edge link tool
@@ -1425,11 +1457,24 @@
           }
         });
 
+        this.graph.edgeOptions.setClickEdge((edge) => {
+          if (this.mouseState === POINTER || this.mouseState === SELECT) {
+            if (this.mouseState === POINTER) {
+              this.changeMouseState(SELECT);
+            }
+            this.activeSelect.selectExclusive(edge);
+            this.graph.restart.styles();
+          }
+        });
+
         // Set the action of clicking the node:
         this.graph.nodeOptions.setClickNode((node) => {
-          if (this.mouseState === POINTER) {
-            this.changeMouseState(SELECT);
+          if (this.mouseState === POINTER || this.mouseState === SELECT) {
+            if (this.mouseState === POINTER) {
+              this.changeMouseState(SELECT);
+            }
             this.activeSelect.selectExclusive(node);
+            this.graph.restart.styles();
           }
         });
 
@@ -1496,7 +1541,7 @@
         this.textNodes.forEach(v => this.graph.addNode(this.toNode(v)));
       },
 
-      addNodeHelper(nodeId, x, y) {
+      addNodeHelper(nodeId, x, y, preventLayout) {
         // Adds nodes, and ignores the node if it can't be found.
         // This lets us optimistically create the diagram.
         const indexOfNode = this.textNodes.map(v => v.id).indexOf(nodeId);
@@ -1505,7 +1550,7 @@
           if (x && y) {
             node = { x, y, ...node };
           }
-          this.graph.addNode(node);
+          this.graph.addNode(node, preventLayout);
         }
         this.recalculateNodesOutside();
 
@@ -1532,16 +1577,31 @@
         this.closeHoverMenu();
         this.rootObservable.next({
           type: UNGROUP,
-          group: group,
-          children: { nodes: group.leaves.map(d => d.id) },
+          children: { nodes: group.map(g => g.leaves.map(d => d.id)).reduce((acc, cur) => acc.concat(cur), []) },
         });
       },
 
       mouseOverBrush(node, ev) {
         this.dbClickCreateNode = false;
         this.ifColorPickerOpen = true;
-        // this.coloredEl = element._groups[0];
-        this.coloredNodeId = node.id;
+        this.coloredNodeId = [];
+        const targetId = node.id;
+        const multipleSelected = this.activeSelect.includes(targetId);
+        if (!multipleSelected) {
+          this.coloredNodeId = [targetId];
+        } else {
+          switch (targetId.slice(0, 4)) {
+            case 'note': {
+              [...this.activeSelect.nodes.keys()].forEach(id => this.coloredNodeId.push(id));
+              break;
+            }
+            case 'grup': {
+              [...this.activeSelect.groups.keys()].forEach(id => this.coloredNodeId.push(id));
+              break;
+            }
+          }
+        }
+
         this.colors = node.color ? node.color : node.data.color;
         this.$refs.vueColorPicker.currentColor = node.color;
 
@@ -1714,7 +1774,7 @@
           }
           case DELETE: {
             if (target.id.slice(0, 4) === 'grup') {
-              this.groupRemove(target);
+              this.groupRemove(groups);
             } else {
               this.closeHoverMenu();
               this.changeMouseState(POINTER);
@@ -1907,9 +1967,10 @@
         const groups = savedGraph.groups;
         if (groups) {
           groups.forEach((g) => {
-            this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups });
+            this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups }, true);
           });
         }
+        this.graph.restart.layout();
       },
 
       readFile(event) {
@@ -1962,15 +2023,6 @@
           this.mouseState = state;
         }
         switch (state) {
-
-          case GROUP : {
-            this.mouseState = SELECT;
-            this.rootObservable.next({
-              type: GROUP,
-              children: { nodes: [...this.activeSelect.nodes.keys()] }
-            });
-            break;
-          }
 
           case ADDNOTE: {
             this.changeMouseState(POINTER);
@@ -2047,7 +2099,7 @@
             const svgElem = this.graph.getSVGElement().node();
             fromEvent(svgElem, 'click').pipe(
               takeUntil(this.destroy$),
-              takeWhile(() => this.ifColorPickerOpen === true),
+              takeWhile(() => this.ifColorPickerOpen === true), // TODO use of takewhile is incorrect
               take(1),
               tap(e => e.stopPropagation()),
               tap(e => e.preventDefault()),
@@ -2106,7 +2158,6 @@
                   return { subject, predicate: newPredicate, object };
                 }
               );
-
             this.changeMouseState(POINTER);
             this.rootObservable.next({
               type: CREATE,
@@ -2127,6 +2178,18 @@
               nodeId: nodes,
               triplet: edges,
             });
+            break;
+          }
+
+          case GROUP : {
+            const nodes = [...this.activeSelect.nodes.keys()];
+            if (nodes.length > 0) {
+              this.rootObservable.next({
+                type: GROUP,
+                children: { nodes }
+              });
+              this.changeMouseState(POINTER);
+            }
             break;
           }
 
@@ -2347,6 +2410,8 @@
                 if (X === x && Y === y && preSize === 0 && this.activeSelect.size === 0) {
                   this.changeMouseState(POINTER);
                 }
+                elem.remove();
+                this.graph.restart.styles();
               });
 
               fromEvent(document, 'mousemove').pipe(
@@ -2361,9 +2426,6 @@
                 }),
                 pairwise(),
                 takeUntil(mouseUp),
-                finalize(() => {
-                  elem.remove();
-                }),
               ).subscribe(([oldSelect, currentSelect]) => {
                 if (addTo) {
                   this.activeSelect.deselect(oldSelect);
@@ -2374,25 +2436,6 @@
                 }
                 this.graph.restart.styles();
               });
-            });
-
-            fromEvent(svg, 'click').pipe(
-              takeUntil(this.destroy$),
-              takeWhile(() => this.mouseState === SELECT),
-              map(e => ({ ...this.transformCoordinates({ x: e.x, y: e.y }), shift: e.shiftKey })),
-              map(({ x, y, shift }) => {
-                // if not shift key, clear current selection
-                if (!shift) {
-                  this.activeSelect.clear();
-                }
-                return { x, y };
-              }),
-            ).subscribe(({ x, y }) => {
-              // get the items available at the location clicked on
-              const newSelect = this.graph.selectByCoords({ x, X: x, y, Y: y }).nodes;
-              // add clicked item to selection
-              this.activeSelect.selectExclusive(newSelect);
-              this.graph.restart.styles();
             });
 
             /** DEFINE KEYBOARD SHORTCUTS FOR SELECT TOOL **/
@@ -2551,6 +2594,10 @@
   .highlight {
     stroke: rgb(64, 158, 255);
     stroke-width: 3px;
+  }
+
+  .translucent {
+    opacity: 0.5;
   }
 
   .medium-editor-toolbar li button {

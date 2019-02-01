@@ -277,11 +277,11 @@
   } */
 
   .weight-icon {
-    stroke: #000000;
+    stroke: #575959;
   }
 
   .dash-icon {
-    stroke: #000000;
+    stroke: #575959;
     stroke-width: 3.5;
   }
 

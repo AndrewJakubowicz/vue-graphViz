@@ -492,6 +492,7 @@
         svg.focus();
         this.ifColorPickerOpen = false;
         this.colors = value;
+        this.hoverEdgeColor = value.hex;
         const idArray = Array.isArray(this.coloredNodeId) ? this.coloredNodeId : [this.coloredNodeId];
         if (idArray[0].slice(0, 4) === 'grup') {
           this.rootObservable.next({
@@ -509,12 +510,12 @@
             id: idArray,
           });
         }
-        if (edges.length > 0) {
+        if (idArray[0].slice(0, 4) === "edge") {
           this.rootObservable.next({
             type: EDGEEDIT,
             prop: COLOR,
             value: value.hex,
-            hash: edges,
+            hash: idArray,
           })
         }
       },
@@ -656,6 +657,7 @@
 
               case DELETE: {
                 this.closeHoverMenu();
+                this.closeEdgeHoverMenu();
                 // get all edges attached to node
                 const db = this.graph.getDB();
                 let nodeIds;
@@ -1329,11 +1331,13 @@
               this.hoverAwait = [group, selection, e];
             }
           },
+
           mouseOutGroup: (group, selection, e) => {
             this.hoverQueue$.next(false);
           },
 
           mouseOverNode: (node, selection, e) => {
+            this.closeEdgeHoverMenu();
             this.hoverQueue$.next(() => this.createHoverMenu(node, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1364,6 +1368,7 @@
           },
 
           mouseOverEdge: (edge, selection, e) => {
+            this.closeHoverMenu();
             this.hoverQueue$.next(() => this.createEdgeHoverMenu(edge, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1827,10 +1832,9 @@
         // const elem = selection.node();
         // const pos = elem.getBoundingClientRect();
         this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
-        this.hoverEdgeColor = d.predicate.stroke || "#000000";
+        this.hoverEdgeColor = d.predicate ? (d.predicate.stroke || "#000000") : "#000000";
         this.hoverEdgeDisplay = true;
-        // this.hoverShape = d.nodeShape;
-        this.hoverEdgeType = d.predicate.hash.slice(0, 4);
+        this.hoverEdgeType = d.predicate ? d.predicate.hash.slice(0, 4) : "edge";
         this.hoverEdgeData = { data: d, el: selection };
       },
 
@@ -1844,12 +1848,12 @@
         }
       },
 
-      edgeColorChange(predicate, e) {
+      edgeColorChange(edges, e) {
         this.dbClickCreateNode = false;
         this.ifColorPickerOpen = true;
         // this.coloredEl = element._groups[0];
-        this.coloredNodeId = predicate.hash;
-        this.colors = predicate.stroke ? predicate.stroke : '#000000';
+        this.coloredNodeId = edges.map(edge => edge.predicate.hash);
+        this.colors = edges[0].predicate.stroke ? edges[0].predicate.stroke : '#000000';
         this.$refs.vueColorPicker.currentColor = this.colors;
 
         let graphEditor = document.getElementById('graph').getBoundingClientRect();
@@ -1895,44 +1899,49 @@
         });
       },
 
-      edgeWeightChange(predicate, payload) {
+      edgeWeightChange(edges, payload) {
         this.rootObservable.next({
           type: EDGEEDIT,
           prop: WEIGHT,
-          value: payload,
-          hash: predicate.hash,
+          value: edges.map(_ => payload),
+          hash: edges.map(edge => edge.predicate.hash),
         });
       },
 
-      edgeDashChange(predicate, payload) {
+      edgeDashChange(edges, payload) {
         this.rootObservable.next({
           type: EDGEEDIT,
           prop: DASH,
-          value: payload,
-          hash: predicate.hash,
+          value: edges.map(_ => payload),
+          hash: edges.map(edge => edge.predicate.hash),
         });
       },
 
       hoverEdgeInteract(event) {
         const edge = event.data.data;
-        const predicate = edge.predicate;
         // const d3Selection = event.data.el;
         const payload = event.payload;
+        const edges = [];
+        if (edge && this.activeSelect.includes(edge.predicate.hash)) {
+          [...this.activeSelect.edges.values()].forEach(d => edges.push(d));
+        } else {
+          edges.push(edge);
+        }
         switch (event.type) {
           case COLOR: {
-            this.edgeColorChange(predicate, event.e);
+            this.edgeColorChange(edges, event.e);
             break;
           }
           case WEIGHT: {
-            this.edgeWeightChange(predicate, payload);
+            this.edgeWeightChange(edges, payload);
             break;
           }
           case DASH: {
-            this.edgeDashChange(predicate, payload);
+            this.edgeDashChange(edges, payload);
             break;
           }
           case DELETE: {
-            this.edgeRemove(edge);
+            this.edgeRemove(edges);
             break;
           }
           default: {
@@ -2593,7 +2602,7 @@
 
   .highlight {
     stroke: rgb(64, 158, 255);
-    stroke-width: 3px;
+    /* stroke-width: 3px; */
   }
 
   .translucent {

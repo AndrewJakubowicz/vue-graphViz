@@ -87,7 +87,7 @@
             action: 'OPEN',
             icon: ['folder-open-o'],
             toggled: false,
-            tip: 'Save (Ctrl+O)',
+            tip: 'Open (Ctrl+O)',
           },
           {
             action: 'SAVE',

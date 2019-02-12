@@ -1057,6 +1057,7 @@
             nodes.forEach(d => {
               d.class = d.class.replace(' translucent', '');
             });
+            this.graph.restart.styles();
           }),
           takeUntil(end),
         );

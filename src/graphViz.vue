@@ -1357,17 +1357,7 @@
         });
         this.linkToolDispose = this.linkTool(this.textNodes);
         // Set the action of double clicking the edge:
-        this.graph.edgeOptions.setDblClickEdge((edge, elem, e) => {
-          if (this.mouseState === SELECT) {
-            if (e.shiftKey) {
-              this.activeSelect.selectExclusive(edge);
-            } else {
-              this.activeSelect.clear();
-              this.activeSelect.select(edge);
-            }
-            this.graph.restart.styles();
-          }
-          if (this.mouseState === POINTER || this.mouseState === CREATEEDGE) {
+        this.graph.edgeOptions.setDblClickEdge((edge, elem) => {
             $mousedown.next({
               type: 'EDITEDGE',
               edge: edge,
@@ -1382,7 +1372,6 @@
                 });
               },
             });
-          }
         });
 
         this.graph.edgeOptions.setClickEdge((edge) => {

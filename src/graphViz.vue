@@ -99,7 +99,6 @@
   const TEXTEDIT = 'TEXTEDIT';
   const UNDERLINE = 'UNDERLINE';
   const UNDO = 'UNDO';
-  const UNGROUP = 'UNGROUP';
   const WIDTH = 'WIDTH';
   const POS = 'POS';
 
@@ -108,7 +107,7 @@
           '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
           '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
         ];
-
+  
   export default {
     props: {
       hypothesisId: String,
@@ -846,31 +845,6 @@
                     break;
                   }
 
-                  case POS: {
-                    oldValues = idArray.map(id => this.graph.getNode(id)).map(d => ({ x: d.x, y: d.y }));
-                    nodeIndices.forEach((nodeIndex, i) => {
-                      if (multipleValues) {
-                        this.textNodes[nodeIndex]['x'] = values[i].x;
-                        this.textNodes[nodeIndex]['y'] = values[i].y;
-                      } else {
-                        this.textNodes[nodeIndex]['x'] = values[0].x;
-                        this.textNodes[nodeIndex]['y'] = values[0].y;
-                      }
-                    });
-
-                    this.graph.editNode({
-                      property: 'x',
-                      id: idArray,
-                      value: values.map(p => p.x),
-                    });
-                    this.graph.editNode({
-                      property: 'y',
-                      id: idArray,
-                      value: values.map(p => p.y),
-                    });
-                    break;
-                  }
-
                   default : {
                     console.log('Unknown property:', action.prop);
                   }
@@ -943,59 +917,100 @@
                 break;
               }
 
+              /**
+               * Create new groups, move nodes between groups, or remove nodes from groups.
+               *
+               * create new group
+               * Passing an array of children will create new group for each set of children
+               * {type: GROUP,
+                  group: true,
+                  children: {nodes: [nodeIDs]} | [{nodes: [nodeIDs]}], }
+               *
+               * add to existing group(s)
+               * Passing in array of groups and children will map each set of children to each group
+               * {type: GROUP,
+                  group: {groupObj} | [{groupObj}],
+                  children: {nodes: [nodeIDs]} | [{nodes: [nodeIDs]}], }
+               *
+               * Remove from group
+               * {type: GROUP,
+                  group: false,
+                  children: {nodes: [nodeIDs]} | [{nodes: [nodeIDs]}], }
+               *
+               */
               case GROUP: {
-                const initGroup = () => ({
+                /**
+                 * Helper function to create group object
+                 */
+                const initGroupHelper = () => ({
                   id: `grup-${uuid()}`,
                   data: { color: '#F6ECAF', class: '' },
                 });
-                let groups = action.group;
-                // if undefined create 1 initial group
-                if (!groups) {
-                  groups = [initGroup()];
-                } else if (!Array.isArray(groups)) {
-                  // if groups is not an array turn into an array
-                  groups = [groups];
-                }
-                const children = Array.isArray(action.children) ? action.children : [action.children];
-                // take array of children and match children to each group. if there are less groups than children create new group
-                children.forEach((child, i) => {
-                  // if group does not exist for this set of children create new group
-                  if (!groups[i]) {
-                    groups.push(initGroup());
-                  }
-                  this.graph.addToGroup(groups[i], children[i], true);
-                });
-                this.graph.restart.layout();
 
-                undoStack.push({
-                  type: UNGROUP,
-                  children: children,
-                });
-                break;
-              }
-
-              case UNGROUP: {
-                const groupMap = new Map();
+                const applyTranslationHelper = () => {
+                  const nodeIDs = trans.targets;
+                  const nodes = nodeIDs.map(id => this.graph.getNode(id));
+                  const xVal = nodes.map(d => d.x + trans.x);
+                  const yVal = nodes.map(d => d.y + trans.y);
+                  // TODO does textnodes really need position to be updated?
+                  this.graph.editNode({
+                    property: 'x',
+                    id: nodeIDs,
+                    value: xVal,
+                  });
+                  this.graph.editNode({
+                    property: 'y',
+                    id: nodeIDs,
+                    value: yVal,
+                  });
+                };
                 const children = Array.isArray(action.children) ? action.children : [action.children];
+                const trans = action.translation;
+                // save previous group node belonged to
+                const prevGroupMap = new Map();
                 children.forEach((child) => {
                   child.nodes.forEach(id => {
                     const d = this.graph.getNode(id);
-                    const g = this.graph.getGroup(d.parent.id);
-                    if (groupMap.has(g)) {
-                      groupMap.get(g).nodes.push(id);
+                    const g = d.parent ? this.graph.getGroup(d.parent.id) : false;
+                    if (prevGroupMap.has(g)) {
+                      prevGroupMap.get(g).nodes.push(id);
                     } else {
-                      groupMap.set(g, { nodes: [id] });
+                      prevGroupMap.set(g, { nodes: [id] });
                     }
                   });
                 });
-                const groups = [...groupMap.keys()];
-                const childs = [...groupMap.values()];
-                this.graph.unGroup(children);
-                undoStack.push({
+
+                if (!action.group) {
+                  // if groups is false or undefined, remove from group
+                  this.graph.unGroup(children);
+                } else {
+                  const groups = Array.isArray(action.group) ? action.group : [action.group];
+                  // take array of children and match children to each group.
+                  children.forEach((child, i) => {
+                    // if group is false, then ungroup children
+                    if (groups[i] === false) {
+                      this.graph.unGroup(children[i]);
+                    } else {
+                      // if group does not exist for this set of children create new group
+                      if (groups[i] === true || groups[i] === undefined) {
+                        groups[i] = initGroupHelper();
+                      }
+                      // add to group
+                      this.graph.addToGroup(groups[i], children[i], true);
+                    }
+                  });
+                  this.graph.restart.layout();
+                }
+                const opposingAction = {
                   type: GROUP,
-                  group: groups,
-                  children: childs,
-                });
+                  group: [...prevGroupMap.keys()],
+                  children: [...prevGroupMap.values()],
+                };
+                if (trans) {
+                  applyTranslationHelper();
+                  opposingAction.translation = { targets: trans.targets, x: -trans.x, y: -trans.y, };
+                }
+                undoStack.push(opposingAction);
                 break;
               }
 
@@ -1103,6 +1118,7 @@
             nodes.forEach(d => {
               d.class = d.class.replace(' translucent', '');
             });
+            this.graph.restart.styles();
           }),
           takeUntil(end),
         );
@@ -1128,28 +1144,19 @@
               const nodeIDs = nodes.filter(d => d.parent).map(node => node.id);
               if (nodeIDs.length > 0) {
                 this.rootObservable.next({
-                  type: UNGROUP,
+                  type: GROUP,
+                  group: false,
                   children: { nodes: nodeIDs },
                 });
               }
             } else {
               this.rootObservable.next({
                 type: GROUP,
-                group: targetGroup,
+                group: targetGroup ? targetGroup : true,
                 children: { nodes: nodes.map(node => node.id) },
+                translation: { targets: draggednodesIDs, x: xf - d.x, y: yf - d.y },
               });
             }
-            //TODO grey out, mix of grouped and ungrouped in selection
-            // move "dragged" nodes to their destination they were dragged to
-            const dx = xf - d.x;
-            const dy = yf - d.y;
-
-            this.rootObservable.next({
-              type: NODEEDIT,
-              prop: POS,
-              value: draggedNodes.map(d => ({ x: d.x + dx, y: d.y + dy })),
-              id: draggednodesIDs
-            });
           });
 
         // drag animation - causes the "trails"
@@ -1434,17 +1441,7 @@
         });
         this.linkToolDispose = this.linkTool(this.textNodes);
         // Set the action of double clicking the edge:
-        this.graph.edgeOptions.setDblClickEdge((edge, elem, e) => {
-          if (this.mouseState === SELECT) {
-            if (e.shiftKey) {
-              this.activeSelect.selectExclusive(edge);
-            } else {
-              this.activeSelect.clear();
-              this.activeSelect.select(edge);
-            }
-            this.graph.restart.styles();
-          }
-          if (this.mouseState === POINTER || this.mouseState === CREATEEDGE) {
+        this.graph.edgeOptions.setDblClickEdge((edge, elem) => {
             $mousedown.next({
               type: 'EDITEDGE',
               edge: edge,
@@ -1459,7 +1456,6 @@
                 });
               },
             });
-          }
         });
 
         this.graph.edgeOptions.setClickEdge((edge) => {
@@ -1581,7 +1577,8 @@
       groupRemove(group) {
         this.closeHoverMenu();
         this.rootObservable.next({
-          type: UNGROUP,
+          type: GROUP,
+          group: false,
           children: { nodes: group.map(g => g.leaves.map(d => d.id)).reduce((acc, cur) => acc.concat(cur), []) },
         });
       },
@@ -2195,7 +2192,8 @@
             if (nodes.length > 0) {
               this.rootObservable.next({
                 type: GROUP,
-                children: { nodes }
+                group: true,
+                children: { nodes },
               });
               this.changeMouseState(POINTER);
             }

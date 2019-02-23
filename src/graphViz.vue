@@ -93,6 +93,7 @@
   const SAVE = 'SAVE';
   const SELECT = 'SELECT';
   const SHAPE = 'SHAPE';
+  const ARROW = 'ARROW';
   const WEIGHT = 'WEIGHT';
   const DASH = 'DASH';
   const TEXT = 'TEXT';
@@ -874,6 +875,15 @@
                     this.graph.restart.layout();
                     break;
                   }
+                  case ARROW: {
+                    oldValues = predicates.map(p => p.arrowhead);
+                    this.graph.editEdge({
+                      property: 'arrow',
+                      id: idArray,
+                      value: values,
+                    })
+                    break;
+                  }
                   case WEIGHT: {
                     oldValues = predicates.map(p => p.strokeWidth);
                     this.graph.editEdge({
@@ -1389,6 +1399,10 @@
             return predicate ? (predicate.stroke ? predicate.stroke.substring(1) : "000000") : "000000";
           },
 
+          edgeArrowhead: (predicate) => {
+            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 'R') : 'R';
+          },
+
           edgeStroke: (predicate) => {
             return predicate ? (predicate.strokeWidth ? predicate.strokeWidth : 2) : 2;
           },
@@ -1722,6 +1736,7 @@
         this.hoverShape = d.nodeShape;
         this.hoverType = d.id.slice(0, 4);
         this.hoverData = { data: d, el: selection };
+        this.hoverEdgeDisplay = false;
       },
 
       updateHoverMenu() {
@@ -1828,11 +1843,14 @@
       createEdgeHoverMenu(d, selection, e) {
         // const elem = selection.node();
         // const pos = elem.getBoundingClientRect();
-        this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
-        this.hoverEdgeColor = d.predicate ? (d.predicate.stroke || "#000000") : "#000000";
-        this.hoverEdgeDisplay = true;
-        this.hoverEdgeType = d.predicate ? d.predicate.hash.slice(0, 4) : "edge";
-        this.hoverEdgeData = { data: d, el: selection };
+        if (!this.hoverEdgeDisplay) {
+          this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
+          this.hoverEdgeColor = d.predicate ? (d.predicate.stroke || "#000000") : "#000000";
+          this.hoverEdgeDisplay = true;
+          this.hoverEdgeType = d.predicate ? d.predicate.hash.slice(0, 4) : "edge";
+          this.hoverEdgeData = { data: d, el: selection };
+          this.hoverDisplay = false;
+        }
       },
 
       closeEdgeHoverMenu() {
@@ -1896,6 +1914,15 @@
         });
       },
 
+      edgeArrowChange(edges, payload) {
+        this.rootObservable.next({
+          type: EDGEEDIT,
+          prop: ARROW,
+          value: edges.map(_ => payload),
+          hash: edges.map(edge => edge.predicate.hash),
+        })
+      },
+
       edgeWeightChange(edges, payload) {
         this.rootObservable.next({
           type: EDGEEDIT,
@@ -1927,6 +1954,10 @@
         switch (event.type) {
           case COLOR: {
             this.edgeColorChange(edges, event.e);
+            break;
+          }
+          case ARROW: {
+            this.edgeArrowChange(edges, payload);
             break;
           }
           case WEIGHT: {
@@ -2237,6 +2268,7 @@
                       rightID: objOfNodes[key].id,
                       gap: 170,
                     },
+                    arrowhead: 'R',
                     stroke: "#000000",
                     strokeWidth: 2,
                     strokeDasharray: 0,
@@ -2600,7 +2632,11 @@
 
   .highlight {
     stroke: rgb(64, 158, 255);
-    /* stroke-width: 3px; */
+    stroke-width: 3px;
+  }
+
+  .highlight-edge {
+    stroke: rgb(64, 158, 255);
   }
 
   .translucent {

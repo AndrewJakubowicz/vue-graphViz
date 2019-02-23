@@ -1,6 +1,6 @@
 <template>
   <div id="graph-hover-menu" ref="parent"
-       :style="{top:`${posPad.y+posPad.height/2}px`, left:`${posPad.x+posPad.width/2}px`}"
+       :style="{top:`${posPad.y + posPad.height/2}px`, left:`${posPad.x + posPad.width/2}px`}"
        v-show="display">
 
     <!--SVG to detect mouse leave-->
@@ -10,18 +10,18 @@
     <!--:style="hoverRectPos"></rect>-->
     <!--</svg>-->
 
-    <!--TOP ICONS-->
-    <div class="icon-position h-center-align menu-color hand" :style="{bottom:`${posPad.height/2}px`}">
-      <i class="fa fa-paint-brush" id="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></i>
-    </div>
-
     <!--BOTTOM ICONS-->
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{top:`${posPad.height/2}px`}">
-      <i class="fa fa-trash-o custom-icon" @click="interact('DELETE', $event)"></i>
+    <div class="icon-position h-center-align hand" :style="{top: `${posPad.height/2}px`}" style="width: 60px">
+      <div class="icon-wrapper menu-color hand">
+        <i class="fa fa-paint-brush" id="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></i>
+      </div>
+      <div class="icon-wrapper hand">
+        <i class="fa fa-trash-o custom-icon" @click="interact('DELETE', $event)"></i>
+      </div>
     </div>
 
     <!--RIGHT ICONS-->
-    <div class="icon-position v-center-align hand" :style="{left: `${posPad.width / 2}px`}" v-show="type==='note'">
+    <div class="icon-position v-center-align hand" :style="{left: `${posPad.width/2}px`}" v-show="type==='note'">
       <div class="icon-wrapper">
         <i class="fa fa-arrow-right custom-icon" @mousedown="interact('CREATEEDGE', $event)"></i>
       </div>
@@ -31,7 +31,7 @@
     </div>
 
     <!--Resize Drag // TODO better solution-->
-    <div class="icon-position" :style="{left: `${position.width / 2-5}px`, top:`${position.height/2-10}px`}"
+    <div class="icon-position" :style="{left: `${position.width/2 - 5}px`, top:`${position.height/2 - 10}px`}"
          v-show="type==='note'">
       <svg width="8" height="8">
         <rect x="0" y="0" width="8" height="8" fill="white" stroke="black" stroke-width="2" style="cursor: ew-resize;"
@@ -40,7 +40,7 @@
     </div>
 
     <!--LEFT ICONS-->
-    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width / 2}px`}" v-show="type==='note'">
+    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width/2}px`}" v-show="type==='note'">
       <div class="icon-wrapper">
         <svg style="width: 22px; height: 22px;" viewBox="0 0 539 512" class="custom-icon"
              @mousedown="interact('GROUPDRAG', $event)">
@@ -73,7 +73,7 @@
 
     <!--Change shape menu-->
     <!--TODO curve shapes around button, add no border shape.-->
-    <div class="icon-position v-center-align" :style="{right: `${posPad.width/2+24+4}px`}" v-show="shapesToggle">
+    <div class="icon-position v-center-align" :style="{right: `${posPad.width/2 + 28}px`}" v-show="shapesToggle">
       <svg width="26" height="23">
         <rect x="1" y="1" width="24" height="21" class="shape-icon"
               @mousedown="interact('SHAPE', $event,'rect')"></rect>

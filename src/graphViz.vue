@@ -13,6 +13,15 @@
                      @exitHover="closeHoverMenu($event)"
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
+    <hover-menu-edge :position="hoverEdgePos"
+                     :pad="10"
+                     :color="hoverEdgeColor"
+                     :display="hoverEdgeDisplay"
+                     :data="hoverEdgeData"
+                     :type="hoverEdgeType"
+                     @exitHover="closeEdgeHoverMenu($event)"
+                     @clickedButton="hoverEdgeInteract($event)">
+    </hover-menu-edge>
     <toolBar @clickedAction="changeMouseState($event)"
              @changeDefaultShape="changeDefaultShape($event)"
              @mouseEnter="closeHoverMenu()"
@@ -54,6 +63,7 @@
   } from 'rxjs/operators';
   import toolBar from './components/toolBar';
   import hoverMenuNode from './components/hoverMenuNode';
+  import hoverMenuEdge from './components/hoverMenuEdge';
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
   import HighlightSelection from './behaviours/selection';
@@ -85,11 +95,20 @@
   const SAVE = 'SAVE';
   const SELECT = 'SELECT';
   const SHAPE = 'SHAPE';
+  const ARROW = 'ARROW';
+  const WEIGHT = 'WEIGHT';
+  const DASH = 'DASH';
   const TEXT = 'TEXT';
   const TEXTEDIT = 'TEXTEDIT';
   const UNDERLINE = 'UNDERLINE';
   const UNDO = 'UNDO';
   const WIDTH = 'WIDTH';
+
+  const palette = [
+    '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
+    '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
+    '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
+  ];
 
   export default {
     props: {
@@ -118,10 +137,12 @@
       toolBar,
       'color-picker': Compact,
       hoverMenuNode,
+      hoverMenuEdge
     },
     data() {
       return {
         ifColorPickerOpen: false,
+        coloredNodeId: undefined,
         updateValue: null,
         styleObject: {
           top: '230px',
@@ -137,14 +158,15 @@
         hoverType: undefined,
         hoverAwait: false,
         hoverQueue$: undefined,
+        hoverEdgeDisplay: false,
+        hoverEdgePos: undefined,
+        hoverEdgeColor: undefined,
+        hoverEdgeData: undefined,
+        hoverEdgeType: undefined,
         colors: {
           hex: '#FFFFFF',
         },
-        palette: [
-          '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
-          '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
-          '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
-        ],
+        palette: palette,
         graph: undefined,
         nodesOutsideDiagram: [],
         mouseState: POINTER,
@@ -472,6 +494,7 @@
         svg.focus();
         this.ifColorPickerOpen = false;
         this.colors = value;
+        this.hoverEdgeColor = value.hex;
         const idArray = Array.isArray(this.coloredNodeId) ? this.coloredNodeId : [this.coloredNodeId];
         if (idArray[0].slice(0, 4) === 'grup') {
           this.rootObservable.next({
@@ -487,6 +510,14 @@
             prop: COLOR,
             value: value.hex,
             id: idArray,
+          });
+        }
+        if (idArray[0].slice(0, 4) === 'edge') {
+          this.rootObservable.next({
+            type: EDGEEDIT,
+            prop: COLOR,
+            value: value.hex,
+            hash: idArray,
           });
         }
       },
@@ -628,6 +659,7 @@
 
               case DELETE: {
                 this.closeHoverMenu();
+                this.closeEdgeHoverMenu();
                 // get all edges attached to node
                 const db = this.graph.getDB();
                 let nodeIds;
@@ -843,6 +875,15 @@
                       value: values,
                     });
                     this.graph.restart.layout();
+                    break;
+                  }
+                  case ARROW: {
+                    oldValues = predicates.map(p => p.arrowhead);
+                    this.graph.editEdge({
+                      property: 'arrow',
+                      id: idArray,
+                      value: values,
+                    });
                     break;
                   }
 
@@ -1167,7 +1208,7 @@
         }
       },
 
-      createGraph(callback) {
+      createGraph() {
         const $mouseOverNode = this.mouseOverNode$;
         const $mousedown = this.mouseDown$;
         let me = this;
@@ -1190,6 +1231,7 @@
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
           edgeSmoothness: 15,
+          palette: palette,
 
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : ' "#ffffff"';
@@ -1249,16 +1291,6 @@
             return g && g.data.color ? g.data.color : '#F6ECAF';
           },
 
-          mouseOverRadial: (node) => {
-            this.dbClickCreateNode = false;
-          },
-
-          mouseOutRadial: (node) => {
-            if (!this.ifColorPickerOpen) {
-              this.dbClickCreateNode = true;
-            }
-          },
-
           clickAway: () => {
             this.closeHoverMenu();
           },
@@ -1286,11 +1318,13 @@
               this.hoverAwait = [group, selection, e];
             }
           },
+
           mouseOutGroup: (group, selection, e) => {
             this.hoverQueue$.next(false);
           },
 
           mouseOverNode: (node, selection, e) => {
+            this.closeEdgeHoverMenu();
             this.hoverQueue$.next(() => this.createHoverMenu(node, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1319,7 +1353,33 @@
             const tempNode = { ...node, mouseOverNode: false };
             $mouseOverNode.next(tempNode);
             currentState.currentNode.mouseOverNode = false;
-            this.$emit('mouseoutnode');
+          },
+
+          mouseOverEdge: (edge, selection, e) => {
+            this.closeHoverMenu();
+            this.hoverQueue$.next(() => this.createEdgeHoverMenu(edge, selection, e));
+            me.dbClickCreateNode = false;
+            me.clickedGraphViz = false;
+          },
+
+          mouseOutEdge: () => {
+            this.hoverQueue$.next(false);
+          },
+
+          edgeColor: (predicate) => {
+            return predicate ? (predicate.stroke ? predicate.stroke.substring(1) : '000000') : '000000';
+          },
+
+          edgeArrowhead: (predicate) => {
+            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 'R') : 'R';
+          },
+
+          edgeStroke: (predicate) => {
+            return predicate ? (predicate.strokeWidth ? predicate.strokeWidth : 2) : 2;
+          },
+
+          edgeDasharray: (predicate) => {
+            return predicate ? (predicate.strokeDasharray ? predicate.strokeDasharray : 0) : 0;
           },
 
           edgeRemove: (edge, selection, e) => {
@@ -1666,6 +1726,7 @@
         this.hoverShape = d.nodeShape;
         this.hoverType = d.id.slice(0, 4);
         this.hoverData = { data: d, el: selection };
+        this.hoverEdgeDisplay = false;
       },
 
       updateHoverMenu() {
@@ -1768,6 +1829,140 @@
           }
         }
 
+      },
+
+      createEdgeHoverMenu(d, selection, e) {
+        if (!this.hoverEdgeDisplay) {
+          this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
+          this.hoverEdgeColor = d.predicate ? (d.predicate.stroke || '#000000') : '#000000';
+          this.hoverEdgeDisplay = true;
+          this.hoverEdgeType = d.predicate ? d.predicate.hash.slice(0, 4) : 'edge';
+          this.hoverEdgeData = { data: d, el: selection };
+          this.hoverDisplay = false;
+        }
+      },
+
+      closeEdgeHoverMenu() {
+        this.hoverEdgeDisplay = false;
+        this.hoverEdgePos = undefined;
+        this.hoverEdgeData = undefined;
+        if (this.hoverAwait) {
+          this.createEdgeHoverMenu(...this.hoverAwait);
+          this.hoverAwait = false;
+        }
+      },
+
+      edgeColorChange(edges, e) {
+        this.dbClickCreateNode = false;
+        this.ifColorPickerOpen = true;
+        this.coloredNodeId = edges.map(edge => edge.predicate.hash);
+        this.colors = edges[0].predicate.stroke ? edges[0].predicate.stroke : '#000000';
+        this.$refs.vueColorPicker.currentColor = this.colors;
+
+        let graphEditor = document.getElementById('graph').getBoundingClientRect();
+        let graphEditorX = graphEditor.x;
+        let graphEditorY = graphEditor.y;
+        let graphEditorW = graphEditor.width;
+        let graphEditorH = graphEditor.height;
+        let posX = e.clientX - graphEditorX;
+        let posY = e.clientY + 50 - graphEditorY;
+
+        if (posX + 250 > graphEditorW) {
+          posX = posX - 250;
+        }
+        if (posY < 0) {
+          posY = 0;
+        }
+        if (posY + 70 > graphEditorH) {
+          posY = posY - (posY + 80 - graphEditorH);
+        }
+        this.styleObject = {
+          position: 'absolute !important',
+          top: posY + 'px !important',
+          left: posX + 'px !important',
+          'z-index': '9999'
+        };
+        const svgElem = this.graph.getSVGElement().node();
+        fromEvent(svgElem, 'click').pipe(
+          takeWhile(() => this.ifColorPickerOpen === true),
+          take(1),
+          tap(e => e.stopPropagation()),
+          tap(e => e.preventDefault()),
+        ).subscribe(() => {
+          this.ifColorPickerOpen = false;
+        });
+      },
+
+      edgeRemove(edge) {
+        this.changeMouseState(POINTER);
+        this.rootObservable.next({
+          type: DELETE,
+          triplet: edge,
+        });
+      },
+
+      edgeArrowChange(edges, payload) {
+        this.rootObservable.next({
+          type: EDGEEDIT,
+          prop: ARROW,
+          value: edges.map(_ => payload),
+          hash: edges.map(edge => edge.predicate.hash),
+        });
+      },
+
+      edgeWeightChange(edges, payload) {
+        this.rootObservable.next({
+          type: EDGEEDIT,
+          prop: WEIGHT,
+          value: edges.map(_ => payload),
+          hash: edges.map(edge => edge.predicate.hash),
+        });
+      },
+
+      edgeDashChange(edges, payload) {
+        this.rootObservable.next({
+          type: EDGEEDIT,
+          prop: DASH,
+          value: edges.map(_ => payload),
+          hash: edges.map(edge => edge.predicate.hash),
+        });
+      },
+
+      hoverEdgeInteract(event) {
+        const edge = event.data.data;
+        // const d3Selection = event.data.el;
+        const payload = event.payload;
+        const edges = [];
+        if (edge && this.activeSelect.includes(edge.predicate.hash)) {
+          [...this.activeSelect.edges.values()].forEach(d => edges.push(d));
+        } else {
+          edges.push(edge);
+        }
+        switch (event.type) {
+          case COLOR: {
+            this.edgeColorChange(edges, event.e);
+            break;
+          }
+          case ARROW: {
+            this.edgeArrowChange(edges, payload);
+            break;
+          }
+          case WEIGHT: {
+            this.edgeWeightChange(edges, payload);
+            break;
+          }
+          case DASH: {
+            this.edgeDashChange(edges, payload);
+            break;
+          }
+          case DELETE: {
+            this.edgeRemove(edges);
+            break;
+          }
+          default: {
+            console.warn('Unrecognised event ', event.type, ' on ', event.data);
+          }
+        }
       },
 
       loadFromSaved(savedGraph) {
@@ -2064,6 +2259,10 @@
                       rightID: objOfNodes[key].id,
                       gap: 170,
                     },
+                    arrowhead: 'R',
+                    stroke: "#000000",
+                    strokeWidth: 2,
+                    strokeDasharray: 0,
                   },
                   object: objOfNodes[key],
                 });
@@ -2427,6 +2626,10 @@
     stroke-width: 3px;
   }
 
+  .highlight-edge {
+    stroke: rgb(64, 158, 255);
+  }
+
   .translucent {
     opacity: 0.5;
   }
@@ -2460,67 +2663,6 @@
   .node-status-icons .fa {
     font-size: 12px !important;
     color: #575959;
-  }
-
-  .icon-wrapper {
-    margin-top: 1px !important;
-    display: inline-block;
-    width: 22px;
-  }
-
-  .icon-wrapper .pinned, .icon-wrapper .unpinned {
-    border-radius: 100%;
-    border: 1px solid #fff;
-    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
-    display: table-cell;
-    font-size: 15px;
-    height: 15px;
-    padding: 2px;
-    text-align: center;
-    transition: 2s;
-    vertical-align: middle;
-    width: 22px;
-  }
-
-  .icon-wrapper .pinned {
-    background: rgba(182, 239, 239, 1);
-    color: #575959;
-  }
-
-  .icon-wrapper .unpinned {
-    background: rgba(182, 239, 239, 0.3);
-    color: #9b9da0;
-    -webkit-text-stroke: 1px #9b9da0;
-    -webkit-text-fill-color: rgba(182, 239, 239, 0.3);
-  }
-
-  .menu-shape, .menu-color, .menu-action, .menu-trash {
-    cursor: pointer;
-    cursor: hand;
-  }
-
-  .menu-color .fa-paint-brush {
-    font-size: 19px !important;
-  }
-
-  .icon-wrapper .custom-icon {
-    background: rgba(182, 239, 239, 0.3);
-    border-radius: 100%;
-    border: 1px solid #fff;
-    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
-    color: #575959;
-    display: table-cell;
-    font-size: 15px;
-    height: 15px;
-    padding: 2px;
-    text-align: center;
-    transition: 2s;
-    vertical-align: middle;
-    width: 22px;
-  }
-
-  .custom-icon:hover {
-    background: rgba(182, 239, 239, 1);
   }
 
   .fix-editor {

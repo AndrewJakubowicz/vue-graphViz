@@ -14,7 +14,9 @@
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
     <toolBar @clickedAction="changeMouseState($event)"
+             @changeDefaultShape="changeDefaultShape($event)"
              @mouseEnter="closeHoverMenu()"
+             :shape="defaultShape"
              :mouse="mouseState"/>
     <color-picker v-show="ifColorPickerOpen"
                   :style="styleObject"
@@ -160,6 +162,7 @@
         scale: 1,
         activeSelect: new HighlightSelection(),
         mouseStateObs$: undefined,
+        defaultShape: 'capsule',
       };
     },
     mounted() {
@@ -545,7 +548,7 @@
                     const defaultNode = {
                       id: 'note-' + uuid(),
                       class: 'b-no-snip',
-                      nodeShape: 'capsule',
+                      nodeShape: this.defaultShape,
                       text: 'New',
                       img: false,
                       isSnip: false,
@@ -1679,6 +1682,7 @@
             groups.push(target);
           }
         }
+        this.ifColorPickerOpen = false;
         const d3Selection = event.data.el;
         const payload = event.payload;
         const e = event.e;
@@ -1730,9 +1734,9 @@
                 value: payload,
                 id: nodes.map(d => d.id),
               });
-              this.nodeShapeChange(nodes, payload);
               this.hoverShape = target.nodeShape;
             }
+            this.defaultShape = payload;
             break;
           }
           default: {
@@ -1797,6 +1801,10 @@
         } else {
           console.warn('unrecoginsed file type.');
         }
+      },
+
+      changeDefaultShape(e) {
+        this.defaultShape = e;
       },
 
       changeMouseState(state) {

@@ -1,0 +1,50 @@
+<!--
+Icons By FontAwesome
+license: CC BY 4.0 - https://fontawesome.com/license/free
+-->
+<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="expand" class="svg-inline--fa fa-expand fa-w-14"
+     role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+
+  <!--available: https://fontawesome.com/icons/expand?style=solid-->
+  <path fill="currentColor" id="expand"
+        d="M0 180V56c0-13.3 10.7-24 24-24h124c6.6 0 12 5.4 12 12v40c0 6.6-5.4 12-12 12H64v84c0 6.6-5.4 12-12 12H12c-6.6 0-12-5.4-12-12zM288 44v40c0 6.6 5.4 12 12 12h84v84c0 6.6 5.4 12 12 12h40c6.6 0 12-5.4 12-12V56c0-13.3-10.7-24-24-24H300c-6.6 0-12 5.4-12 12zm148 276h-40c-6.6 0-12 5.4-12 12v84h-84c-6.6 0-12 5.4-12 12v40c0 6.6 5.4 12 12 12h124c13.3 0 24-10.7 24-24V332c0-6.6-5.4-12-12-12zM160 468v-40c0-6.6-5.4-12-12-12H64v-84c0-6.6-5.4-12-12-12H12c-6.6 0-12 5.4-12 12v124c0 13.3 10.7 24 24 24h124c6.6 0 12-5.4 12-12z"></path>
+
+  <!--available: https://fontawesome.com/icons/plus-square?style=regular-->
+  <path fill="currentColor" id="plus-square-regular"
+        d="M352 240v32c0 6.6-5.4 12-12 12h-88v88c0 6.6-5.4 12-12 12h-32c-6.6 0-12-5.4-12-12v-88h-88c-6.6 0-12-5.4-12-12v-32c0-6.6 5.4-12 12-12h88v-88c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v88h88c6.6 0 12 5.4 12 12zm96-160v352c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V80c0-26.5 21.5-48 48-48h352c26.5 0 48 21.5 48 48zm-48 346V86c0-3.3-2.7-6-6-6H54c-3.3 0-6 2.7-6 6v340c0 3.3 2.7 6 6 6h340c3.3 0 6-2.7 6-6z"></path>
+
+  <!--Icon By FontAwesome - modified by Yusuf Ades
+  available: https://fontawesome.com/icons//plus-circle?style=solid-->
+  <path fill="currentColor" id="plus-circle-solid"
+        d="M223.9,32.1C100.2,32.1,0,132.3,0,256s100.2,223.9,223.9,223.9S447.9,379.7,447.9,256S347.7,32.1,223.9,32.1z M354,281.2
+	c0,6-4.9,10.8-10.8,10.8H260v83.2c0,6-4.9,10.8-10.8,10.8h-50.3c-6,0-10.8-4.9-10.8-10.8V292h-83.2c-6,0-10.8-4.9-10.8-10.8v-50.3
+	c0-6,4.9-10.8,10.8-10.8H188v-83.2c0-6,4.9-10.8,10.8-10.8h50.3c6,0,10.8,4.9,10.8,10.8V220h83.2c6,0,10.8,4.9,10.8,10.8V281.2z"></path>
+
+  <!--Icon By FontAwesome - modified by Yusuf Ades
+  available: https://fontawesome.com/icons/plus-square?style=solid-->
+  <path fill="currentColor" id="plus-rect-solid"
+        d="M448,32H0v448h448V32z M368,284c0,6.6-5.4,12-12,12h-92v92c0,6.6-5.4,12-12,12h-56c-6.6,0-12-5.4-12-12v-92H92
+	c-6.6,0-12-5.4-12-12v-56c0-6.6,5.4-12,12-12h92v-92c0-6.6,5.4-12,12-12h56c6.6,0,12,5.4,12,12v92h92c6.6,0,12,5.4,12,12V284z"></path>
+  <!--Icon By FontAwesome - modified by Yusuf Ades
+  available: https://fontawesome.com/icons/plus-square?style=solid-->
+  <path fill="currentColor" id="plus-capsule-solid"
+        d="M306.4,32H141.7C63.4,32,0,95.4,0,173.7v164.5C0,416.5,63.5,480,141.7,480h164.5c78.3,0,141.7-63.5,141.7-141.7V173.7
+	C448.1,95.5,384.6,32,306.4,32z M368,284c0,6.6-5.4,12-12,12h-92v92c0,6.6-5.4,12-12,12h-56c-6.6,0-12-5.4-12-12v-92H92
+	c-6.6,0-12-5.4-12-12v-56c0-6.6,5.4-12,12-12h92v-92c0-6.6,5.4-12,12-12h56c6.6,0,12,5.4,12,12v92h92c6.6,0,12,5.4,12,12V284z"></path>
+
+  <!--Icon By FontAwesome - modified by Yusuf Ades
+  available: https://fontawesome.com/icons//plus-circle?style=solid-->
+  <path fill="currentColor" id="circle-solid"
+        d="M223.9,32.1C100.2,32.1,0,132.3,0,256s100.2,223.9,223.9,223.9S447.9,379.7,447.9,256S347.7,32.1,223.9,32.1z"></path>
+
+  <!--Icon By FontAwesome - modified by Yusuf Ades
+  available: https://fontawesome.com/icons/plus-square?style=solid-->
+  <path fill="currentColor" id="rect-solid"
+        d="M448,32H0v448h448V32z"></path>
+  <!--Icon By FontAwesome - modified by Yusuf Ades
+  available: https://fontawesome.com/icons/plus-square?style=solid-->
+  <path fill="currentColor" id="capsule-solid"
+        d="M306.4,32H141.7C63.4,32,0,95.4,0,173.7v164.5C0,416.5,63.5,480,141.7,480h164.5c78.3,0,141.7-63.5,141.7-141.7V173.7
+	C448.1,95.5,384.6,32,306.4,32z"></path>
+
+</svg>

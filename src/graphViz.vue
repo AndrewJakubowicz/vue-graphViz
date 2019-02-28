@@ -462,7 +462,7 @@
         const groups = savedGraph.groups;
         if (groups) {
           groups.forEach((g) => {
-            this.graph.addToGroup({ id: g.id, data: g.data }, g.nodes, g.groups);
+            this.graph.addToGroup({ id: g.id, data: g.data }, g.children);
           });
         }
       },
@@ -618,7 +618,7 @@
                   .catch((err) => {
                     console.log(err);
                   });
-                this.graph.restart.layout();
+                this.graph.restart.layout().then(() => this.graph.restart.repositionGroupText());
                 // TODO fixed width nodes on addition size incorrectly. 2nd restart required
                 if (fixedWidthNodePresent) {
                   this.graph.restart.layout();
@@ -886,7 +886,7 @@
                  */
                 const initGroupHelper = () => ({
                   id: `grup-${uuid()}`,
-                  data: { color: '#F6ECAF', class: '' },
+                  data: { color: '#F6ECAF', class: '', text: '' },
                 });
 
                 const applyTranslationHelper = () => {
@@ -941,7 +941,8 @@
                       this.graph.addToGroup(groups[i], children[i], true);
                     }
                   });
-                  this.graph.restart.layout();
+                  this.graph.restart.layout()
+                    .then(() => this.graph.restart.repositionGroupText());
                 }
                 const opposingAction = {
                   type: GROUP,
@@ -978,7 +979,11 @@
                   value: oldValues,
                   id: action.id,
                 });
-                this.graph.restart.styles();
+                if (property === 'text') {
+                  this.graph.restart.layout();
+                } else {
+                  this.graph.restart.styles();
+                }
                 break;
               }
 
@@ -1362,20 +1367,20 @@
         this.linkToolDispose = this.linkTool(this.textNodes);
         // Set the action of double clicking the edge:
         this.graph.edgeOptions.setDblClickEdge((edge, elem) => {
-            $mousedown.next({
-              type: 'EDITEDGE',
-              edge: edge,
-              restart: this.graph.restart.layout,
-              textElem: elem.node().querySelector('text'),
-              save: (newText) => {
-                this.rootObservable.next({
-                  type: EDGEEDIT,
-                  prop: TEXT,
-                  value: newText,
-                  hash: edge.predicate.hash,
-                });
-              },
-            });
+          $mousedown.next({
+            type: 'EDITEDGE',
+            d: edge,
+            restart: this.graph.restart.layout,
+            textElem: elem.node().querySelector('text'),
+            save: (newText) => {
+              this.rootObservable.next({
+                type: EDGEEDIT,
+                prop: TEXT,
+                value: newText,
+                hash: edge.predicate.hash,
+              });
+            },
+          });
         });
 
         this.graph.edgeOptions.setClickEdge((edge) => {
@@ -1406,7 +1411,7 @@
             this.currentNode = node;
             $mousedown.next({
               type: 'EDITNODE',
-              clickedNode: node,
+              d: node,
               restart: this.graph.restart.layout,
               textElem: elem.node().parentNode.querySelector('text'),
               clickedElem: elem,
@@ -1420,6 +1425,25 @@
               },
             });
           }
+        });
+
+        this.graph.groupOptions.setDblClickGroup((d, elem) => {
+          d.data.expandText = true;
+          $mousedown.next({
+            type: 'EDITGROUP',
+            d: d,
+            restart: this.graph.restart.layout,
+            textElem: elem.node().parentNode.querySelector('text'),
+            clickedElem: elem,
+            save: (newText) => {
+              this.rootObservable.next({
+                type: GROUPEDIT,
+                prop: 'text',
+                value: newText,
+                id: d.id,
+              });
+            },
+          });
         });
         // Initiate the text edit function - for both nodes and edges
         textEdit($mousedown, () => {
@@ -1772,10 +1796,10 @@
         const groups = savedGraph.groups;
         if (groups) {
           groups.forEach((g) => {
-            this.graph.addToGroup({ id: g.id, data: g.data }, { nodes: g.nodes, groups: g.groups }, true);
+            this.graph.addToGroup({ id: g.id, data: g.data }, g.children, true);
           });
         }
-        this.graph.restart.layout();
+        this.graph.restart.layout().then(() => this.graph.restart.repositionGroupText());
       },
 
       readFile(event) {

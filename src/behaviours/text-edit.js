@@ -23,7 +23,7 @@ require('medium-editor/dist/css/themes/beagle.css');
  */
 export default ($action, startCallback, endCallback) => {
   $action.pipe(
-    filter(action => (action.type === 'EDITNODE' || action.type === 'EDITEDGE')),
+    filter(action => (action.type === 'EDITNODE' || action.type === 'EDITEDGE' || action.type === 'EDITGROUP')),
     map((action) => {
       startCallback && startCallback();
       const fullRestart = action.restart;
@@ -36,10 +36,10 @@ export default ($action, startCallback, endCallback) => {
       // get initial text
       let oldText;
       if (action.type === 'EDITNODE') {
-        oldText = action.clickedNode.shortname ? action.clickedNode.shortname : defaultText;
+        oldText = action.d.shortname ? action.d.shortname : defaultText;
       }
       if (action.type === 'EDITEDGE') {
-        oldText = action.edge.predicate.text ? action.edge.predicate.text : '';
+        oldText = action.d.predicate.text ? action.d.predicate.text : '';
         if (oldText === '') {
           textElem.innerHTML = 'New';
           // manually reposition text so that mediumeditor menu appears in correct position
@@ -47,6 +47,14 @@ export default ($action, startCallback, endCallback) => {
           fOParent.setAttribute('x', fOParent.getAttribute('x') - textElem.offsetWidth / 2);
           fOParent.setAttribute('y', fOParent.getAttribute('y') - textElem.offsetHeight / 2);
         }
+      }
+      if (action.type === 'EDITGROUP') {
+        oldText = action.d.data.text ? action.d.data.text : '';
+        if (oldText === '') {
+          textElem.innerHTML = 'New';
+        }
+        const fOParent = textElem.parentElement.parentElement;
+        fOParent.setAttribute('y', fOParent.getAttribute('y') - textElem.offsetHeight);
       }
 
       // allow mouse interaction with node text
@@ -168,6 +176,13 @@ export default ($action, startCallback, endCallback) => {
           if (action.type === 'EDITEDGE' && unedited) {
             textElem.innerHTML = '';
           }
+          if (action.type === 'EDITGROUP') {
+            action.d.data.expandText = false;
+            if (unedited) {
+              textElem.innerHTML = '';
+            }
+          }
+          textElem.innerHTML = textElem.innerHTML.trim();
           if (!textElem.innerHTML || textElem.innerHTML === '' ||
             textElem.innerHTML.length === 0 || textElem.innerHTML === oldText) {
             textElem.innerHTML = oldText;

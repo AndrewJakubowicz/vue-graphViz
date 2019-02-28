@@ -6,24 +6,45 @@
           v-show="tools[tools.reduce((acc,curr, i) => (curr.action === 'SELECT'? i: acc), -1)].toggled">
         <li :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }"
             v-for="item in selectTools">
-        <span class="icon-alone tooltip" v-if="item.icon.length === 1">
+          <span class="icon-alone tooltip" v-if="item.icon.length === 1">
           <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
-        </span>
+          </span>
           <span class="fa-stack fa-sm tooltip" v-else>
             <i :class="item.icon[0]"></i>
             <i :class="item.icon[1]"></i>
             <span class="screen-reader-text">{{ item.action }}</span>
-        <span class="tooltiptext">{{item.tip}}</span>
-        </span>
+            <span class="tooltiptext">{{item.tip}}</span>
+          </span>
         </li>
       </ul>
     </transition>
+
+    <transition name="slide-fade-right">
+      <ul @mouseenter="mouseEnter()" class="graph-unorderedList" id="graph-shape-tool"
+          :style="{visibility:shapeToolVisibility}">
+        <li :key="item.shape" @click="changeDefaultShape(item.shape)" v-bind:class="{ active: shape===item.shape }"
+            v-for="item in shapes">
+          <span class="icon-alone tooltip">
+            <svg width="16px" height="18px" class="icon-alone">
+              <use style="transform:scale(0.03571);"
+                   :xlink:href="item.icon"></use>
+            </svg>
+          <span class="screen-reader-text">{{ item.shape }}</span>
+          </span>
+        </li>
+      </ul>
+    </transition>
+
     <ul @mouseenter="mouseEnter()" class="graph-unorderedList" id="graph-main-tool">
       <li :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }"
           v-for="item in tools">
-        <span class="icon-alone tooltip" v-if="item.icon.length === 1">
+        <span class="icon-alone tooltip" v-if="item.custom" v-html="item.html">
+          <span class="screen-reader-text">{{ item.action }}</span>
+          <span class="tooltiptext">{{item.tip}}</span>
+        </span>
+        <span class="icon-alone tooltip" v-else-if="item.icon.length === 1">
           <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
@@ -32,7 +53,7 @@
             <i :class="item.icon[0]"></i>
             <i :class="item.icon[1]"></i>
             <span class="screen-reader-text">{{ item.action }}</span>
-        <span class="tooltiptext">{{item.tip}}</span>
+          <span class="tooltiptext">{{item.tip}}</span>
         </span>
       </li>
     </ul>
@@ -41,8 +62,10 @@
 
 
 <script>
+  import fa5Icons from '../assets/fa5-icons.svg';
+
   export default {
-    props: ['mouse'],
+    props: ['mouse', 'shape'],
     name: 'toolBar',
     data() {
       return {
@@ -55,15 +78,18 @@
           },
           {
             action: 'SELECT',
-            icon: ['fw'],
             toggled: false,
-            tip: 'Select Tool (S)'
+            tip: 'Select Tool (S)',
+            custom: true,
+            html: `<svg width="16px" height="18px" class="icon-alone"><use style="transform:scale(0.03571);" xlink:href=.${fa5Icons}#expand></use></svg>`,
           },
           {
             action: 'ADDNOTE',
-            icon: ['plus-square-o'],
+            icon: ['plus-square'],
             toggled: false,
             tip: 'Add Node',
+            custom: true,
+            html: `<svg id="addNodeButton" width="16px" height="18px" class="icon-alone"><use id="addNodeIcon" style="transform:scale(0.03571);" xlink:href=.${fa5Icons}#plus-square-regular></use></svg>`,
           },
           {
             action: 'IMPORTPROB',
@@ -146,6 +172,28 @@
             tip: 'Group',
           },
         ],
+        shapes: [
+          {
+            shape: 'circle',
+            icon: `.${fa5Icons}#circle-solid`,
+            tip: 'Circle',
+          },
+          {
+            shape: 'rect',
+            icon: `.${fa5Icons}#rect-solid`,
+            tip: 'Rectangle',
+          },
+          {
+            shape: 'capsule',
+            icon: `.${fa5Icons}#capsule-solid`,
+            tip: 'Rounded Rectangle',
+          },
+        ],
+        showShapeMenu: false,
+        shapeToolVisibility: 'hidden',
+        addNodeButton: undefined,
+        bb: undefined,
+        bt: undefined,
       };
     },
     methods: {
@@ -153,6 +201,7 @@
         this.$emit('mouseEnter');
       },
       clicked(action) {
+        this.showShapeMenu = false;
         this.$emit('clickedAction', action);
         let newAction = action;
         if (action === 'SAVE'
@@ -180,6 +229,47 @@
           toggled: v.action === newAction,
         }));
       },
+      changeShapeIcon(newVal) {
+        let iconID;
+        switch (newVal) {
+          case 'circle': {
+            iconID = 'plus-circle-solid';
+            break;
+          }
+          case 'rect': {
+            iconID = 'plus-rect-solid';
+            break;
+          }
+          case 'capsule': {
+            iconID = 'plus-capsule-solid';
+            break;
+          }
+          default: {
+            iconID = 'plus-square-regular';
+            break;
+          }
+        }
+        const elem = document.getElementById('addNodeIcon');
+        elem.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `.${fa5Icons}#${iconID}`);
+      },
+      mouseOutShapeCheck(event) {
+        if (event.clientX < this.bb.x - 1.5 * this.bb.width - this.bt.width
+          || event.clientX > this.bb.x + 1.5 * this.bb.width
+          || event.clientY < this.bb.y - 0.5 * this.bt.height
+          || event.clientY > this.bb.y + this.bt.height
+        ) {
+          this.showShapeMenu = false;
+        }
+      },
+      changeDefaultShape(e) {
+        this.$emit('changeDefaultShape', e);
+        this.showShapeMenu = false;
+      },
+      mouseOverShapeIcon(e) {
+        if (!this.showShapeMenu) {
+          this.showShapeMenu = true;
+        }
+      }
     },
     watch: {
       mouse(newVal, oldVal) {
@@ -187,8 +277,30 @@
           ...v,
           toggled: v.action === newVal,
         }));
+      },
+      shape: 'changeShapeIcon',
+      showShapeMenu(displayed) {
+        if (displayed) {
+          this.shapeToolVisibility = 'visible';
+          this.bb = this.addNodeButton.getBoundingClientRect();
+          this.bt = this.shapeTool.getBoundingClientRect();
+          document.addEventListener('mousemove', this.mouseOutShapeCheck);
+        } else {
+          document.removeEventListener('mousemove', this.mouseOutShapeCheck);
+          this.shapeToolVisibility = 'hidden';
 
+        }
       }
+    },
+    mounted() {
+      this.changeShapeIcon(this.shape);
+      this.addNodeButton = document.getElementById('addNodeButton');
+      this.shapeTool = document.getElementById('graph-shape-tool');
+      this.addNodeButton.addEventListener('mouseenter', this.mouseOverShapeIcon);
+    },
+    beforeDestroy() {
+      this.addNodeButton.removeEventListener('mouseenter', this.mouseOverShapeIcon);
+      document.removeEventListener('mousemove', this.mouseOutShapeCheck);
     }
   };
 </script>
@@ -203,7 +315,11 @@
   }
 
   .slide-fade-enter, .slide-fade-leave-to {
-    transform: translate(50px, -70px) scale(1, 0);
+    transform: translate(50px) scale(1, 0);
+  }
+
+  .slide-fade-right-enter, .slide-fade-right-leave-to {
+    transform: translate(50px) scale(1, 0);
   }
 
   .tooltip {
@@ -248,6 +364,12 @@
     top: 16px;
   }
 
+  #graph-shape-tool {
+    right: 47px;
+    top: 70px;
+    display: inline-flex;
+  }
+
   ul {
     margin: 0;
     padding: 0;
@@ -278,12 +400,6 @@
 
   .fa-sm { /* Translates the stacked icons to the same size as the other ones */
     font-size: 0.75em;
-  }
-
-  .fa-fw {
-    width: 0.8em;
-    height: 0.8em;
-    border: dotted .1em;
   }
 
   .fa-stack { /* adjust the gap between the stacked icon and the next */

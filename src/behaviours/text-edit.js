@@ -3,178 +3,201 @@
  * Text edit utility.
  * Deals with the text edit capability of the note nodes.
  */
-const Rx = require('rxjs');
+import {fromEvent, fromEventPattern, concat, merge} from 'rxjs';
+import {
+  map,
+  filter,
+  tap,
+  finalize,
+  take,
+  takeUntil,
+  switchAll,
+} from 'rxjs/operators';
 
-// Modal of the text
-function Text(startingText, node, restart) {
-    let text = [],
-        cursor = true;
-    if (!Array.isArray(startingText)){
-        text.push(startingText);
-    } else {
-        // Make a copy of the array
-        text = JSON.parse(JSON.stringify(startingText));
-    }
-    return {
-        addLetter: (char) => {
-            let lastLine = text.slice(-1);
-            lastLine += char;
-            text[text.length - 1] = lastLine;
-        },
-        newLine: () => {
-            if (text[text.length - 1] === "") {
-                return;
-            }
-            text.push("");
-        },
-        deleteText: () => {
-            /**
-             * Delete a single character of text.
-             * Delete a line if it is empty.
-             */
-            if (text.length > 1){
-                if (text[text.length - 1] === ''){
-                    text = text.slice(0, -1)
-                    return;
-                } else {
-                    text[text.length - 1] = text[text.length - 1].slice(0, -1)
-                    return;
-                }
-            } else {
-                if (text[0] === ""){
-                    return;
-                }
-                text[0] = text[0].slice(0, -1);
-            }
-        },
-        toggleCursor: () => {
-            cursor = !cursor;
-        },
-        getWithCursor: () => {
-            let t = JSON.parse(JSON.stringify(text));
-            if (cursor) {
-                return t;
-            } else {
-                t[t.length - 1] += '|';
-                return t
-            }
-        },
-        getText: () => {
-            return JSON.parse(JSON.stringify(text));
-        }
-    }
-}
+const MediumEditor = require('medium-editor');
+require('medium-editor/dist/css/medium-editor.css');
+require('medium-editor/dist/css/themes/beagle.css');
 
 /**
  * Takes an action observable.
  */
-export default ($action) => {
-    $action
-      .filter(action => {
-        return action.type === 'EDITNODE';
-      })
-      .map(action => {
-        let restart = action.restart;
-        let fullRestart = action.fullRestart;
-        let node = action.clickedNode;
-        let text = Text(node.shortname, node, restart);
-        let previousColor = node.color;
-        node.color = "white";
-        restart();
-        // Exit on "esc" keypress
-        let $exit = Rx.Observable.concat(
-            Rx.Observable.fromEvent(document, "keyup")
-                    .filter(e => e.keyCode == 27)
-        );
+export default ($action, startCallback, endCallback) => {
+  $action.pipe(
+    filter(action => (action.type === 'EDITNODE' || action.type === 'EDITEDGE' || action.type === 'EDITGROUP')),
+    map((action) => {
+      startCallback && startCallback();
+      const fullRestart = action.restart;
+      const restart = () => action.restart(undefined, true);
+      const save = action.save;
+      const textElem = action.textElem;
+      const defaultText = 'New';
+      let unedited = true;
 
-        // Backspace
-        let $backspace = Rx.Observable.fromEvent(document, "keydown")
-            .filter(e => e.keyCode === 8 && e.keyCode !== 13)
-            .do(_ => text.deleteText())
-            .do(fullRestart);
-        
-        // Letters
-        let $letters = Rx.Observable.fromEvent(document, "keypress")
-            .filter(e => e.keyCode !== 8 && e.keyCode !== 13)
-            .do((e) => {
-                if ((e.keyCode || e.which) === 32){
-                    e.preventDefault();
-                }
-                let event = e || window.event;
-                let char = String.fromCharCode(e.keyCode || e.which)
-                text.addLetter(char);
-            })
-            .do(fullRestart);
-
-        let $newLine = Rx.Observable.fromEvent(document, "keypress")
-            .filter(e => e.keyCode === 13)
-            .do(e => {
-                // Prevent stacking newlines. (Not supported)
-                if (node.shortname.slice(-1) === ""){
-                    return;
-                }
-                text.newLine();
-            })
-            .do(fullRestart)
-        
-        let $interval = Rx.Observable
-            .interval(500 /* ms */)
-            .timeInterval()
-            .do(_ => {
-                text.toggleCursor();
-            })
-        
-        // Return the typing observables merged together.
-        let $typingControls = Rx.Observable.merge(
-                $backspace,
-                $letters,
-                $newLine,
-                $interval
-            )
-            .do(_ => {
-                node.shortname = text.getWithCursor();
-                restart();
-            })
-            .takeUntil($exit)
-            .finally(_ => {
-                node.color = previousColor;
-                node.shortname = text.getText();
-                fullRestart();
-            })
-        return $typingControls
-    })
-    .switch()
-    .subscribe(
-        console.log,
-        console.error,
-        () => console.log("FINISH")
-    )
-}
-
-
-function deleteText(nodeText){
-    /**
-     * Delete a single character of text.
-     * Delete a line if it is empty.
-     */
-    if (nodeText.length > 1){
-        if (nodeText[nodeText.length - 1] === ''){
-            node.shortname = nodeText.slice(0, -1)
-            return;
-        } else {
-            nodeText[nodeText.length - 1] = nodeText[nodeText.length - 1].slice(0, -1)
-            return;
+      // get initial text
+      let oldText;
+      if (action.type === 'EDITNODE') {
+        oldText = action.d.shortname ? action.d.shortname : defaultText;
+      }
+      if (action.type === 'EDITEDGE') {
+        oldText = action.d.predicate.text ? action.d.predicate.text : '';
+        if (oldText === '') {
+          textElem.innerHTML = 'New';
+          // manually reposition text so that mediumeditor menu appears in correct position
+          const fOParent = textElem.parentElement.parentElement;
+          fOParent.setAttribute('x', fOParent.getAttribute('x') - textElem.offsetWidth / 2);
+          fOParent.setAttribute('y', fOParent.getAttribute('y') - textElem.offsetHeight / 2);
         }
-    } else {
-        if (nodeText[0] === ""){
-            return
+      }
+      if (action.type === 'EDITGROUP') {
+        oldText = action.d.data.text ? action.d.data.text : '';
+        if (oldText === '') {
+          textElem.innerHTML = 'New';
         }
-        nodeText[0] = nodeText[0].slice(0, -1)
-    }
-}
+        const fOParent = textElem.parentElement.parentElement;
+        fOParent.setAttribute('y', fOParent.getAttribute('y') - textElem.offsetHeight);
+      }
 
-function addLetter(text, character){
-    let lastLine = text.slice(-1);
-    lastLine += character;
-    text[text.length - 1] = lastLine;
-}
+      // allow mouse interaction with node text
+      textElem.style.pointerEvents = 'visiblePainted';
+      // allow selection of text
+      textElem.classList.add('allowSelection');
+
+      // start rich text editor
+      const mediumEditorConfig = {
+        buttonLabels: 'fontawesome',
+        disableDoubleReturn: true,
+        toolbar: {
+          buttons: ['bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter'],
+          diffTop: 0,
+        },
+        paste: {
+          forcePlainText: false,
+          cleanPastedHTML: false,
+        },
+        placeholder: false,
+      };
+      const editor = new MediumEditor(textElem, mediumEditorConfig);
+
+      // select text if New else move caret to end
+      if (window.getSelection) {
+        const range = document.createRange();
+        range.selectNodeContents(textElem);
+        if (textElem.innerHTML !== defaultText) {
+          range.collapse(false);
+        }
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else if (document.body.createTextRange) { // IE compatability
+        const textRange = document.body.createTextRange();
+        textRange.moveToElementText(textElem);
+        if (textElem.innerHTML !== defaultText) {
+          textRange.collapse(false);
+        }
+        textRange.select();
+      }
+
+      textElem.focus(); // focus on text box
+      restart();
+
+      // Input handling
+      const $input = fromEventPattern(
+        handler => editor.subscribe('editableInput', handler),
+        handler => editor.unsubscribe('editableInput', handler),
+      );
+      // correct behaviour on paste
+      const $paste = fromEvent(textElem, 'paste').pipe(
+        tap((e) => {
+          e.preventDefault();
+          const HTMLText = e.clipboardData.getData('text/html').replace(/[\n\r]+/g, '\n');
+          const plaintext = e.clipboardData.getData('text/plain');
+          editor.cleanPaste(HTMLText || plaintext);
+        })
+      );
+
+      // Exit Handling
+      // On "esc" keypress cancel changes
+      const $esc = concat(
+        fromEvent(document, 'keyup').pipe(
+          filter(e => e.keyCode === 27),
+          tap(() => {
+            textElem.innerHTML = oldText;
+          }),
+        ));
+      // On mouseclick
+      const $mouseClick = concat(
+        fromEvent(document, 'click').pipe(
+          filter(e => e.target !== textElem),
+          map(e => ({ e, descendants: Array.from(textElem.querySelectorAll('*')) })),
+          filter(({ e, descendants }) => !descendants.includes(e.target)),
+        ));
+      // Exit on focus lost
+      const $editorBlur = fromEventPattern(
+        handler => editor.subscribe('blur', handler),
+        handler => editor.unsubscribe('blur', handler),
+      );
+      const $windowBlur = fromEvent(window, 'blur');
+      // on exit
+      const $exit = merge(
+        $esc,
+        $mouseClick,
+        $windowBlur,
+        $editorBlur,
+      ).pipe(tap(() => {
+        // remove selection
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        } else if (document.selection) {
+          document.selection.empty();
+        }
+        // remove focus
+        document.activeElement.blur();
+        // remove text selection
+        textElem.classList.remove('allowSelection');
+        // remove pointer events
+        textElem.style.pointerEvents = 'none';
+      }));
+
+      // watch to see if text gets edited.
+      $input.pipe(
+        takeUntil($exit),
+        take(1),
+      ).subscribe(() => {
+        unedited = false;
+      });
+
+      // Return the typing observable.
+      return merge($paste, $input).pipe(
+        tap(restart),
+        takeUntil($exit),
+        finalize(() => {
+          editor.destroy();
+          // if text is unedited, reset edge text to blank
+          if (action.type === 'EDITEDGE' && unedited) {
+            textElem.innerHTML = '';
+          }
+          if (action.type === 'EDITGROUP') {
+            action.d.data.expandText = false;
+            if (unedited) {
+              textElem.innerHTML = '';
+            }
+          }
+          textElem.innerHTML = textElem.innerHTML.trim();
+          if (!textElem.innerHTML || textElem.innerHTML === '' ||
+            textElem.innerHTML.length === 0 || textElem.innerHTML === oldText) {
+            textElem.innerHTML = oldText;
+            fullRestart();
+          } else {
+            save && save(textElem.innerHTML.replace(/^<p>|<\/p>$/g, ''));
+          }
+          endCallback && endCallback();
+        }),
+      );
+    }),
+    switchAll(),
+  ).subscribe(
+    () => undefined,
+    console.error,
+    () => console.log('FINISH'),
+  );
+};

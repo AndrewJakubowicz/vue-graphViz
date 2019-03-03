@@ -81,7 +81,7 @@
             toggled: false,
             tip: 'Select Tool (S)',
             custom: true,
-            html: `<svg width="16px" height="18px" class="icon-alone"><use style="transform:scale(0.03571);" xlink:href=.${fa5Icons}#expand></use></svg>`,
+            html: `<svg width="16px" height="18px" class="icon-alone"><use style="transform:scale(0.03571);" xlink:href=${fa5Icons}#expand></use></svg>`,
           },
           {
             action: 'ADDNOTE',
@@ -89,7 +89,7 @@
             toggled: false,
             tip: 'Add Node',
             custom: true,
-            html: `<svg id="addNodeButton" width="16px" height="18px" class="icon-alone"><use id="addNodeIcon" style="transform:scale(0.03571);" xlink:href=.${fa5Icons}#plus-square-regular></use></svg>`,
+            html: `<svg id="addNodeButton" width="16px" height="18px" class="icon-alone"><use id="addNodeIcon" style="transform:scale(0.03571);" xlink:href=${fa5Icons}#plus-square-regular></use></svg>`,
           },
           {
             action: 'IMPORTPROB',
@@ -175,17 +175,17 @@
         shapes: [
           {
             shape: 'circle',
-            icon: `.${fa5Icons}#circle-solid`,
+            icon: `${fa5Icons}#circle-solid`,
             tip: 'Circle',
           },
           {
             shape: 'rect',
-            icon: `.${fa5Icons}#rect-solid`,
+            icon: `${fa5Icons}#rect-solid`,
             tip: 'Rectangle',
           },
           {
             shape: 'capsule',
-            icon: `.${fa5Icons}#capsule-solid`,
+            icon: `${fa5Icons}#capsule-solid`,
             tip: 'Rounded Rectangle',
           },
         ],

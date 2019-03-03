@@ -47343,14 +47343,14 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
         toggled: false,
         tip: 'Select Tool (S)',
         custom: true,
-        html: '<svg width="16px" height="18px" class="icon-alone"><use style="transform:scale(0.03571);" xlink:href=.' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#expand></use></svg>'
+        html: '<svg width="16px" height="18px" class="icon-alone"><use style="transform:scale(0.03571);" xlink:href=' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#expand></use></svg>'
       }, {
         action: 'ADDNOTE',
         icon: ['plus-square'],
         toggled: false,
         tip: 'Add Node',
         custom: true,
-        html: '<svg id="addNodeButton" width="16px" height="18px" class="icon-alone"><use id="addNodeIcon" style="transform:scale(0.03571);" xlink:href=.' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#plus-square-regular></use></svg>'
+        html: '<svg id="addNodeButton" width="16px" height="18px" class="icon-alone"><use id="addNodeIcon" style="transform:scale(0.03571);" xlink:href=' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#plus-square-regular></use></svg>'
       }, {
         action: 'IMPORTPROB',
         icon: ['fas fa-percent'],
@@ -47415,15 +47415,15 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
       }],
       shapes: [{
         shape: 'circle',
-        icon: '.' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#circle-solid',
+        icon: __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#circle-solid',
         tip: 'Circle'
       }, {
         shape: 'rect',
-        icon: '.' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#rect-solid',
+        icon: __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#rect-solid',
         tip: 'Rectangle'
       }, {
         shape: 'capsule',
-        icon: '.' + __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#capsule-solid',
+        icon: __WEBPACK_IMPORTED_MODULE_1__assets_fa5_icons_svg___default.a + '#capsule-solid',
         tip: 'Rounded Rectangle'
       }],
       showShapeMenu: false,

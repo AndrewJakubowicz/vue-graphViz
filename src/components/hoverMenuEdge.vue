@@ -10,17 +10,18 @@
     </div>
 
     <!-- Change arrow menu -->
+    <!-- 0 - None, 1 - Right, -1 - Left, 2 - Bidirectional -->
     <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 64}px`}" v-show="arrowsToggle">
-      <i class="fa fa-arrows-h custom-icon" @click="interact('ARROW', $event, 'B')"></i>
+      <i class="fa fa-arrows-h custom-icon" @click="interact('ARROW', $event, 2)"></i>
     </div>
     <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 40}px`}" v-show="arrowsToggle">
-      <i class="fa fa-long-arrow-left custom-icon" @click="interact('ARROW', $event, 'L')"></i>
+      <i class="fa fa-long-arrow-left custom-icon" @click="interact('ARROW', $event, -1)"></i>
     </div>
     <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 16}px`}" v-show="arrowsToggle">
-      <i class="fa fa-long-arrow-right custom-icon" @click="interact('ARROW', $event, 'R')"></i>
+      <i class="fa fa-long-arrow-right custom-icon" @click="interact('ARROW', $event, 1)"></i>
     </div>
     <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 + 8}px`}" v-show="arrowsToggle">
-      <i class="fa fa-minus custom-icon" @click="interact('ARROW', $event, 'N')"></i>
+      <i class="fa fa-minus custom-icon" @click="interact('ARROW', $event, 0)"></i>
     </div>
 
     <!--BOTTOM ICONS-->

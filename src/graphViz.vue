@@ -884,9 +884,39 @@
                       id: idArray,
                       value: values,
                     });
+                    this.graph.restart.styles();
                     break;
                   }
-
+                  case WEIGHT: {
+                    oldValues = predicates.map(p => p.strokeWidth);
+                    this.graph.editEdge({
+                      property: 'weight',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case DASH: {
+                    oldValues = predicates.map(p => p.strokeDasharray);
+                    this.graph.editEdge({
+                      property: 'dash',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case COLOR: {
+                    oldValues = predicates.map(p => p.stroke);
+                    this.graph.editEdge({
+                      property: 'color',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
                   default : {
                     console.log('Unknown property:', action.prop);
                   }
@@ -1371,7 +1401,7 @@
           },
 
           edgeArrowhead: (predicate) => {
-            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 'R') : 'R';
+            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 1) : 1;
           },
 
           edgeStroke: (predicate) => {
@@ -2259,7 +2289,7 @@
                       rightID: objOfNodes[key].id,
                       gap: 170,
                     },
-                    arrowhead: 'R',
+                    arrowhead: 1,
                     stroke: "#000000",
                     strokeWidth: 2,
                     strokeDasharray: 0,

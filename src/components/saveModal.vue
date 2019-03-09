@@ -91,10 +91,17 @@
         const svg = this.svgData.cloneNode(true);
         const desc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
         desc.setAttribute('id', 'graphJSONData');
-        desc.innerHTML = this.graphData;
         svg.appendChild(desc);
         // save as file
-        const svgString = new XMLSerializer().serializeToString(svg);
+        let svgString = new XMLSerializer().serializeToString(svg);
+        // insert JSON data after serialisation using regex. Inserting before may cause HTML inside JSON  to be parsed by XMLSerializer.
+        const re = new RegExp('<desc id="graphJSONData"\/>');
+        if (re.test(svgString)) {
+          const dataString = `<desc id="graphJSONData">${this.graphData}</desc>`;
+          svgString = svgString.replace(re, dataString);
+        } else {
+          console.warn('Error occured whilst saving. Could not find desc.');
+        }
         const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
         saveAs(svgBlob, `${this.filename}.svg`);
         this.exit();

@@ -2032,11 +2032,10 @@
         if (file.type === 'image/svg+xml') {
           const reader = new FileReader();
           reader.onload = () => {
-            const parser = new DOMParser();
-            const svg = parser.parseFromString(reader.result, 'text/xml');
-            const desc = svg.querySelector('#graphJSONData');
-            if (desc && desc.innerHTML) {
-              const graphData = JSON.parse(desc.innerHTML);
+            // Find using regex, to prevent HTML inside JSON being parsed
+            const re = new RegExp('<desc id="graphJSONData">(.*)</desc>');
+            if (reader.result.match(re).length > 1) {
+              const graphData = JSON.parse(reader.result.match(re)[1]);
               graphData.textNodes.forEach(x => this.textNodes.push(x));
               this.clearScreen().then(() => {
                 this.rootObservable.next({ type: CLEARHISTORY });
@@ -2352,6 +2351,7 @@
             this.changeMouseState(POINTER);
             const fileInput = document.createElement('input');
             fileInput.setAttribute('type', 'file');
+            fileInput.setAttribute('accept', '.svg');
             fileInput.click();
             fileInput.onchange = (e) => {
               this.readFile(e);

@@ -1342,7 +1342,7 @@
           },
 
           mouseOverGroup: (group, selection, e) => {
-            if (!this.hoverDisplay) {
+            if (!this.hoverDisplay && !this.hoverEdgeDisplay) {
               this.hoverQueue$.next(() => this.createHoverMenu(group, selection, e));
             } else {
               this.hoverAwait = [group, selection, e];
@@ -1354,7 +1354,6 @@
           },
 
           mouseOverNode: (node, selection, e) => {
-            this.closeEdgeHoverMenu();
             this.hoverQueue$.next(() => this.createHoverMenu(node, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1386,7 +1385,6 @@
           },
 
           mouseOverEdge: (edge, selection, e) => {
-            this.closeHoverMenu();
             this.hoverQueue$.next(() => this.createEdgeHoverMenu(edge, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1401,7 +1399,7 @@
           },
 
           edgeArrowhead: (predicate) => {
-            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 1) : 1;
+            return (predicate && typeof predicate.arrowhead === 'number') ? predicate.arrowhead : 1;
           },
 
           edgeStroke: (predicate) => {
@@ -1877,7 +1875,7 @@
         this.hoverEdgePos = undefined;
         this.hoverEdgeData = undefined;
         if (this.hoverAwait) {
-          this.createEdgeHoverMenu(...this.hoverAwait);
+          this.createHoverMenu(...this.hoverAwait);
           this.hoverAwait = false;
         }
       },
@@ -1935,7 +1933,7 @@
         this.rootObservable.next({
           type: EDGEEDIT,
           prop: ARROW,
-          value: edges.map(_ => payload),
+          value: payload,
           hash: edges.map(edge => edge.predicate.hash),
         });
       },
@@ -2289,7 +2287,7 @@
                       gap: 170,
                     },
                     arrowhead: 1,
-                    stroke: "#000000",
+                    stroke: '#000000',
                     strokeWidth: 2,
                     strokeDasharray: 0,
                   },

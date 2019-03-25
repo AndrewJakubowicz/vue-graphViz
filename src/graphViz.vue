@@ -884,9 +884,39 @@
                       id: idArray,
                       value: values,
                     });
+                    this.graph.restart.styles();
                     break;
                   }
-
+                  case WEIGHT: {
+                    oldValues = predicates.map(p => p.strokeWidth);
+                    this.graph.editEdge({
+                      property: 'weight',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case DASH: {
+                    oldValues = predicates.map(p => p.strokeDasharray);
+                    this.graph.editEdge({
+                      property: 'dash',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case COLOR: {
+                    oldValues = predicates.map(p => p.stroke);
+                    this.graph.editEdge({
+                      property: 'color',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
                   default : {
                     console.log('Unknown property:', action.prop);
                   }
@@ -1312,7 +1342,7 @@
           },
 
           mouseOverGroup: (group, selection, e) => {
-            if (!this.hoverDisplay) {
+            if (!this.hoverDisplay && !this.hoverEdgeDisplay) {
               this.hoverQueue$.next(() => this.createHoverMenu(group, selection, e));
             } else {
               this.hoverAwait = [group, selection, e];
@@ -1324,7 +1354,6 @@
           },
 
           mouseOverNode: (node, selection, e) => {
-            this.closeEdgeHoverMenu();
             this.hoverQueue$.next(() => this.createHoverMenu(node, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1356,7 +1385,6 @@
           },
 
           mouseOverEdge: (edge, selection, e) => {
-            this.closeHoverMenu();
             this.hoverQueue$.next(() => this.createEdgeHoverMenu(edge, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1371,7 +1399,7 @@
           },
 
           edgeArrowhead: (predicate) => {
-            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 'R') : 'R';
+            return (predicate && typeof predicate.arrowhead === 'number') ? predicate.arrowhead : 1;
           },
 
           edgeStroke: (predicate) => {
@@ -1847,7 +1875,7 @@
         this.hoverEdgePos = undefined;
         this.hoverEdgeData = undefined;
         if (this.hoverAwait) {
-          this.createEdgeHoverMenu(...this.hoverAwait);
+          this.createHoverMenu(...this.hoverAwait);
           this.hoverAwait = false;
         }
       },
@@ -1905,7 +1933,7 @@
         this.rootObservable.next({
           type: EDGEEDIT,
           prop: ARROW,
-          value: edges.map(_ => payload),
+          value: payload,
           hash: edges.map(edge => edge.predicate.hash),
         });
       },
@@ -2002,11 +2030,10 @@
         if (file.type === 'image/svg+xml') {
           const reader = new FileReader();
           reader.onload = () => {
-            const parser = new DOMParser();
-            const svg = parser.parseFromString(reader.result, 'text/xml');
-            const desc = svg.querySelector('#graphJSONData');
-            if (desc && desc.innerHTML) {
-              const graphData = JSON.parse(desc.innerHTML);
+            // Find using regex, to prevent HTML inside JSON being parsed
+            const re = new RegExp('<desc id="graphJSONData">(.*)</desc>');
+            if (reader.result.match(re).length > 1) {
+              const graphData = JSON.parse(reader.result.match(re)[1]);
               graphData.textNodes.forEach(x => this.textNodes.push(x));
               this.clearScreen().then(() => {
                 this.rootObservable.next({ type: CLEARHISTORY });
@@ -2259,8 +2286,8 @@
                       rightID: objOfNodes[key].id,
                       gap: 170,
                     },
-                    arrowhead: 'R',
-                    stroke: "#000000",
+                    arrowhead: 1,
+                    stroke: '#000000',
                     strokeWidth: 2,
                     strokeDasharray: 0,
                   },
@@ -2322,6 +2349,7 @@
             this.changeMouseState(POINTER);
             const fileInput = document.createElement('input');
             fileInput.setAttribute('type', 'file');
+            fileInput.setAttribute('accept', '.svg');
             fileInput.click();
             fileInput.onchange = (e) => {
               this.readFile(e);

@@ -250,7 +250,7 @@
           }
         }
         const elem = document.getElementById('addNodeIcon');
-        elem.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `.${fa5Icons}#${iconID}`);
+        elem.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `${fa5Icons}#${iconID}`);
       },
       mouseOutShapeCheck(event) {
         if (event.clientX < this.bb.x - 1.5 * this.bb.width - this.bt.width

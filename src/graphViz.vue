@@ -10,6 +10,7 @@
                      :shape="hoverShape"
                      :data="hoverData"
                      :type="hoverType"
+                     :show-text-bar="hoverTextBar"
                      @exitHover="closeHoverMenu($event)"
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
@@ -163,6 +164,8 @@
         hoverEdgeColor: undefined,
         hoverEdgeData: undefined,
         hoverEdgeType: undefined,
+        hoverTextBar: false,
+        viewedGroupText: undefined,
         colors: {
           hex: '#FFFFFF',
         },
@@ -195,10 +198,10 @@
 
       this.hoverQueue$ = new Subject().pipe(
         takeUntil(this.destroy$),
-        debounceTime(100)
+        debounceTime(100),
       );
 
-      this.hoverQueue$.subscribe(callback => {
+      this.hoverQueue$.subscribe((callback) => {
         if (callback && typeof (callback) === 'function') {
           callback();
         }
@@ -284,14 +287,14 @@
           x: -Infinity,
           X: Infinity,
           y: -Infinity,
-          Y: Infinity
+          Y: Infinity,
         });
         if (this.mouseState !== SELECT) {
           this.changeMouseState(SELECT);
         }
         this.activeSelect.select(newSelect.nodes);
         this.activeSelect.select(newSelect.edges);
-        this.graph.restart.styles();
+        this.graph.restart.highlight();
       });
 
       // keyboard shortcuts to switch mouse tool
@@ -1095,7 +1098,7 @@
           .append('g')
           .attr('transform', `translate(0,0),scale(${scale})`);
 
-        //get nodes to be changed
+        // get nodes to be changed
         let nodes = [];
         if (this.mouseState === SELECT) {
           nodes = [...this.activeSelect.nodes.values()];
@@ -1322,7 +1325,7 @@
           },
 
           clickAway: () => {
-            this.closeHoverMenu();
+            // this.closeHoverMenu();
           },
 
           zoomScale: (scale) => {
@@ -1345,7 +1348,16 @@
             if (!this.hoverDisplay && !this.hoverEdgeDisplay) {
               this.hoverQueue$.next(() => this.createHoverMenu(group, selection, e));
             } else {
-              this.hoverAwait = [group, selection, e];
+              // if hover menu currently on group, dont add duplicate group to queue
+              let currentMenuTarget;
+              try {
+                currentMenuTarget = this.hoverData.data.id;
+              } catch (error) {
+                currentMenuTarget = undefined;
+              }
+              if (currentMenuTarget !== group.id) {
+                this.hoverAwait = [group, selection, e];
+              }
             }
           },
 
@@ -1434,7 +1446,7 @@
                 this.changeMouseState(SELECT);
               }
               this.activeSelect.selectExclusive(d);
-              this.graph.restart.styles();
+              this.graph.restart.highlight();
             }
           }
         };
@@ -1477,7 +1489,7 @@
               this.changeMouseState(SELECT);
             }
             this.activeSelect.selectExclusive(edge);
-            this.graph.restart.styles();
+            this.graph.restart.highlight();
           }
         });
 
@@ -1488,7 +1500,7 @@
               this.changeMouseState(SELECT);
             }
             this.activeSelect.selectExclusive(node);
-            this.graph.restart.styles();
+            this.graph.restart.highlight();
           }
         });
 
@@ -1516,32 +1528,38 @@
         });
 
         this.graph.groupOptions.setDblClickGroup((d, elem) => {
-          d.data.expandText = true;
-          $mousedown.next({
-            type: 'EDITGROUP',
-            d: d,
-            restart: this.graph.restart.layout,
-            textElem: elem.node().parentNode.querySelector('text'),
-            clickedElem: elem,
-            save: (newText) => {
-              this.rootObservable.next({
-                type: GROUPEDIT,
-                prop: 'text',
-                value: newText,
-                id: d.id,
-              });
-            },
-          });
+          this.showGroupTextPreview(d);
+          // TODO working fix for DOM updates being behind. Better alternative?? use for edge text.
+          setTimeout(() => {
+            $mousedown.next({
+              type: 'EDITGROUP',
+              d,
+              restart: this.graph.restart.layout,
+              textElem: elem.node().parentNode.querySelector('text'),
+              clickedElem: elem,
+              save: (newText) => {
+                this.rootObservable.next({
+                  type: GROUPEDIT,
+                  prop: 'text',
+                  value: newText,
+                  id: d.id,
+                });
+              },
+            });
+          }, 0);
         });
         // Initiate the text edit function - for both nodes and edges
-        textEdit($mousedown, () => {
+        const textEditStartCallback = () => {
           this.canKeyboardUndo = false;
           // this.closeHoverMenu();
           this.mouseState = TEXTEDIT;
-        }, () => {
+        };
+        const textEditEndCallback = () => {
           this.canKeyboardUndo = true;
           this.changeMouseState(POINTER);
-        });
+          this.hideGroupTextPreview();
+        };
+        textEdit($mousedown, textEditStartCallback, textEditEndCallback);
 
         // set clickedgraphviz to true first time user clicks
         const svgElem = this.graph.getSVGElement().node();
@@ -1567,6 +1585,24 @@
           color: backgroundColor,
           ...nodeProtocolObject,
         };
+      },
+
+      showGroupTextPreview(d) {
+        if (!d.data.text || d.data.text === '') {
+          this.hoverTextBar = false;
+          this.viewedGroupText = d;
+          return this.graph.groupTextPreview(true, d.id, 'New');
+        }
+        // TODO fix this, maybe use async
+        return Promise.resolve();
+      },
+
+      hideGroupTextPreview() {
+        const d = this.viewedGroupText;
+        if (d && (!d.data.text || d.data.text === '')) {
+          this.graph.groupTextPreview(false, this.viewedGroupText.id);
+          this.viewedGroupText = undefined;
+        }
       },
 
       addNodes() {
@@ -1743,7 +1779,7 @@
         });
       },
 
-      createHoverMenu(d, selection, e) {
+      createHoverMenu(d, selection) {
         this.dbClickCreateNode = false;
         const elem = selection.node();
         const pos = elem.getBoundingClientRect();
@@ -1755,6 +1791,8 @@
         this.hoverType = d.id.slice(0, 4);
         this.hoverData = { data: d, el: selection };
         this.hoverEdgeDisplay = false;
+        this.hoverTextBar = d.id.slice(0, 4) === 'grup' && this.mouseState !== TEXTEDIT
+                            && (!d.data.text || d.data.text === '');
       },
 
       updateHoverMenu() {
@@ -1768,7 +1806,7 @@
         }
       },
 
-      closeHoverMenu(event) {
+      closeHoverMenu() {
         if (!this.ifColorPickerOpen) {
           this.dbClickCreateNode = true;
         }
@@ -1778,6 +1816,9 @@
         if (this.hoverAwait) {
           this.createHoverMenu(...this.hoverAwait);
           this.hoverAwait = false;
+        }
+        if (this.mouseState !== TEXTEDIT) {
+          this.hideGroupTextPreview();
         }
       },
 
@@ -1852,11 +1893,15 @@
             this.defaultShape = payload;
             break;
           }
+
+          case TEXT: {
+            this.showGroupTextPreview(target);
+            break;
+          }
           default: {
             console.warn('Unrecognised event ', event.type, ' on ', event.data);
           }
         }
-
       },
 
       createEdgeHoverMenu(d, selection, e) {
@@ -2492,7 +2537,7 @@
                   this.activeSelect.select(oldSelect);
                   this.activeSelect.deselect(currentSelect);
                 }
-                this.graph.restart.styles();
+                this.graph.restart.highlight();
               });
             });
 

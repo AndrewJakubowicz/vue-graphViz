@@ -10,6 +10,18 @@
     <!--:style="hoverRectPos"></rect>-->
     <!--</svg>-->
 
+    <!--TOP ICONS-->
+    <div class="icon-position h-center-align" :style="{bottom:`${posPad.height/2-15}px`}"
+         v-show="type==='grup' && showTextBar">
+      <div class="rectangle" :style="{width: `${posPad.width/3*2}px`}" @mouseenter="interact('TEXT', $event)">
+        <div class="circle-wrapper">
+          <div class="circle"></div>
+          <div class="circle"></div>
+          <div class="circle"></div>
+        </div>
+      </div>
+    </div>
+
     <!--BOTTOM ICONS-->
     <div class="icon-position h-center-align hand" :style="{top: `${posPad.height/2}px`}" style="width: 60px">
       <div class="icon-wrapper menu-color hand">
@@ -97,39 +109,45 @@
     props: {
       pad: {
         type: Number,
-        default: function () {
+        default() {
           return 0;
-        }
+        },
       },
       display: {
         type: Boolean,
-        default: function () {
+        default() {
           return false;
-        }
+        },
       },
       position: {
         type: Object,
-        default: function () {
+        default() {
           return { x: 0, y: 0, width: 0, height: 0 };
-        }
+        },
       },
       color: {
         type: String,
-        default: function () {
+        default() {
           return '#575959';
         },
       },
       fixed: {
         type: Boolean,
-        default: function () {
+        default() {
           return false;
+        },
+      },
+      showTextBar: {
+        type: Boolean,
+        default() {
+          return undefined;
         },
       },
       data: {},
       shape: {},
       type: {
         type: String,
-        default: function () {
+        default() {
           return 'note';
         },
       },
@@ -141,7 +159,7 @@
       };
     },
     computed: {
-      posPad: function () {
+      posPad() {
         const posPad = { ...this.position };
         posPad.width += this.pad;
         posPad.height += this.pad;
@@ -149,10 +167,10 @@
         posPad.y -= this.pad / 2;
         return posPad;
       },
-      pinned: function () {
+      pinned() {
         return this.fixed ? 'pinned' : 'unpinned';
       },
-      mouseLimit: function () {
+      mouseLimit() {
         const yMargin = 80;
         if (this.shapesToggle) {
           const xMargin = 115;
@@ -162,15 +180,14 @@
             X: this.position.x + this.position.width + xMargin / 2,
             Y: this.position.y + this.position.height + yMargin / 2,
           };
-        } else {
-          const xMargin = 85;
-          return {
-            x: this.position.x - xMargin / 2,
-            y: this.position.y - yMargin / 2,
-            X: this.position.x + this.position.width + xMargin / 2,
-            Y: this.position.y + this.position.height + yMargin / 2,
-          };
         }
+        const xMargin = 85;
+        return {
+          x: this.position.x - xMargin / 2,
+          y: this.position.y - yMargin / 2,
+          X: this.position.x + this.position.width + xMargin / 2,
+          Y: this.position.y + this.position.height + yMargin / 2,
+        };
       },
       // hoverBackPos: function () {
       //   if (this.shapesToggle) {
@@ -235,7 +252,7 @@
         this.$emit('exitHover', payload);
       },
       interact(message, event, payload) {
-        this.$emit('clickedButton', { type: message, data: this.data, e: event, payload: payload });
+        this.$emit('clickedButton', { type: message, data: this.data, e: event, payload });
         if (message === 'DELETE' || message === 'SHAPE') {
           this.exit(event);
         }
@@ -253,8 +270,8 @@
           clearTimeout(this.timerId);
           this.timerId = false;
         }
-      }
-    }
+      },
+    },
   };
 </script>
 
@@ -357,6 +374,30 @@
 
   .custom-icon:hover {
     background: #B6EFEF;
+  }
+
+  .rectangle {
+    background: #E9FAFA;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    height: 5px;
+  }
+
+  .circle {
+    height: 3px;
+    width: 4px;
+    background-color: #555;
+    border-radius: 50%;
+    float: left;
+    margin-left: 5px;
+    margin-top: 1px;
+  }
+
+  .circle-wrapper {
+    position: relative;
+    left: calc(50% - 15px);
   }
 
 </style>

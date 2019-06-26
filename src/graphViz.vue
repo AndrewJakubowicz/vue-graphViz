@@ -1559,12 +1559,12 @@
       },
 
       toNode(nodeProtocolObject) {
-        const className = `.${nodeProtocolObject.class}`;
-        const backgroundColor = $(className).css('backgroundColor');
+        // const className = `.${nodeProtocolObject.class}`;
+        // const backgroundColor = $(className).css('backgroundColor');
         return {
           hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
           shortname: nodeProtocolObject.text,
-          color: backgroundColor,
+          // color: backgroundColor,
           ...nodeProtocolObject,
         };
       },

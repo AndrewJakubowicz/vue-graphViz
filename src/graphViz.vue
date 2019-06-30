@@ -1,7 +1,5 @@
 <template>
   <div id="graph-viz">
-<!--    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css"/>-->
-
     <hover-menu-node :position="hoverPos"
                      :pad="10"
                      :color="hoverColor"

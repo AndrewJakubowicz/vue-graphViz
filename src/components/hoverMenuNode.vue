@@ -4,7 +4,7 @@
        v-show="display">
 
     <!--SVG to detect mouse leave-->
-    <!--Usefull to debug mouse limit size-->
+    <!--Useful to debug mouse limit size-->
     <!--<svg id="hover-back" :style="hoverBackPos">-->
     <!--<rect id="hover-rect" rx="50" ry="40" width="0" height="0"-->
     <!--:style="hoverRectPos"></rect>-->
@@ -13,20 +13,20 @@
     <!--BOTTOM ICONS-->
     <div class="icon-position h-center-align hand" :style="{top: `${posPad.height/2}px`}" style="width: 60px">
       <div class="icon-wrapper menu-color hand">
-        <i class="fa fa-paint-brush" id="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></i>
+        <fa-icon icon="paint-brush" class="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></fa-icon>
       </div>
       <div class="icon-wrapper hand">
-        <i class="fa fa-trash-o custom-icon" @click="interact('DELETE', $event)"></i>
+        <fa-icon :icon="['far', 'trash-alt']" class="custom-icon" @click="interact('DELETE', $event)"></fa-icon>
       </div>
     </div>
 
     <!--RIGHT ICONS-->
     <div class="icon-position v-center-align hand" :style="{left: `${posPad.width/2}px`}" v-show="type==='note'">
       <div class="icon-wrapper">
-        <i class="fa fa-arrow-right custom-icon" @mousedown="interact('CREATEEDGE', $event)"></i>
+        <fa-icon icon="arrow-right" class="custom-icon" @mousedown="interact('CREATEEDGE', $event)"></fa-icon>
       </div>
       <div class="icon-wrapper">
-        <i class="fa fa-thumb-tack" :class="pinned" @click="interact('PIN', $event)"></i>
+        <fa-icon icon="thumbtack" :class="pinned" @click="interact('PIN', $event)"></fa-icon>
       </div>
     </div>
 
@@ -58,16 +58,7 @@
         </svg>
       </div>
       <div class="icon-wrapper">
-        <svg class="custom-icon" viewBox="0 0 512 512" @mouseenter="timerStart" @mouseleave="timerCancel"
-             style="padding: 3px; width: 22px; height: 22px;">
-          <!--
-            Icon By FontAwesome
-            available: https://fontawesome.com/icons/shapes?style=solid
-            license: CC BY 4.0 - https://fontawesome.com/license/free
-          -->
-          <path fill="#575959"
-                d="M512 320v160c0 17.67-14.33 32-32 32H320c-17.67 0-32-14.33-32-32V320c0-17.67 14.33-32 32-32h160c17.67 0 32 14.33 32 32zm-384-64C57.31 256 0 313.31 0 384s57.31 128 128 128 128-57.31 128-128-57.31-128-128-128zm351.03-32c25.34 0 41.18-26.67 28.51-48L412.51 16c-12.67-21.33-44.35-21.33-57.02 0l-95.03 160c-12.67 21.33 3.17 48 28.51 48h190.06z"></path>
-        </svg>
+        <fa-icon icon="shapes" class="custom-icon" @mouseenter="timerStart" @mouseleave="timerCancel"></fa-icon>
       </div>
     </div>
 
@@ -92,36 +83,43 @@
 </template>
 
 <script>
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import { faThumbtack, faArrowRight, faPaintBrush, faShapes } from '@fortawesome/free-solid-svg-icons';
+  import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
+
+  library.add(faTrashAlt, faThumbtack, faArrowRight, faPaintBrush, faShapes);
   export default {
     name: 'hoverMenuNode',
+    components: { faIcon: FontAwesomeIcon },
     props: {
       pad: {
         type: Number,
-        default: function () {
+        default() {
           return 0;
-        }
+        },
       },
       display: {
         type: Boolean,
-        default: function () {
+        default() {
           return false;
-        }
+        },
       },
       position: {
         type: Object,
-        default: function () {
+        default() {
           return { x: 0, y: 0, width: 0, height: 0 };
-        }
+        },
       },
       color: {
         type: String,
-        default: function () {
+        default() {
           return '#575959';
         },
       },
       fixed: {
         type: Boolean,
-        default: function () {
+        default() {
           return false;
         },
       },
@@ -129,7 +127,7 @@
       shape: {},
       type: {
         type: String,
-        default: function () {
+        default() {
           return 'note';
         },
       },
@@ -141,7 +139,7 @@
       };
     },
     computed: {
-      posPad: function () {
+      posPad() {
         const posPad = { ...this.position };
         posPad.width += this.pad;
         posPad.height += this.pad;
@@ -149,28 +147,27 @@
         posPad.y -= this.pad / 2;
         return posPad;
       },
-      pinned: function () {
+      pinned() {
         return this.fixed ? 'pinned' : 'unpinned';
       },
-      mouseLimit: function () {
+      mouseLimit() {
         const yMargin = 80;
         if (this.shapesToggle) {
           const xMargin = 115;
           return {
-            x: this.position.x - xMargin * 0.58,
-            y: this.position.y - yMargin * 0.58,
-            X: this.position.x + this.position.width + xMargin / 2,
-            Y: this.position.y + this.position.height + yMargin / 2,
-          };
-        } else {
-          const xMargin = 85;
-          return {
-            x: this.position.x - xMargin / 2,
-            y: this.position.y - yMargin / 2,
-            X: this.position.x + this.position.width + xMargin / 2,
-            Y: this.position.y + this.position.height + yMargin / 2,
+            x: this.position.x - (xMargin * 0.58),
+            y: this.position.y - (yMargin * 0.58),
+            X: this.position.x + this.position.width + (xMargin / 2),
+            Y: this.position.y + this.position.height + (yMargin / 2),
           };
         }
+        const xMargin = 85;
+        return {
+          x: this.position.x - (xMargin / 2),
+          y: this.position.y - (yMargin / 2),
+          X: this.position.x + this.position.width + (xMargin / 2),
+          Y: this.position.y + this.position.height + (yMargin / 2),
+        };
       },
       // hoverBackPos: function () {
       //   if (this.shapesToggle) {
@@ -235,7 +232,7 @@
         this.$emit('exitHover', payload);
       },
       interact(message, event, payload) {
-        this.$emit('clickedButton', { type: message, data: this.data, e: event, payload: payload });
+        this.$emit('clickedButton', { type: message, data: this.data, e: event, payload });
         if (message === 'DELETE' || message === 'SHAPE') {
           this.exit(event);
         }
@@ -253,8 +250,8 @@
           clearTimeout(this.timerId);
           this.timerId = false;
         }
-      }
-    }
+      },
+    },
   };
 </script>
 
@@ -301,9 +298,9 @@
     cursor: pointer;
   }
 
-  .menu-color .fa-paint-brush {
+  .bgpicker {
     font-size: 19px !important;
-    text-shadow: rgb(31, 45, 61) 1px 0 6px;
+    filter: drop-shadow(1px 0 6px rgb(19, 26, 39));
   }
 
   .icon-wrapper {
@@ -317,8 +314,7 @@
     border: 1px solid #fff;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     display: table-cell;
-    font-size: 15px;
-    height: 15px;
+    font-size: 20px;
     padding: 2px;
     text-align: center;
     transition: 1s;
@@ -346,8 +342,7 @@
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     color: #575959;
     display: table-cell;
-    font-size: 15px;
-    height: 15px;
+    font-size: 20px;
     padding: 2px;
     text-align: center;
     transition: 1s;

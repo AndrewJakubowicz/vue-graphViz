@@ -64,7 +64,6 @@ export default ($action, startCallback, endCallback) => {
 
       // start rich text editor
       const mediumEditorConfig = {
-        buttonLabels: 'fontawesome',
         disableDoubleReturn: true,
         toolbar: {
           buttons: ['bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter'],

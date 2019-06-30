@@ -6,14 +6,8 @@
           v-show="tools[tools.reduce((acc,curr, i) => (curr.action === 'SELECT'? i: acc), -1)].toggled">
         <li :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }"
             v-for="item in selectTools">
-          <span class="icon-alone tooltip" v-if="item.icon.length === 1">
-          <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
-          <span class="screen-reader-text">{{ item.action }}</span>
-          <span class="tooltiptext">{{item.tip}}</span>
-          </span>
-          <span class="fa-stack fa-sm tooltip" v-else>
-            <i :class="item.icon[0]"></i>
-            <i :class="item.icon[1]"></i>
+          <span class="icon-alone tooltip">
+            <fa-icon :icon="[item.iconStyle, item.icon]" fixed-width></fa-icon>
             <span class="screen-reader-text">{{ item.action }}</span>
             <span class="tooltiptext">{{item.tip}}</span>
           </span>
@@ -27,10 +21,7 @@
         <li :key="item.shape" @click="changeDefaultShape(item.shape)" v-bind:class="{ active: shape===item.shape }"
             v-for="item in shapes">
           <span class="icon-alone tooltip">
-            <svg width="16px" height="18px" class="icon-alone">
-              <use style="transform:scale(0.03571);"
-                   :xlink:href="item.icon"></use>
-            </svg>
+            <fa-icon :icon="[item.iconStyle, item.icon]" fixed-width></fa-icon>
           <span class="screen-reader-text">{{ item.shape }}</span>
           </span>
         </li>
@@ -40,21 +31,17 @@
     <ul @mouseenter="mouseEnter()" class="graph-unorderedList" id="graph-main-tool">
       <li :key="item.action" @click="clicked(item.action)" v-bind:class="{ active: item.toggled }"
           v-for="item in tools">
-        <span class="icon-alone tooltip" v-if="item.custom" v-html="item.html">
+        <span class="icon-alone tooltip" v-if="item.action==='ADDNOTE'" ref="addNodeButton">
+          <fa-icon :icon="addNoteIcon" :mask="addNoteMask" fixed-width></fa-icon>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
-        <span class="icon-alone tooltip" v-else-if="item.icon.length === 1">
-          <i :class="'fa fa-' + item.icon[0] + ' fa-lg'"></i>
+        <span class="icon-alone tooltip" v-else>
+          <fa-icon :icon="[item.iconStyle, item.icon]" fixed-width></fa-icon>
           <span class="screen-reader-text">{{ item.action }}</span>
           <span class="tooltiptext">{{item.tip}}</span>
         </span>
-        <span class="fa-stack fa-sm tooltip" v-else>
-            <i :class="item.icon[0]"></i>
-            <i :class="item.icon[1]"></i>
-            <span class="screen-reader-text">{{ item.action }}</span>
-          <span class="tooltiptext">{{item.tip}}</span>
-        </span>
+
       </li>
     </ul>
   </div>
@@ -62,62 +49,95 @@
 
 
 <script>
-  import fa5Icons from '../assets/fa5-icons.svg';
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import {
+    faMousePointer,
+    faExpand,
+    faPercent,
+    faUndo,
+    faRedo,
+    faThumbtack,
+    faBold,
+    faItalic,
+    faUnderline,
+    faCircle,
+    faSquare,
+    faSquareFull,
+    faPlus,
+    faPlusSquare as fasPlusSquare,
+  } from '@fortawesome/free-solid-svg-icons';
+  import { faSave,
+    faFolderOpen,
+    faCopy,
+    faTrashAlt,
+    faObjectGroup,
+    faPlusSquare as farPlusSquare,
+  } from '@fortawesome/free-regular-svg-icons';
+
+  library.add(faMousePointer, faExpand, faPercent, faUndo, faRedo, faThumbtack, faBold,
+    faItalic, faUnderline, faCircle, faSquare, faSquareFull, faSave, faFolderOpen,
+    faCopy, faTrashAlt, faObjectGroup, fasPlusSquare, faPlus, farPlusSquare);
 
   export default {
     props: ['mouse', 'shape'],
     name: 'toolBar',
+    components: { faIcon: FontAwesomeIcon },
     data() {
       return {
         tools: [
           {
             action: 'POINTER',
-            icon: ['mouse-pointer'],
+            icon: 'mouse-pointer',
+            iconStyle: 'fas',
             toggled: true,
             tip: 'Pointer (P)',
           },
           {
             action: 'SELECT',
+            icon: 'expand',
+            iconStyle: 'fas',
             toggled: false,
             tip: 'Select Tool (S)',
-            custom: true,
-            html: `<svg width="16px" height="18px" class="icon-alone"><use style="transform:scale(0.03571);" xlink:href=${fa5Icons}#expand></use></svg>`,
           },
           {
             action: 'ADDNOTE',
-            icon: ['plus-square'],
             toggled: false,
             tip: 'Add Node',
-            custom: true,
-            html: `<svg id="addNodeButton" width="16px" height="18px" class="icon-alone"><use id="addNodeIcon" style="transform:scale(0.03571);" xlink:href=${fa5Icons}#plus-square-regular></use></svg>`,
+            mask: this.addNoteMask,
           },
           {
             action: 'IMPORTPROB',
-            icon: ['fas fa-percent'],
+            icon: 'percent',
+            iconStyle: 'fas',
             toggled: false,
             tip: 'Import Probability Diagram',
           },
           {
             action: 'UNDO',
-            icon: ['undo'],
+            icon: 'undo',
+            iconStyle: 'fas',
             toggled: false,
             tip: 'Undo (Ctrl+Z)',
           },
           {
             action: 'REDO',
-            icon: ['repeat'],
+            icon: 'redo',
+            iconStyle: 'fas',
             toggled: false,
             tip: 'Redo (Ctrl+Y)',
           },
           {
             action: 'OPEN',
-            icon: ['folder-open-o'],
+            icon: 'folder-open',
+            iconStyle: 'far',
             toggled: false,
             tip: 'Open (Ctrl+O)',
           },
           {
             action: 'SAVE',
-            icon: ['floppy-o'],
+            icon: 'save',
+            iconStyle: 'far',
             toggled: false,
             tip: 'Save (Ctrl+S)',
           },
@@ -125,49 +145,57 @@
         selectTools: [
           // {
           //   action: 'COLOR',
-          //   icon: ['paint-brush'],
+          //   icon: 'paint-brush',
+          //   iconStyle: 'fas',
           //   toggled: false,
           //   tip: 'Color',
           // },
           {
             action: 'PIN',
-            icon: ['thumb-tack'],
+            icon: 'thumbtack',
+            iconStyle: 'fas',
             toggled: false,
-            tip: 'Pin'
+            tip: 'Pin',
           },
           {
             action: 'COPY',
-            icon: ['copy'],
+            icon: 'copy',
+            iconStyle: 'far',
             toggled: false,
             tip: 'Duplicate (Ctrl+C)',
           },
           {
             action: 'DELETE',
-            icon: ['trash'],
+            icon: 'trash-alt',
+            iconStyle: 'far',
             toggled: false,
-            tip: 'Delete (Del)'
+            tip: 'Delete (Del)',
           },
           {
             action: 'BOLD',
-            icon: ['bold'],
+            icon: 'bold',
+            iconStyle: 'fas',
             toggled: false,
-            tip: 'Bold  (Ctrl+B)'
+            tip: 'Bold  (Ctrl+B)',
           },
           {
             action: 'ITALIC',
-            icon: ['italic'],
+            icon: 'italic',
+            iconStyle: 'fas',
             toggled: false,
-            tip: 'Italics  (Ctrl+I)'
+            tip: 'Italics  (Ctrl+I)',
           },
           {
             action: 'UNDERLINE',
-            icon: ['underline'],
+            icon: 'underline',
+            iconStyle: 'fas',
             toggled: false,
-            tip: 'Underline (Ctrl+U)'
+            tip: 'Underline (Ctrl+U)',
           },
           {
             action: 'GROUP',
-            icon: ['fas fa-object-group'],
+            icon: 'object-group',
+            iconStyle: 'far',
             toggled: false,
             tip: 'Group',
           },
@@ -175,22 +203,27 @@
         shapes: [
           {
             shape: 'circle',
-            icon: `${fa5Icons}#circle-solid`,
+            icon: 'circle',
+            iconStyle: 'fas',
             tip: 'Circle',
           },
           {
             shape: 'rect',
-            icon: `${fa5Icons}#rect-solid`,
+            icon: 'square-full',
+            iconStyle: 'fas',
             tip: 'Rectangle',
           },
           {
             shape: 'capsule',
-            icon: `${fa5Icons}#capsule-solid`,
+            icon: 'square',
+            iconStyle: 'fas',
             tip: 'Rounded Rectangle',
           },
         ],
         showShapeMenu: false,
         shapeToolVisibility: 'hidden',
+        addNoteMask: undefined,
+        addNoteIcon: ['far', 'plus-square'],
         addNodeButton: undefined,
         bb: undefined,
         bt: undefined,
@@ -230,32 +263,33 @@
         }));
       },
       changeShapeIcon(newVal) {
-        let iconID;
         switch (newVal) {
           case 'circle': {
-            iconID = 'plus-circle-solid';
+            this.addNoteIcon = 'plus';
+            this.addNoteMask = 'circle';
             break;
           }
           case 'rect': {
-            iconID = 'plus-rect-solid';
+            this.addNoteIcon = 'plus';
+            this.addNoteMask = 'square-full';
             break;
           }
           case 'capsule': {
-            iconID = 'plus-capsule-solid';
+            this.addNoteIcon = 'plus-square';
+            this.addNoteMask = undefined;
             break;
           }
           default: {
-            iconID = 'plus-square-regular';
+            this.addNoteIcon = ['far', 'plus-square'];
+            this.addNoteMask = undefined;
             break;
           }
         }
-        const elem = document.getElementById('addNodeIcon');
-        elem.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `${fa5Icons}#${iconID}`);
       },
       mouseOutShapeCheck(event) {
-        if (event.clientX < this.bb.x - 1.5 * this.bb.width - this.bt.width
-          || event.clientX > this.bb.x + 1.5 * this.bb.width
-          || event.clientY < this.bb.y - 0.5 * this.bt.height
+        if (event.clientX < this.bb.x - (1.5 * this.bb.width) - this.bt.width
+          || event.clientX > this.bb.x + (1.5 * this.bb.width)
+          || event.clientY < this.bb.y - (0.5 * this.bt.height)
           || event.clientY > this.bb.y + this.bt.height
         ) {
           this.showShapeMenu = false;
@@ -265,14 +299,14 @@
         this.$emit('changeDefaultShape', e);
         this.showShapeMenu = false;
       },
-      mouseOverShapeIcon(e) {
+      mouseOverShapeIcon() {
         if (!this.showShapeMenu) {
           this.showShapeMenu = true;
         }
-      }
+      },
     },
     watch: {
-      mouse(newVal, oldVal) {
+      mouse(newVal) {
         this.tools = this.tools.map(v => ({
           ...v,
           toggled: v.action === newVal,
@@ -288,20 +322,19 @@
         } else {
           document.removeEventListener('mousemove', this.mouseOutShapeCheck);
           this.shapeToolVisibility = 'hidden';
-
         }
-      }
+      },
     },
     mounted() {
       this.changeShapeIcon(this.shape);
-      this.addNodeButton = document.getElementById('addNodeButton');
+      this.addNodeButton = this.$refs.addNodeButton[0];
       this.shapeTool = document.getElementById('graph-shape-tool');
       this.addNodeButton.addEventListener('mouseenter', this.mouseOverShapeIcon);
     },
     beforeDestroy() {
       this.addNodeButton.removeEventListener('mouseenter', this.mouseOverShapeIcon);
       document.removeEventListener('mousemove', this.mouseOutShapeCheck);
-    }
+    },
   };
 </script>
 
@@ -396,14 +429,6 @@
     position: absolute;
     top: -9999px;
     left: -9999px;
-  }
-
-  .fa-sm { /* Translates the stacked icons to the same size as the other ones */
-    font-size: 0.75em;
-  }
-
-  .fa-stack { /* adjust the gap between the stacked icon and the next */
-    height: 1em;
   }
 
   .graph-unorderedList {

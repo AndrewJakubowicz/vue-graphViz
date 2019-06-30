@@ -10,6 +10,18 @@
     <!--:style="hoverRectPos"></rect>-->
     <!--</svg>-->
 
+    <!--TOP ICONS-->
+    <div class="icon-position h-center-align" :style="{bottom:`${posPad.height/2-15}px`}"
+         v-show="type==='grup' && showTextBar">
+      <div class="rectangle" :style="{width: `${posPad.width/3*2}px`}" @mouseenter="interact('TEXT', $event)">
+        <div class="circle-wrapper">
+          <div class="circle"></div>
+          <div class="circle"></div>
+          <div class="circle"></div>
+        </div>
+      </div>
+    </div>
+
     <!--BOTTOM ICONS-->
     <div class="icon-position h-center-align hand" :style="{top: `${posPad.height/2}px`}" style="width: 60px">
       <div class="icon-wrapper menu-color hand">
@@ -121,6 +133,12 @@
         type: Boolean,
         default() {
           return false;
+        },
+      },
+      showTextBar: {
+        type: Boolean,
+        default() {
+          return undefined;
         },
       },
       data: {},
@@ -352,6 +370,30 @@
 
   .custom-icon:hover {
     background: #B6EFEF;
+  }
+
+  .rectangle {
+    background: #E9FAFA;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    height: 5px;
+  }
+
+  .circle {
+    height: 3px;
+    width: 4px;
+    background-color: #555;
+    border-radius: 50%;
+    float: left;
+    margin-left: 5px;
+    margin-top: 1px;
+  }
+
+  .circle-wrapper {
+    position: relative;
+    left: calc(50% - 15px);
   }
 
 </style>

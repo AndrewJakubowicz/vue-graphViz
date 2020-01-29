@@ -36,9 +36,9 @@
     props: {
       display: {
         type: Boolean,
-        default: function () {
+        default() {
           return false;
-        }
+        },
       },
       svgData: {},
       graphData: {},
@@ -52,17 +52,20 @@
       display(displayed) {
         // on display create PNG preview
         if (displayed) {
-          const svgString = new XMLSerializer().serializeToString(this.svgData);
+          const svg = this.svgData.cloneNode(true);
+          // set final image to match svg size
+          const svgSize = this.svgData.getBBox();
+          svg.setAttribute('viewBox', `${svgSize.x - 3} ${svgSize.y - 3} ${svgSize.width + 3} ${svgSize.height + 3}`);
+
+          const svgString = new XMLSerializer().serializeToString(svg);
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // set final image to match svg size
-          const svgSize = this.svgData.viewBox.baseVal;
           canvas.width = svgSize.width;
           canvas.height = svgSize.height;
 
           // Convert SVG string to data URL
-          const imgsrc = 'data:image/svg+xml;base64,' + btoa(svgString);
+          const imgsrc = `data:image/svg+xml;base64,${btoa(svgString)}`;
 
           const img = new Image();
           // on image load, enable save as PNG button, and set correct onclick function
@@ -82,19 +85,28 @@
           };
           img.src = imgsrc;
         }
-
-      }
+      },
     },
     methods: {
       saveSVG() {
-        //add JSON structure to svg
+        // add JSON structure to svg
         const svg = this.svgData.cloneNode(true);
+        const svgSize = this.svgData.getBBox();
+        svg.setAttribute('viewBox', `${svgSize.x - 3} ${svgSize.y - 3} ${svgSize.width + 3} ${svgSize.height + 3}`);
         const desc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
         desc.setAttribute('id', 'graphJSONData');
-        desc.innerHTML = this.graphData;
         svg.appendChild(desc);
         // save as file
-        const svgString = new XMLSerializer().serializeToString(svg);
+        let svgString = new XMLSerializer().serializeToString(svg);
+        // insert JSON data after serialisation using regex.
+        // Inserting before may cause HTML inside JSON  to be parsed by XMLSerializer.
+        const re = new RegExp('<desc id="graphJSONData"\/>');
+        if (re.test(svgString)) {
+          const dataString = `<desc id="graphJSONData">${this.graphData}</desc>`;
+          svgString = svgString.replace(re, dataString);
+        } else {
+          console.warn('Error occured whilst saving. Could not find desc.');
+        }
         const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
         saveAs(svgBlob, `${this.filename}.svg`);
         this.exit();
@@ -103,7 +115,7 @@
         this.$refs.savePNG.disabled = true;
         this.$refs.savePNG.onclick = undefined;
         this.$emit('close');
-      }
+      },
     },
   };
 </script>

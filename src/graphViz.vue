@@ -1,7 +1,5 @@
 <template>
   <div id="graph-viz">
-    <link v-once rel="stylesheet" href="./static/fonts/font-awesome/css/font-awesome.css"/>
-
     <hover-menu-node :position="hoverPos"
                      :pad="10"
                      :color="hoverColor"
@@ -10,6 +8,7 @@
                      :shape="hoverShape"
                      :data="hoverData"
                      :type="hoverType"
+                     :show-text-bar="hoverTextBar"
                      @exitHover="closeHoverMenu($event)"
                      @clickedButton="hoverInteract($event)">
     </hover-menu-node>
@@ -163,6 +162,8 @@
         hoverEdgeColor: undefined,
         hoverEdgeData: undefined,
         hoverEdgeType: undefined,
+        hoverTextBar: false,
+        viewedGroupText: undefined,
         colors: {
           hex: '#FFFFFF',
         },
@@ -195,10 +196,10 @@
 
       this.hoverQueue$ = new Subject().pipe(
         takeUntil(this.destroy$),
-        debounceTime(100)
+        debounceTime(100),
       );
 
-      this.hoverQueue$.subscribe(callback => {
+      this.hoverQueue$.subscribe((callback) => {
         if (callback && typeof (callback) === 'function') {
           callback();
         }
@@ -284,14 +285,14 @@
           x: -Infinity,
           X: Infinity,
           y: -Infinity,
-          Y: Infinity
+          Y: Infinity,
         });
         if (this.mouseState !== SELECT) {
           this.changeMouseState(SELECT);
         }
         this.activeSelect.select(newSelect.nodes);
         this.activeSelect.select(newSelect.edges);
-        this.graph.restart.styles();
+        this.graph.restart.highlight();
       });
 
       // keyboard shortcuts to switch mouse tool
@@ -884,9 +885,39 @@
                       id: idArray,
                       value: values,
                     });
+                    this.graph.restart.styles();
                     break;
                   }
-
+                  case WEIGHT: {
+                    oldValues = predicates.map(p => p.strokeWidth);
+                    this.graph.editEdge({
+                      property: 'weight',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case DASH: {
+                    oldValues = predicates.map(p => p.strokeDasharray);
+                    this.graph.editEdge({
+                      property: 'dash',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
+                  case COLOR: {
+                    oldValues = predicates.map(p => p.stroke);
+                    this.graph.editEdge({
+                      property: 'color',
+                      id: idArray,
+                      value: values,
+                    });
+                    this.graph.restart.styles();
+                    break;
+                  }
                   default : {
                     console.log('Unknown property:', action.prop);
                   }
@@ -1065,7 +1096,7 @@
           .append('g')
           .attr('transform', `translate(0,0),scale(${scale})`);
 
-        //get nodes to be changed
+        // get nodes to be changed
         let nodes = [];
         if (this.mouseState === SELECT) {
           nodes = [...this.activeSelect.nodes.values()];
@@ -1292,7 +1323,7 @@
           },
 
           clickAway: () => {
-            this.closeHoverMenu();
+            // this.closeHoverMenu();
           },
 
           zoomScale: (scale) => {
@@ -1312,10 +1343,19 @@
           },
 
           mouseOverGroup: (group, selection, e) => {
-            if (!this.hoverDisplay) {
+            if (!this.hoverDisplay && !this.hoverEdgeDisplay) {
               this.hoverQueue$.next(() => this.createHoverMenu(group, selection, e));
             } else {
-              this.hoverAwait = [group, selection, e];
+              // if hover menu currently on group, dont add duplicate group to queue
+              let currentMenuTarget;
+              try {
+                currentMenuTarget = this.hoverData.data.id;
+              } catch (error) {
+                currentMenuTarget = undefined;
+              }
+              if (currentMenuTarget !== group.id) {
+                this.hoverAwait = [group, selection, e];
+              }
             }
           },
 
@@ -1324,7 +1364,6 @@
           },
 
           mouseOverNode: (node, selection, e) => {
-            this.closeEdgeHoverMenu();
             this.hoverQueue$.next(() => this.createHoverMenu(node, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1356,7 +1395,6 @@
           },
 
           mouseOverEdge: (edge, selection, e) => {
-            this.closeHoverMenu();
             this.hoverQueue$.next(() => this.createEdgeHoverMenu(edge, selection, e));
             me.dbClickCreateNode = false;
             me.clickedGraphViz = false;
@@ -1371,7 +1409,7 @@
           },
 
           edgeArrowhead: (predicate) => {
-            return predicate ? (predicate.arrowhead ? predicate.arrowhead : 'R') : 'R';
+            return (predicate && typeof predicate.arrowhead === 'number') ? predicate.arrowhead : 1;
           },
 
           edgeStroke: (predicate) => {
@@ -1406,7 +1444,7 @@
                 this.changeMouseState(SELECT);
               }
               this.activeSelect.selectExclusive(d);
-              this.graph.restart.styles();
+              this.graph.restart.highlight();
             }
           }
         };
@@ -1449,7 +1487,7 @@
               this.changeMouseState(SELECT);
             }
             this.activeSelect.selectExclusive(edge);
-            this.graph.restart.styles();
+            this.graph.restart.highlight();
           }
         });
 
@@ -1460,7 +1498,7 @@
               this.changeMouseState(SELECT);
             }
             this.activeSelect.selectExclusive(node);
-            this.graph.restart.styles();
+            this.graph.restart.highlight();
           }
         });
 
@@ -1488,32 +1526,38 @@
         });
 
         this.graph.groupOptions.setDblClickGroup((d, elem) => {
-          d.data.expandText = true;
-          $mousedown.next({
-            type: 'EDITGROUP',
-            d: d,
-            restart: this.graph.restart.layout,
-            textElem: elem.node().parentNode.querySelector('text'),
-            clickedElem: elem,
-            save: (newText) => {
-              this.rootObservable.next({
-                type: GROUPEDIT,
-                prop: 'text',
-                value: newText,
-                id: d.id,
-              });
-            },
-          });
+          this.showGroupTextPreview(d);
+          // TODO working fix for DOM updates being behind. Better alternative?? use for edge text.
+          setTimeout(() => {
+            $mousedown.next({
+              type: 'EDITGROUP',
+              d,
+              restart: this.graph.restart.layout,
+              textElem: elem.node().parentNode.querySelector('text'),
+              clickedElem: elem,
+              save: (newText) => {
+                this.rootObservable.next({
+                  type: GROUPEDIT,
+                  prop: 'text',
+                  value: newText,
+                  id: d.id,
+                });
+              },
+            });
+          }, 0);
         });
         // Initiate the text edit function - for both nodes and edges
-        textEdit($mousedown, () => {
+        const textEditStartCallback = () => {
           this.canKeyboardUndo = false;
           // this.closeHoverMenu();
           this.mouseState = TEXTEDIT;
-        }, () => {
+        };
+        const textEditEndCallback = () => {
           this.canKeyboardUndo = true;
           this.changeMouseState(POINTER);
-        });
+          this.hideGroupTextPreview();
+        };
+        textEdit($mousedown, textEditStartCallback, textEditEndCallback);
 
         // set clickedgraphviz to true first time user clicks
         const svgElem = this.graph.getSVGElement().node();
@@ -1531,14 +1575,32 @@
       },
 
       toNode(nodeProtocolObject) {
-        const className = `.${nodeProtocolObject.class}`;
-        const backgroundColor = $(className).css('backgroundColor');
+        // const className = `.${nodeProtocolObject.class}`;
+        // const backgroundColor = $(className).css('backgroundColor');
         return {
           hash: `${nodeProtocolObject.id || nodeProtocolObject.hash}`,
           shortname: nodeProtocolObject.text,
-          color: backgroundColor,
+          // color: backgroundColor,
           ...nodeProtocolObject,
         };
+      },
+
+      showGroupTextPreview(d) {
+        if (!d.data.text || d.data.text === '') {
+          this.hoverTextBar = false;
+          this.viewedGroupText = d;
+          return this.graph.groupTextPreview(true, d.id, 'New');
+        }
+        // TODO fix this, maybe use async
+        return Promise.resolve();
+      },
+
+      hideGroupTextPreview() {
+        const d = this.viewedGroupText;
+        if (d && (!d.data.text || d.data.text === '')) {
+          this.graph.groupTextPreview(false, this.viewedGroupText.id);
+          this.viewedGroupText = undefined;
+        }
       },
 
       addNodes() {
@@ -1715,7 +1777,7 @@
         });
       },
 
-      createHoverMenu(d, selection, e) {
+      createHoverMenu(d, selection) {
         this.dbClickCreateNode = false;
         const elem = selection.node();
         const pos = elem.getBoundingClientRect();
@@ -1727,6 +1789,8 @@
         this.hoverType = d.id.slice(0, 4);
         this.hoverData = { data: d, el: selection };
         this.hoverEdgeDisplay = false;
+        this.hoverTextBar = d.id.slice(0, 4) === 'grup' && this.mouseState !== TEXTEDIT
+                            && (!d.data.text || d.data.text === '');
       },
 
       updateHoverMenu() {
@@ -1740,7 +1804,7 @@
         }
       },
 
-      closeHoverMenu(event) {
+      closeHoverMenu() {
         if (!this.ifColorPickerOpen) {
           this.dbClickCreateNode = true;
         }
@@ -1750,6 +1814,9 @@
         if (this.hoverAwait) {
           this.createHoverMenu(...this.hoverAwait);
           this.hoverAwait = false;
+        }
+        if (this.mouseState !== TEXTEDIT) {
+          this.hideGroupTextPreview();
         }
       },
 
@@ -1824,11 +1891,15 @@
             this.defaultShape = payload;
             break;
           }
+
+          case TEXT: {
+            this.showGroupTextPreview(target);
+            break;
+          }
           default: {
             console.warn('Unrecognised event ', event.type, ' on ', event.data);
           }
         }
-
       },
 
       createEdgeHoverMenu(d, selection, e) {
@@ -1847,7 +1918,7 @@
         this.hoverEdgePos = undefined;
         this.hoverEdgeData = undefined;
         if (this.hoverAwait) {
-          this.createEdgeHoverMenu(...this.hoverAwait);
+          this.createHoverMenu(...this.hoverAwait);
           this.hoverAwait = false;
         }
       },
@@ -1905,7 +1976,7 @@
         this.rootObservable.next({
           type: EDGEEDIT,
           prop: ARROW,
-          value: edges.map(_ => payload),
+          value: payload,
           hash: edges.map(edge => edge.predicate.hash),
         });
       },
@@ -2002,11 +2073,10 @@
         if (file.type === 'image/svg+xml') {
           const reader = new FileReader();
           reader.onload = () => {
-            const parser = new DOMParser();
-            const svg = parser.parseFromString(reader.result, 'text/xml');
-            const desc = svg.querySelector('#graphJSONData');
-            if (desc && desc.innerHTML) {
-              const graphData = JSON.parse(desc.innerHTML);
+            // Find using regex, to prevent HTML inside JSON being parsed
+            const re = new RegExp('<desc id="graphJSONData">(.*)</desc>');
+            if (reader.result.match(re).length > 1) {
+              const graphData = JSON.parse(reader.result.match(re)[1]);
               graphData.textNodes.forEach(x => this.textNodes.push(x));
               this.clearScreen().then(() => {
                 this.rootObservable.next({ type: CLEARHISTORY });
@@ -2259,8 +2329,8 @@
                       rightID: objOfNodes[key].id,
                       gap: 170,
                     },
-                    arrowhead: 'R',
-                    stroke: "#000000",
+                    arrowhead: 1,
+                    stroke: '#000000',
                     strokeWidth: 2,
                     strokeDasharray: 0,
                   },
@@ -2322,6 +2392,7 @@
             this.changeMouseState(POINTER);
             const fileInput = document.createElement('input');
             fileInput.setAttribute('type', 'file');
+            fileInput.setAttribute('accept', '.svg');
             fileInput.click();
             fileInput.onchange = (e) => {
               this.readFile(e);
@@ -2464,7 +2535,7 @@
                   this.activeSelect.select(oldSelect);
                   this.activeSelect.deselect(currentSelect);
                 }
-                this.graph.restart.styles();
+                this.graph.restart.highlight();
               });
             });
 

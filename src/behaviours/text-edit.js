@@ -3,7 +3,7 @@
  * Text edit utility.
  * Deals with the text edit capability of the note nodes.
  */
-import {fromEvent, fromEventPattern, concat, merge} from 'rxjs';
+import { fromEvent, fromEventPattern, concat, merge } from 'rxjs';
 import {
   map,
   filter,
@@ -17,6 +17,19 @@ import {
 const MediumEditor = require('medium-editor');
 require('medium-editor/dist/css/medium-editor.css');
 require('medium-editor/dist/css/themes/beagle.css');
+
+const mediumEditorConfig = {
+  disableDoubleReturn: true,
+  toolbar: {
+    buttons: ['bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter'],
+    diffTop: 0,
+  },
+  paste: {
+    forcePlainText: false,
+    cleanPastedHTML: false,
+  },
+  placeholder: false,
+};
 
 /**
  * Takes an action observable.
@@ -49,12 +62,10 @@ export default ($action, startCallback, endCallback) => {
         }
       }
       if (action.type === 'EDITGROUP') {
-        oldText = action.d.data.text ? action.d.data.text : '';
+        oldText = action.d.data.text || '';
         if (oldText === '') {
           textElem.innerHTML = 'New';
         }
-        const fOParent = textElem.parentElement.parentElement;
-        fOParent.setAttribute('y', fOParent.getAttribute('y') - textElem.offsetHeight);
       }
 
       // allow mouse interaction with node text
@@ -63,19 +74,6 @@ export default ($action, startCallback, endCallback) => {
       textElem.classList.add('allowSelection');
 
       // start rich text editor
-      const mediumEditorConfig = {
-        buttonLabels: 'fontawesome',
-        disableDoubleReturn: true,
-        toolbar: {
-          buttons: ['bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter'],
-          diffTop: 0,
-        },
-        paste: {
-          forcePlainText: false,
-          cleanPastedHTML: false,
-        },
-        placeholder: false,
-      };
       const editor = new MediumEditor(textElem, mediumEditorConfig);
 
       // select text if New else move caret to end
@@ -112,7 +110,7 @@ export default ($action, startCallback, endCallback) => {
           const HTMLText = e.clipboardData.getData('text/html').replace(/[\n\r]+/g, '\n');
           const plaintext = e.clipboardData.getData('text/plain');
           editor.cleanPaste(HTMLText || plaintext);
-        })
+        }),
       );
 
       // Exit Handling
@@ -172,20 +170,17 @@ export default ($action, startCallback, endCallback) => {
         takeUntil($exit),
         finalize(() => {
           editor.destroy();
-          // if text is unedited, reset edge text to blank
-          if (action.type === 'EDITEDGE' && unedited) {
+          textElem.innerHTML = textElem.innerHTML.trim();
+          // if blank line reset to blank text.
+          if (textElem.innerHTML === '<br>') {
             textElem.innerHTML = '';
           }
-          if (action.type === 'EDITGROUP') {
-            action.d.data.expandText = false;
-            if (unedited) {
-              textElem.innerHTML = '';
-            }
+          // if text is unedited, reset edge text to blank for groups and edges
+          if ((action.type === 'EDITEDGE' || action.type === 'EDITGROUP')
+            && unedited && oldText === '') {
+            textElem.innerHTML = '';
           }
-          textElem.innerHTML = textElem.innerHTML.trim();
-          if (!textElem.innerHTML || textElem.innerHTML === '' ||
-            textElem.innerHTML.length === 0 || textElem.innerHTML === oldText) {
-            textElem.innerHTML = oldText;
+          if (textElem.innerHTML === oldText) {
             fullRestart();
           } else {
             save && save(textElem.innerHTML.replace(/^<p>|<\/p>$/g, ''));

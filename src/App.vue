@@ -18,8 +18,8 @@
   </div>
 </template>
 <script>
-  import graphViz from './graphViz.vue';
-  import saveModal from './components/saveModal.vue';
+  import graphViz from './graphViz';
+  import saveModal from './components/saveModal';
 
   export default {
     props: ['snippets', 'w', 'graphChunk', 'chunk'],
@@ -42,7 +42,7 @@
       w() {
         this.$log.info('graph - width changed', this.w);
         this.width = this.w;
-      }
+      },
     },
     created() {
       this.$log.info('graph - created', this.w, this);
@@ -81,16 +81,16 @@
         }
       },
       save(savedDiagram, svg, textNodes) {
-        let graph = JSON.stringify({
+        const graph = JSON.stringify({
           saved: savedDiagram,
           svg: svg.outerHTML,
-          textNodes: textNodes
+          textNodes,
         });
-        let payload = {
+        const payload = {
           graphChunk: this.graphChunk,
           chunk: this.chunk,
           id: this.chunkId,
-          graph: graph
+          graph,
         };
         this.$log.info('graph - saved', payload, JSON.parse(savedDiagram));
         this.$emit('save', payload);
@@ -99,9 +99,8 @@
         this.svgData = svg;
         this.graphData = JSON.stringify({
           saved: JSON.parse(savedDiagram),
-          textNodes: textNodes,
+          textNodes,
         });
-
       },
       closeSave() {
         this.saveDisplay = false;
@@ -109,7 +108,7 @@
         this.graphData = undefined;
       },
     },
-    components: { graphViz, saveModal }
+    components: { graphViz, saveModal },
   };
 
 </script>

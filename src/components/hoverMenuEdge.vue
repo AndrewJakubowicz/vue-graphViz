@@ -5,38 +5,49 @@
 
     <!--TOP ICONS-->
     <!-- arrows -->
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 15}px`}" v-show="type==='edge' && !arrowsToggle">
-      <i class="fa fa-arrows-alt custom-icon" @mouseenter="arrowsTimerStart" @mouseleave="arrowsTimerCancel"></i>
+    <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 15}px`}"
+         v-show="type==='edge' && !arrowsToggle">
+      <fa-icon icon="arrows-alt" class="custom-icon" @mouseenter="arrowsTimerStart"
+               @mouseleave="arrowsTimerCancel"></fa-icon>
     </div>
 
     <!-- Change arrow menu -->
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 64}px`}" v-show="arrowsToggle">
-      <i class="fa fa-arrows-h custom-icon" @click="interact('ARROW', $event, 'B')"></i>
+    <!-- 0 - None, 1 - Right, -1 - Left, 2 - Bidirectional -->
+    <div class="icon-wrapper icon-position h-center-align hand"
+         :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 64}px`}" v-show="arrowsToggle">
+      <fa-icon icon="arrows-alt-h" class="custom-icon" @click="interact('ARROW', $event, 2)"></fa-icon>
     </div>
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 40}px`}" v-show="arrowsToggle">
-      <i class="fa fa-long-arrow-left custom-icon" @click="interact('ARROW', $event, 'L')"></i>
+    <div class="icon-wrapper icon-position h-center-align hand"
+         :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 40}px`}" v-show="arrowsToggle">
+      <fa-icon icon="long-arrow-alt-left" class="custom-icon" @click="interact('ARROW', $event, -1)"></fa-icon>
     </div>
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 16}px`}" v-show="arrowsToggle">
-      <i class="fa fa-long-arrow-right custom-icon" @click="interact('ARROW', $event, 'R')"></i>
+    <div class="icon-wrapper icon-position h-center-align hand"
+         :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 16}px`}" v-show="arrowsToggle">
+      <fa-icon icon="long-arrow-alt-right" class="custom-icon" @click="interact('ARROW', $event, 1)"></fa-icon>
     </div>
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 + 8}px`}" v-show="arrowsToggle">
-      <i class="fa fa-minus custom-icon" @click="interact('ARROW', $event, 'N')"></i>
+    <div class="icon-wrapper icon-position h-center-align hand"
+         :style="{bottom:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 + 8}px`}" v-show="arrowsToggle">
+      <fa-icon icon="minus" class="custom-icon" @click="interact('ARROW', $event, 0)"></fa-icon>
     </div>
 
     <!--BOTTOM ICONS-->
     <!-- paint brush -->
-    <div class="icon-position h-center-align menu-color hand" :style="{top:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 48}px`}">
-      <i class="fa fa-paint-brush" id="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></i>
+    <div class="icon-position h-center-align menu-color hand"
+         :style="{top:`${posPad.height/2 - 10}px`, left: `${posPad.width/2 - 48}px`}">
+      <fa-icon icon="paint-brush" class="bgpicker" :style="{color}" @click="interact('COLOR', $event)"></fa-icon>
     </div>
 
     <!-- trash -->
-    <div class="icon-wrapper icon-position h-center-align hand" :style="{top:`${posPad.height/2 - 12}px`, left: `${posPad.width/2 - 16}px`}">
-      <i class="fa fa-trash-o custom-icon" @click="interact('DELETE', $event)"></i>
+    <div class="icon-wrapper icon-position h-center-align hand"
+         :style="{top:`${posPad.height/2 - 12}px`, left: `${posPad.width/2 - 16}px`}">
+      <fa-icon :icon="['far','trash-alt']" class="custom-icon" @click="interact('DELETE', $event)"></fa-icon>
     </div>
 
     <!--RIGHT ICONS-->
     <!-- weights -->
-    <div class="icon-position v-center-align hand" :style="{top:`${posPad.height/2 - 30}px`, left:`${posPad.width/2 - 10}px`}" v-show="type==='edge' && !weightsToggle">
+    <div class="icon-position v-center-align hand"
+         :style="{top:`${posPad.height/2 - 30}px`, left:`${posPad.width/2 - 10}px`}"
+         v-show="type==='edge' && !weightsToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mouseenter="weightsTimerStart" @mouseleave="weightsTimerCancel">
@@ -48,15 +59,17 @@
     </div>
 
     <!--Change weight menu-->
-    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 55}px`, left:`${posPad.width/2}px`}" v-show="weightsToggle">
+    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 55}px`, left:`${posPad.width/2}px`}"
+         v-show="weightsToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mousedown="interact('WEIGHT', $event, 2)">
           <line class="weight-icon" x1="0" y1="7" x2="14" y2="7" stroke-width="2"></line>
         </svg>
-      </div> 
-    </div> 
-    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 30}px`, left:`${posPad.width/2}px`}" v-show="weightsToggle">
+      </div>
+    </div>
+    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 30}px`, left:`${posPad.width/2}px`}"
+         v-show="weightsToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mousedown="interact('WEIGHT', $event, 4)">
@@ -64,18 +77,21 @@
         </svg>
       </div>
     </div>
-    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 5}px`, left:`${posPad.width/2}px`}" v-show="weightsToggle">
+    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 5}px`, left:`${posPad.width/2}px`}"
+         v-show="weightsToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mousedown="interact('WEIGHT', $event, 6)">
           <line class="weight-icon" x1="0" y1="7" x2="14" y2="7" stroke-width="6"></line>
         </svg>
-      </div> 
+      </div>
     </div>
 
     <!--LEFT ICONS-->
     <!-- dashes -->
-    <div class="icon-position v-center-align hand" :style="{top:`${posPad.height/2 - 30}px`, right: `${posPad.width / 2 - 10}px`}" v-show="type==='edge' && !dashesToggle">
+    <div class="icon-position v-center-align hand"
+         :style="{top:`${posPad.height/2 - 30}px`, right: `${posPad.width / 2 - 10}px`}"
+         v-show="type==='edge' && !dashesToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mouseenter="dashesTimerStart" @mouseleave="dashesTimerCancel">
@@ -86,7 +102,8 @@
     </div>
 
     <!--Change dash menu-->
-    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 42}px`, right: `${posPad.width/2}px`}" v-show="dashesToggle">
+    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 42}px`, right: `${posPad.width/2}px`}"
+         v-show="dashesToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mousedown="interact('DASH', $event, 0)">
@@ -94,7 +111,8 @@
         </svg>
       </div>
     </div>
-    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 17}px`, right: `${posPad.width/2}px`}" v-show="dashesToggle">
+    <div class="icon-position v-center-align" :style="{top:`${posPad.height/2 - 17}px`, right: `${posPad.width/2}px`}"
+         v-show="dashesToggle">
       <div class="icon-wrapper">
         <svg class="custom-icon" style="padding: 3px; width: 22px; height: 22px;"
              @mousedown="interact('DASH', $event, 3)">
@@ -107,37 +125,53 @@
 </template>
 
 <script>
+  import { library } from '@fortawesome/fontawesome-svg-core';
+  import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+  import {
+    faPaintBrush,
+    faArrowsAlt,
+    faArrowsAltH,
+    faMinus,
+    faLongArrowAltLeft,
+    faLongArrowAltRight,
+  } from '@fortawesome/free-solid-svg-icons';
+  import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
+
+  library.add(faTrashAlt, faMinus, faLongArrowAltLeft, faLongArrowAltRight,
+    faPaintBrush, faArrowsAlt, faArrowsAltH);
+
   export default {
     name: 'hoverMenuEdge',
+    components: { faIcon: FontAwesomeIcon },
     props: {
       pad: {
         type: Number,
-        default: function () {
+        default() {
           return 0;
-        }
+        },
       },
       display: {
         type: Boolean,
-        default: function () {
+        default() {
           return false;
-        }
+        },
       },
       position: {
         type: Object,
-        default: function () {
+        default() {
           return { x: 0, y: 0, width: 0, height: 0 };
-        }
+        },
       },
       color: {
         type: String,
-        default: function () {
+        default() {
           return '#575959';
         },
       },
       data: {},
       type: {
         type: String,
-        default: function () {
+        default() {
           return 'note';
         },
       },
@@ -149,11 +183,11 @@
         dashesTimerId: false,
         arrowsToggle: false,
         weightsToggle: false,
-        dashesToggle: false
+        dashesToggle: false,
       };
     },
     computed: {
-      posPad: function () {
+      posPad() {
         const posPad = { ...this.position };
         posPad.width += this.pad;
         posPad.height += this.pad;
@@ -161,26 +195,25 @@
         posPad.y -= this.pad / 2;
         return posPad;
       },
-      mouseLimit: function () {
+      mouseLimit() {
         const yMargin = 80;
         if (this.dashesToggle || this.weightsToggle || this.arrowsToggle) {
           const xMargin = 115;
           return {
-            x: this.position.x - xMargin * 0.58,
-            y: this.position.y - yMargin * 0.58,
-            X: this.position.x + this.position.width + xMargin / 2,
-            Y: this.position.y + this.position.height + yMargin / 2,
-          };
-        } else {
-          const xMargin = 115;
-          return {
-            x: this.position.x - xMargin / 2,
-            y: this.position.y - yMargin / 2,
-            X: this.position.x + this.position.width + xMargin / 2,
-            Y: this.position.y + this.position.height + yMargin / 2,
+            x: this.position.x - (xMargin * 0.58),
+            y: this.position.y - (yMargin * 0.58),
+            X: this.position.x + this.position.width + (xMargin / 2),
+            Y: this.position.y + this.position.height + (yMargin / 2),
           };
         }
-      }
+        const xMargin = 115;
+        return {
+          x: this.position.x - (xMargin / 2),
+          y: this.position.y - (yMargin / 2),
+          X: this.position.x + this.position.width + (xMargin / 2),
+          Y: this.position.y + this.position.height + (yMargin / 2),
+        };
+      },
     },
     beforeDestroy() {
       document.removeEventListener('mousemove', this.mouseOutCheck);
@@ -216,12 +249,12 @@
         this.weightsTimerId = false;
         this.dashesToggle = false;
         this.dashesTimerId = false;
-        this.$emit('exitHover', payload)
+        this.$emit('exitHover', payload);
       },
       interact(message, event, payload) {
-        this.$emit('clickedButton', { type: message, data: this.data, e: event, payload: payload });
+        this.$emit('clickedButton', { type: message, data: this.data, e: event, payload });
         if (message === 'WEIGHT' || message === 'DASH' || message === 'DELETE' || message === 'ARROW') {
-          this.exit(event)
+          this.exit(event);
         }
       },
       arrowsTimerStart() {
@@ -271,8 +304,8 @@
           clearTimeout(this.dashesTimerId);
           this.dashesTimerId = false;
         }
-      }
-    }
+      },
+    },
   };
 </script>
 
@@ -310,9 +343,9 @@
     cursor: pointer;
   }
 
-  .menu-color .fa-paint-brush {
+  .bgpicker {
     font-size: 19px !important;
-    text-shadow: rgb(31, 45, 61) 1px 0 6px;
+    filter: drop-shadow(1px 0 6px rgb(19, 26, 39));
   }
 
   .icon-wrapper {
@@ -329,8 +362,7 @@
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.46);
     color: #575959;
     display: table-cell;
-    font-size: 15px;
-    height: 15px;
+    font-size: 20px;
     padding: 2px;
     text-align: center;
     transition: 1s;

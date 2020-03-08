@@ -8,7 +8,9 @@ You can double click to create nodes easily.
 Multiple objects can be selected and manipulated at once through the selection tool (second from top in toolbar)
 Typical keyboard shortcuts are supported
 
-> networkVizJs component
+## networkVizJs
+This component is built using the networkVizJS API
+See: [Project Link](https://github.com/AndrewJakubowicz/networkVizJS)
 
 ## Very quick rough prototype of structure mapper.
 

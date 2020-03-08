@@ -45,9 +45,9 @@
    - mouseoutnode, void
    */
   import uuid from 'uuid/v4';
-  import {Compact} from 'vue-color';
+  import { Compact } from 'vue-color';
   import networkViz from 'networkvizjs';
-  import {Subject, merge, fromEvent, combineLatest, of, interval} from 'rxjs';
+  import { Subject, merge, fromEvent, combineLatest, of, interval } from 'rxjs';
   import {
     map,
     filter,
@@ -58,7 +58,7 @@
     takeUntil,
     takeLast,
     takeWhile,
-    pairwise
+    pairwise,
   } from 'rxjs/operators';
   import toolBar from './components/toolBar';
   import hoverMenuNode from './components/hoverMenuNode';
@@ -106,7 +106,7 @@
   const palette = [
     '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
     '#333333', '#808080', '#CCCCCC', '#D33115', '#E27300', '#FCDC00', '#B0BC00', '#68BC00', '#16A5A5', '#009CE0', '#7B64FF', '#FA28FF',
-    '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E'
+    '#000000', '#666666', '#B3B3B3', '#9F0500', '#C45100', '#FCC400', '#808900', '#194D33', '#0C797D', '#0062B1', '#653294', '#AB149E',
   ];
 
   export default {
@@ -114,9 +114,9 @@
       hypothesisId: String,
       nodes: {
         type: Array,
-        default: function () {
+        default() {
           return [];
-        }
+        },
       },
       highlightedNodeId: null,
       savedDiagram: null,
@@ -124,9 +124,9 @@
       height: Number,
       textNodes: {
         type: Array,
-        default: function () {
+        default() {
           return [];
-        }
+        },
       },
       imgDropGraph: null,
       getDlist: Function,
@@ -136,7 +136,7 @@
       toolBar,
       'color-picker': Compact,
       hoverMenuNode,
-      hoverMenuEdge
+      hoverMenuEdge,
     },
     data() {
       return {
@@ -146,7 +146,7 @@
         styleObject: {
           top: '230px',
           left: '230px',
-          position: 'absolute'
+          position: 'absolute',
         },
         hoverDisplay: false,
         hoverPos: undefined,
@@ -167,7 +167,7 @@
         colors: {
           hex: '#FFFFFF',
         },
-        palette: palette,
+        palette,
         graph: undefined,
         nodesOutsideDiagram: [],
         mouseState: POINTER,
@@ -211,7 +211,6 @@
           // Create from saved.
           const savedGraph = JSON.parse(this.savedDiagram);
           this.loadFromSaved(savedGraph);
-
         }
       });
 
@@ -243,7 +242,7 @@
       // undo keyboard shortcut
       ctrlDown.pipe(
         filter(e => e.keyCode === 90 && !e.shiftKey && !e.altKey),
-        filter(() => this.canKeyboardUndo)
+        filter(() => this.canKeyboardUndo),
       ).subscribe((e) => {
         e.preventDefault();
         this.rootObservable.next({ type: UNDO });
@@ -252,7 +251,7 @@
       // redo keyboard shortcut
       ctrlDown.pipe(
         filter(e => (e.keyCode === 89 && !e.shiftKey && !e.altKey) || (e.keyCode === 90 && e.shiftKey && !e.altKey)),
-        filter(() => this.canKeyboardUndo)
+        filter(() => this.canKeyboardUndo),
       ).subscribe((e) => {
         e.preventDefault();
         this.rootObservable.next({ type: REDO });
@@ -261,7 +260,7 @@
       // save file keyboard shortcut
       ctrlDown.pipe(
         filter(e => e.keyCode === 83),
-        filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
+        filter(() => this.mouseState === POINTER || this.mouseState === SELECT),
       ).subscribe((e) => {
         e.preventDefault();
         this.changeMouseState(SAVE);
@@ -270,7 +269,7 @@
       // open file keyboard shortcut
       ctrlDown.pipe(
         filter(e => e.keyCode === 79),
-        filter(() => this.mouseState === POINTER || this.mouseState === SELECT)
+        filter(() => this.mouseState === POINTER || this.mouseState === SELECT),
       ).subscribe((e) => {
         e.preventDefault();
         this.changeMouseState(OPEN);
@@ -279,7 +278,7 @@
       // ctrl + A select all keyboard shortcut
       ctrlDown.pipe(filter(e => e.keyCode === 65),
         filter(() => this.mouseState === POINTER || this.mouseState === SELECT),
-        tap(e => e.preventDefault())
+        tap(e => e.preventDefault()),
       ).subscribe(() => {
         const newSelect = this.graph.selectByCoords({
           x: -Infinity,
@@ -306,8 +305,6 @@
           e.preventDefault();
           this.changeMouseState(SELECT);
         });
-
-
     },
     beforeDestroy() {
       this.destroy$.next(true);
@@ -315,13 +312,12 @@
     },
     watch: {
       imgDropGraph(current, old) {
-        let me = this;
+        const me = this;
 
         function imageToBase64(img) {
           if (!img) return;
-          let canvas, ctx, dataURL, base64;
-          canvas = document.createElement('canvas');
-          ctx = canvas.getContext('2d');
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
           const cw = canvas.width;
           const ch = canvas.height;
           const maxW = 150;
@@ -334,14 +330,14 @@
           canvas.width = iwScaled;
           canvas.height = ihScaled;
           ctx.drawImage(img, 0, 0, iwScaled, ihScaled);
-          dataURL = canvas.toDataURL('image/png');
-          base64 = dataURL.replace(/^data:image\/png;base64,/, '');
+          const dataURL = canvas.toDataURL('image/png');
+          const base64 = dataURL.replace(/^data:image\/png;base64,/, '');
           return base64;
         }
 
-        let img = document.querySelector('[src = "' + current.imgSrc + '"]');
+        const img = document.querySelector(`[src = "${current.imgSrc}"]`);
         if (!img) return;
-        let base64 = imageToBase64(img);
+        const base64 = imageToBase64(img);
         const parts = img.getAttribute('src').split('/');
         const id = parts[parts.length - 1];
 
@@ -349,7 +345,7 @@
           src: base64,
           width: 60,
           height: 70,
-          class: 'img-node'
+          class: 'img-node',
         };
         if (current.dropped && current.dropped !== old.dropped) {
           if (!current.existingNode) {
@@ -357,7 +353,7 @@
               type: CREATE,
               newNode: {
                 text: 'New',
-                img: nodeImg
+                img: nodeImg,
               },
             });
           } else {
@@ -371,7 +367,7 @@
               src: base64,
               width: 60,
               height: 70,
-              class: 'img-node'
+              class: 'img-node',
             };
             this.rootObservable.next({
               type: NODEEDIT,
@@ -442,8 +438,8 @@
       async showLoadingMask(text) {
         const target = this.$el;
         const options = {
-          target: target,
-          text: text
+          target,
+          text,
         };
         target.style.opacity = '0.2';
         this.responseLoadingMask = this.$loading(options);
@@ -451,7 +447,7 @@
       },
 
       hideLoadingMask() {
-        let me = this;
+        const me = this;
         if (me.responseLoadingMask) {
           me.responseLoadingMask.close();
         }
@@ -481,7 +477,7 @@
             predicate: x.predicate,
           });
         });
-        //create groups
+        // create groups
         const groups = savedGraph.groups;
         if (groups) {
           groups.forEach((g) => {
@@ -576,9 +572,9 @@
                 // new nodes are nodes that have not been added to the graph yet
                 if (action.newNode) {
                   const newNodes = Array.isArray(action.newNode) ? action.newNode : [action.newNode];
-                  const newNodeArr = newNodes.map(n => {
+                  const newNodeArr = newNodes.map((n) => {
                     const defaultNode = {
-                      id: 'note-' + uuid(),
+                      id: `note-${uuid()}`,
                       class: 'b-no-snip',
                       nodeShape: this.defaultShape,
                       text: 'New',
@@ -605,7 +601,7 @@
                 // existing nodes are nodes that are being re added after being deleted.
                 if (action.existingNode) {
                   const newNodes = Array.isArray(action.existingNode) ? action.existingNode : [action.existingNode];
-                  newNodes.forEach(n => {
+                  newNodes.forEach((n) => {
                     this.graph.addNode(this.toNode(n), true);
                     this.recalculateNodesOutside();
                     if (n.fixedWidth) {
@@ -617,7 +613,7 @@
 
                 if (action.groups) {
                   const groups = [...action.groups.entries()];
-                  groups.forEach(g => {
+                  groups.forEach((g) => {
                     const id = g[0];
                     const saved = g[1];
                     this.graph.addToGroup({ id, data: saved.data }, saved.children, true);
@@ -633,12 +629,12 @@
                   triplet = [];
                 }
                 Promise.all(triplet.map(t => this.graph.addTriplet(t)))
-                // add to undo stack
+                  // add to undo stack
                   .then(() => {
                     undoStack.push({
                       type: DELETE,
                       nodeId: nodes.map(n => n.id),
-                      triplet: triplet,
+                      triplet,
                     });
                   })
                   // perform callbacks
@@ -680,7 +676,7 @@
 
                 // get groups they belong to
                 const groupMap = new Map();
-                nodeArray.forEach(d => {
+                nodeArray.forEach((d) => {
                   if (d.parent) {
                     const g = d.parent;
                     if (groupMap.has(g.id)) {
@@ -691,53 +687,47 @@
                   }
                 });
                 // promise containing all subject edges form DB
-                const subjectEdges = nodeIds.map(id => {
-                  return new Promise((resolve, reject) => {
-                    db.get({ subject: id }, (err, l) => {
-                      if (err) {
-                        reject(err);
-                      } else {
-                        resolve(l);
-                      }
-                    });
+                const subjectEdges = nodeIds.map(id => new Promise((resolve, reject) => {
+                  db.get({ subject: id }, (err, l) => {
+                    if (err) {
+                      reject(err);
+                    } else {
+                      resolve(l);
+                    }
                   });
-                });
+                }));
                 // promise containing all object edges from DB
-                const objectEdges = nodeIds.map(id => {
-                  return new Promise((resolve, reject) => {
-                    db.get({ object: id }, (err, l) => {
-                      if (err) {
-                        reject(err);
-                      } else {
-                        resolve(l);
-                      }
-                    });
+                const objectEdges = nodeIds.map(id => new Promise((resolve, reject) => {
+                  db.get({ object: id }, (err, l) => {
+                    if (err) {
+                      reject(err);
+                    } else {
+                      resolve(l);
+                    }
                   });
-                });
+                }));
                 // promise containing edges selected for deletion
-                const edgePromise = edgeArray.map(triplet => {
+                const edgePromise = edgeArray.map((triplet) => {
                   triplet.subject = triplet.predicate.subject;
                   triplet.object = triplet.predicate.object;
                   return Promise.resolve(triplet);
                 });
 
                 Promise.all([...subjectEdges, ...objectEdges, ...edgePromise])
-                //map database triplets to edge objects
-                  .then((values) => {
-                    return [].concat.apply([], values)
-                      .map((x) => {
-                        const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
-                        const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
-                        if (indexOfSubject !== -1 && indexOfObject !== -1) {
-                          return {
-                            subject: this.toNode(this.textNodes[indexOfSubject]),
-                            predicate: x.predicate,
-                            object: this.toNode(this.textNodes[indexOfObject]),
-                          };
-                        }
-                      });
-                  })
-                  //remove duplicate edges
+                  // map database triplets to edge objects
+                  .then(values => [].concat.apply([], values)
+                    .map((x) => {
+                      const indexOfSubject = this.textNodes.map(v => v && v.id).indexOf(x.subject);
+                      const indexOfObject = this.textNodes.map(v => v && v.id).indexOf(x.object);
+                      if (indexOfSubject !== -1 && indexOfObject !== -1) {
+                        return {
+                          subject: this.toNode(this.textNodes[indexOfSubject]),
+                          predicate: x.predicate,
+                          object: this.toNode(this.textNodes[indexOfObject]),
+                        };
+                      }
+                    }))
+                  // remove duplicate edges
                   .then((edges) => {
                     const edgeMap = new Map();
                     edges.forEach((edge) => {
@@ -746,22 +736,20 @@
                     return [...edgeMap.values()];
                   })
                   // delete all edges
-                  .then((edges) => {
-                    return Promise.all(edges.map(t => this.graph.removeTriplet(t)))
+                  .then(edges => Promise.all(edges.map(t => this.graph.removeTriplet(t)))
                     // delete all nodes
-                      .then(() => {
-                        nodeIds.forEach(id => this.graph.removeNode(id, this.recalculateNodesOutside));
-                      })
-                      // add to undo stack
-                      .then(() => {
-                        undoStack.push({
-                          type: CREATE,
-                          triplet: edges,
-                          existingNode: nodeArray,
-                          groups: groupMap,
-                        });
+                    .then(() => {
+                      nodeIds.forEach(id => this.graph.removeNode(id, this.recalculateNodesOutside));
+                    })
+                    // add to undo stack
+                    .then(() => {
+                      undoStack.push({
+                        type: CREATE,
+                        triplet: edges,
+                        existingNode: nodeArray,
+                        groups: groupMap,
                       });
-                  })
+                    }))
                   // perform callbacks
                   .then(() => {
                     this.graph.restart.layout();
@@ -962,6 +950,7 @@
                 });
 
                 const applyTranslationHelper = () => {
+                  // TODO fix use of trans, should be passed in
                   const nodeIDs = trans.targets;
                   const nodes = nodeIDs.map(id => this.graph.getNode(id));
                   const xVal = nodes.map(d => d.x + trans.x);
@@ -983,7 +972,7 @@
                 // save previous group node belonged to
                 const prevGroupMap = new Map();
                 children.forEach((child) => {
-                  child.nodes.forEach(id => {
+                  child.nodes.forEach((id) => {
                     const d = this.graph.getNode(id);
                     const g = d.parent ? this.graph.getGroup(d.parent.id) : false;
                     if (prevGroupMap.has(g)) {
@@ -1023,7 +1012,7 @@
                 };
                 if (trans) {
                   applyTranslationHelper();
-                  opposingAction.translation = { targets: trans.targets, x: -trans.x, y: -trans.y, };
+                  opposingAction.translation = { targets: trans.targets, x: -trans.x, y: -trans.y };
                 }
                 undoStack.push(opposingAction);
                 break;
@@ -1063,7 +1052,7 @@
                 console.log('Unknown action:', action.type);
               }
             }
-          })
+          }),
         ).subscribe(
           action => console.log('action', action, undoStack.length, redoStack.length),
           console.error,
@@ -1134,7 +1123,7 @@
             // on end remove elements in drag animation
             g.node().remove();
             // remove translucency effect
-            nodes.forEach(d => {
+            nodes.forEach((d) => {
               d.class = d.class.replace(' translucent', '');
             });
             this.graph.restart.styles();
@@ -1150,11 +1139,9 @@
             let draggedNodes = nodes; // nodes that are in the drag selection
             if (target.groups.length > 0) { // mouse target is a group
               targetGroup = target.groups[0];
-            } else {
-              if (target.nodes.length > 0) { // mouse target is another node
-                draggedNodes = draggedNodes.filter(node => node.id !== target.nodes[0].id);
-                nodes = draggedNodes.concat(target.nodes[0]);
-              }
+            } else if (target.nodes.length > 0) { // mouse target is another node
+              draggedNodes = draggedNodes.filter(node => node.id !== target.nodes[0].id);
+              nodes = draggedNodes.concat(target.nodes[0]);
             }
             // map nodes to IDs
             const draggednodesIDs = draggedNodes.map(node => node.id);
@@ -1171,7 +1158,7 @@
             } else {
               this.rootObservable.next({
                 type: GROUP,
-                group: targetGroup ? targetGroup : true,
+                group: targetGroup || true,
                 children: { nodes: nodes.map(node => node.id) },
                 translation: { targets: draggednodesIDs, x: xf - d.x, y: yf - d.y },
               });
@@ -1192,7 +1179,6 @@
 
           elemArr.forEach((e, i) => {
             e.attr('transform', `translate(${(coordArr[i].x) / scale},${coordArr[i].y / scale})`);
-
           });
         });
       },
@@ -1212,10 +1198,10 @@
               const x = width / 2;
               const y = height / 2;
               const r = Math.round(Math.min(width, height) / 8);
-              const v0 = { x: x, y: y };
-              const v1 = { x: x, y: y + height };
+              const v0 = { x, y };
+              const v1 = { x, y: y + height };
               const v2 = { x: x + width, y: y + height };
-              const v3 = { x: x + width, y: y };
+              const v3 = { x: x + width, y };
               return [`M${v0.x} ${v0.y + r}`,
                 `V${v1.y - r}`,
                 `C${v1.x} ${v1.y} ${v1.x + r} ${v1.y} ${v1.x + r} ${v1.y}`,
@@ -1226,11 +1212,8 @@
                 `H${v0.x + r}`,
                 `C${v0.x} ${v0.y} ${v0.x} ${v0.y + r} ${v0.x} ${v0.y + r} Z`]
                 .join(' ');
-            } else {
-              return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z';
             }
-
-
+            return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z';
           }
           default : {
             // Return rect by default
@@ -1242,7 +1225,7 @@
       createGraph() {
         const $mouseOverNode = this.mouseOverNode$;
         const $mousedown = this.mouseDown$;
-        let me = this;
+        const me = this;
         const currentState = {
           currentNode: {
             data: {},
@@ -1252,7 +1235,7 @@
           startedDragAt: '',
           nodeMap: new Map(),
         };
-        this.$on('mouseovernode', function () {
+        this.$on('mouseovernode', () => {
         });
 
         const layoutOptions = {
@@ -1262,14 +1245,15 @@
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
           edgeSmoothness: 15,
-          palette: palette,
+          palette,
 
           nodeToColor: function nodeToColor(d) {
             return d.color ? d.color : ' "#ffffff"';
           },
 
           nodeToPin: function nodeToPin(d) {
-            // 1st bit is user set, second bit is set by d3 whilst dragging. hence check LSB if d.fixed is not bool
+            // 1st bit is user set, second bit is set by d3 whilst dragging.
+            // hence check LSB if d.fixed is not bool
             return (d.fixed === true || d.fixed % 2 === 1);
           },
 
@@ -1291,10 +1275,10 @@
                   const x = width / 2;
                   const y = height / 2;
                   const r = Math.round(Math.min(width, height) / 8);
-                  const v0 = { x: x, y: y };
-                  const v1 = { x: x, y: y + height };
+                  const v0 = { x, y };
+                  const v1 = { x, y: y + height };
                   const v2 = { x: x + width, y: y + height };
-                  const v3 = { x: x + width, y: y };
+                  const v3 = { x: x + width, y };
                   return [`M${v0.x} ${v0.y + r}`,
                     `V${v1.y - r}`,
                     `C${v1.x} ${v1.y} ${v1.x + r} ${v1.y} ${v1.x + r} ${v1.y}`,
@@ -1305,11 +1289,8 @@
                     `H${v0.x + r}`,
                     `C${v0.x} ${v0.y} ${v0.x} ${v0.y + r} ${v0.x} ${v0.y + r} Z`]
                     .join(' ');
-                } else {
-                  return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z';
                 }
-
-
+                return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z';
               }
               default : {
                 // Return rect by default
@@ -1318,9 +1299,7 @@
             }
           },
 
-          groupFillColor: (g) => {
-            return g && g.data.color ? g.data.color : '#F6ECAF';
-          },
+          groupFillColor: g => g && g.data.color ? g.data.color : '#F6ECAF',
 
           clickAway: () => {
             // this.closeHoverMenu();
@@ -1330,9 +1309,7 @@
             this.scale = scale;
           },
 
-          selection: () => {
-            return this.activeSelect;
-          },
+          selection: () => this.activeSelect,
 
           nodeSizeChange: () => {
             this.updateHoverMenu();
@@ -1404,21 +1381,13 @@
             this.hoverQueue$.next(false);
           },
 
-          edgeColor: (predicate) => {
-            return predicate ? (predicate.stroke ? predicate.stroke.substring(1) : '000000') : '000000';
-          },
+          edgeColor: predicate => predicate ? (predicate.stroke ? predicate.stroke.substring(1) : '000000') : '000000',
 
-          edgeArrowhead: (predicate) => {
-            return (predicate && typeof predicate.arrowhead === 'number') ? predicate.arrowhead : 1;
-          },
+          edgeArrowhead: predicate => (predicate && typeof predicate.arrowhead === 'number') ? predicate.arrowhead : 1,
 
-          edgeStroke: (predicate) => {
-            return predicate ? (predicate.strokeWidth ? predicate.strokeWidth : 2) : 2;
-          },
+          edgeStroke: predicate => predicate ? (predicate.strokeWidth ? predicate.strokeWidth : 2) : 2,
 
-          edgeDasharray: (predicate) => {
-            return predicate ? (predicate.strokeDasharray ? predicate.strokeDasharray : 0) : 0;
-          },
+          edgeDasharray: predicate => predicate ? (predicate.strokeDasharray ? predicate.strokeDasharray : 0) : 0,
 
           edgeRemove: (edge, selection, e) => {
             this.changeMouseState(POINTER);
@@ -1434,9 +1403,7 @@
 
           canDrag: () => (this.$data.mouseState === POINTER || this.mouseState === SELECT) && !this.isResizing,
 
-          isSelect: () => {
-            return this.$data.mouseState === SELECT;
-          },
+          isSelect: () => this.$data.mouseState === SELECT,
 
           clickGroup: (d, selection, e) => {
             if (this.mouseState === POINTER || this.mouseState === SELECT) {
@@ -1446,7 +1413,7 @@
               this.activeSelect.selectExclusive(d);
               this.graph.restart.highlight();
             }
-          }
+          },
         };
 
         this.graph = networkViz('graph', layoutOptions);
@@ -1673,28 +1640,28 @@
         this.colors = node.color ? node.color : node.data.color;
         this.$refs.vueColorPicker.currentColor = node.color;
 
-        let grapgEditor = document.getElementById('graph').getBoundingClientRect();
-        let graphEditorX = grapgEditor.x;
-        let graphEditorY = grapgEditor.y;
-        let graphEditorW = grapgEditor.width;
-        let graphEditorH = grapgEditor.height;
+        const grapgEditor = document.getElementById('graph').getBoundingClientRect();
+        const graphEditorX = grapgEditor.x;
+        const graphEditorY = grapgEditor.y;
+        const graphEditorW = grapgEditor.width;
+        const graphEditorH = grapgEditor.height;
         let posX = ev.clientX - graphEditorX;
         let posY = ev.clientY + 50 - graphEditorY;
 
         if (posX + 250 > graphEditorW) {
-          posX = posX - 250;
+          posX -= 250;
         }
         if (posY < 0) {
           posY = 0;
         }
         if (posY + 70 > graphEditorH) {
-          posY = posY - (posY + 80 - graphEditorH);
+          posY -= (posY + 80 - graphEditorH);
         }
         this.styleObject = {
           position: 'absolute !important',
-          top: posY + 'px !important',
-          left: posX + 'px !important',
-          'z-index': '9999'
+          top: `${posY}px !important`,
+          left: `${posX}px !important`,
+          'z-index': '9999',
         };
         const svgElem = this.graph.getSVGElement().node();
         fromEvent(svgElem, 'click').pipe(
@@ -1710,7 +1677,7 @@
       startArrow(node, selection) {
         this.mouseState = CREATEEDGE;
         this.currentNode = node;
-        this.mouseDown$.next({ type: 'CREATEEDGE', clickedNode: node, selection: selection });
+        this.mouseDown$.next({ type: 'CREATEEDGE', clickedNode: node, selection });
       },
 
       resizeDrag(node, elem, event) {
@@ -1772,9 +1739,7 @@
       },
 
       recalculateNodesOutside() {
-        this.nodesOutsideDiagram = this.textNodes.filter((v) => {
-          return !this.graph.hasNode(`${v.id}`);
-        });
+        this.nodesOutsideDiagram = this.textNodes.filter(v => !this.graph.hasNode(`${v.id}`));
       },
 
       createHoverMenu(d, selection) {
@@ -1790,7 +1755,7 @@
         this.hoverData = { data: d, el: selection };
         this.hoverEdgeDisplay = false;
         this.hoverTextBar = d.id.slice(0, 4) === 'grup' && this.mouseState !== TEXTEDIT
-                            && (!d.data.text || d.data.text === '');
+          && (!d.data.text || d.data.text === '');
       },
 
       updateHoverMenu() {
@@ -1827,12 +1792,10 @@
         if (target && this.activeSelect.includes(target.id)) {
           [...this.activeSelect.nodes.values()].forEach(d => nodes.push(d));
           [...this.activeSelect.groups.values()].forEach(d => groups.push(d));
-        } else {
-          if (target.id.slice(0, 4) === 'note') {
-            nodes.push(target);
-          } else if (target.id.slice(0, 4) === 'grup') {
-            groups.push(target);
-          }
+        } else if (target.id.slice(0, 4) === 'note') {
+          nodes.push(target);
+        } else if (target.id.slice(0, 4) === 'grup') {
+          groups.push(target);
         }
         this.ifColorPickerOpen = false;
         const d3Selection = event.data.el;
@@ -1930,28 +1893,28 @@
         this.colors = edges[0].predicate.stroke ? edges[0].predicate.stroke : '#000000';
         this.$refs.vueColorPicker.currentColor = this.colors;
 
-        let graphEditor = document.getElementById('graph').getBoundingClientRect();
-        let graphEditorX = graphEditor.x;
-        let graphEditorY = graphEditor.y;
-        let graphEditorW = graphEditor.width;
-        let graphEditorH = graphEditor.height;
+        const graphEditor = document.getElementById('graph').getBoundingClientRect();
+        const graphEditorX = graphEditor.x;
+        const graphEditorY = graphEditor.y;
+        const graphEditorW = graphEditor.width;
+        const graphEditorH = graphEditor.height;
         let posX = e.clientX - graphEditorX;
         let posY = e.clientY + 50 - graphEditorY;
 
         if (posX + 250 > graphEditorW) {
-          posX = posX - 250;
+          posX -= 250;
         }
         if (posY < 0) {
           posY = 0;
         }
         if (posY + 70 > graphEditorH) {
-          posY = posY - (posY + 80 - graphEditorH);
+          posY -= (posY + 80 - graphEditorH);
         }
         this.styleObject = {
           position: 'absolute !important',
-          top: posY + 'px !important',
-          left: posX + 'px !important',
-          'z-index': '9999'
+          top: `${posY}px !important`,
+          left: `${posX}px !important`,
+          'z-index': '9999',
         };
         const svgElem = this.graph.getSVGElement().node();
         fromEvent(svgElem, 'click').pipe(
@@ -2058,7 +2021,7 @@
             predicate: x.predicate,
           });
         });
-        //create groups
+        // create groups
         const groups = savedGraph.groups;
         if (groups) {
           groups.forEach((g) => {
@@ -2136,25 +2099,25 @@
             let nodes = [...this.activeSelect.nodes.values()];
             let edges = [...this.activeSelect.edges.values()];
             const reCheckBold = /^ *(<.*>)*(<b>)(.*)(<\/b>)(<\/.*>)* *$/;
-            const bold = nodes.every((d) => reCheckBold.test(d.shortname)) && edges.every((d) => reCheckBold.test(d.predicate.text));
-            nodes = nodes.map(d => {
+            const bold = nodes.every(d => reCheckBold.test(d.shortname)) && edges.every(d => reCheckBold.test(d.predicate.text));
+            nodes = nodes.map((d) => {
               // remove existing bold tags
               let str = d.shortname.replace(/<b>|<\/b>/g, '');
               if (!bold) {
                 // add bold tags to outside of string
-                str = '<b>' + str + '</b>';
+                str = `<b>${str}</b>`;
               }
               return str;
             });
-            edges = edges.map(d => {
+            edges = edges.map((d) => {
                 // remove existing bold tags
                 let str = d.predicate.text.replace(/<b>|<\/b>/g, '');
                 if (!bold) {
                   // add bold tags to outside of string
-                  str = '<b>' + str + '</b>';
+                  str = `<b>${str}</b>`;
                 }
                 return str;
-              }
+              },
             );
             if (nodes.length > 0) {
               this.rootObservable.next({
@@ -2190,9 +2153,9 @@
             this.colors.hex = '#FFFFFF';
             this.styleObject = {
               position: 'absolute !important',
-              top: 70 + 'px !important',
-              right: 95 + 'px !important',
-              'z-index': '9999'
+              top: `${70}px !important`,
+              right: `${95}px !important`,
+              'z-index': '9999',
             };
             const svgElem = this.graph.getSVGElement().node();
             fromEvent(svgElem, 'click').pipe(
@@ -2214,9 +2177,9 @@
             const b = svg.getBoundingClientRect();
             const editorBounds = this.transformCoordinates({ x: b.width + b.x, y: b.height + b.y });
             const newNodes = [...this.activeSelect.nodes.values()]
-              .map(d => {
+              .map((d) => {
                 const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname, id, x, y, width, height } = d;
-                const newId = 'note-' + uuid();
+                const newId = `note-${uuid()}`;
                 const newX = x + 100 + width / 2 > editorBounds.x ? x - 20 - width / 2 : x + 20 + width / 2;
                 const newY = y + 160 + height > editorBounds.y ? y - 15 - height : y + 15 + height;
                 const newnode = {
@@ -2238,7 +2201,7 @@
               });
             const newEdges = [...this.activeSelect.edges.values()]
               .filter(d => idMap.has(d.predicate.subject) || idMap.has(d.predicate.object))
-              .map(d => {
+              .map((d) => {
                   let subject = d.source;
                   const predicate = d.predicate;
                   let object = d.target;
@@ -2251,10 +2214,10 @@
                   const newPredicate = Object.assign({}, predicate);
                   newPredicate.subject = subject.id;
                   newPredicate.object = object.id;
-                  newPredicate.hash = 'edge-' + uuid();
+                  newPredicate.hash = `edge-${uuid()}`;
                   newPredicate.class = newPredicate.class.replace(' highlight', '');
                   return { subject, predicate: newPredicate, object };
-                }
+                },
               );
             this.changeMouseState(POINTER);
             this.rootObservable.next({
@@ -2301,9 +2264,9 @@
             const objOfNodes = {};
             const listOfEdges = [];
             Object.keys(Dlist).forEach((D) => {
-              const id = 'note-' + uuid();
+              const id = `note-${uuid()}`;
               objOfNodes[D] = {
-                id: id,
+                id,
                 nodeShape: 'circle',
                 text: D,
                 fixed: false,
@@ -2318,7 +2281,7 @@
                   predicate: {
                     type: 'arrow',
                     text: '',
-                    hash: 'edge-' + uuid(),
+                    hash: `edge-${uuid()}`,
                     subject: objOfNodes[n].id,
                     object: objOfNodes[key].id,
                     class: '',
@@ -2353,21 +2316,21 @@
             let nodes = [...this.activeSelect.nodes.values()];
             let edges = [...this.activeSelect.edges.values()];
             const reCheckItalic = /^ *(<.*>)*(<i>)(.*)(<\/i>)(<\/.*>)* *$/;
-            const italic = nodes.every((d) => reCheckItalic.test(d.shortname)) && edges.every((d) => reCheckItalic.test(d.predicate.text));
-            nodes = nodes.map(d => {
+            const italic = nodes.every(d => reCheckItalic.test(d.shortname)) && edges.every(d => reCheckItalic.test(d.predicate.text));
+            nodes = nodes.map((d) => {
               let str = d.shortname.replace(/<i>|<\/i>/g, ''); // remove existing italic tags
               if (!italic) {
-                str = '<i>' + str + '</i>';// add italic tags to outside of string
+                str = `<i>${str}</i>`;// add italic tags to outside of string
               }
               return str;
             });
-            edges = edges.map(d => {
+            edges = edges.map((d) => {
                 let str = d.predicate.text.replace(/<i>|<\/i>/g, ''); // remove existing italic tags
                 if (!italic) {
-                  str = '<i>' + str + '</i>'; // add italic tags to outside of string
+                  str = `<i>${str}</i>`; // add italic tags to outside of string
                 }
                 return str;
-              }
+              },
             );
             if (nodes.length > 0) {
               this.rootObservable.next({
@@ -2605,8 +2568,8 @@
             let nodes = [...this.activeSelect.nodes.values()];
             let edges = [...this.activeSelect.edges.values()];
             const reCheckUnderlined = /^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/;
-            const underline = nodes.every((d) => reCheckUnderlined.test(d.shortname)) && edges.every((d) => reCheckUnderlined.test(d.predicate.text));
-            nodes = nodes.map(d => {
+            const underline = nodes.every(d => reCheckUnderlined.test(d.shortname)) && edges.every(d => reCheckUnderlined.test(d.predicate.text));
+            nodes = nodes.map((d) => {
               // remove existing underlines
               // let str = d.shortname.replace(/^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/, '$1$3$5');
               let str = d.shortname.replace(/<u>|<\/u>/g, '');
@@ -2616,7 +2579,7 @@
               }
               return str;
             });
-            edges = edges.map(d => {
+            edges = edges.map((d) => {
               // remove existing underlines
               // let str = d.shortname.replace(/^ *(<.*>)*(<u>)(.*)(<\/u>)(<\/.*>)* *$/, '$1$3$5');
               let str = d.predicate.text.replace(/<u>|<\/u>/g, '');

@@ -175,7 +175,7 @@
         linkToolDispose: undefined, // Subscription disposing.
         notes: 0,
         noteObjs: [],
-        dbClickCreateNode: true, // TODO remove this after removing edge menu
+        dbClickCreateNode: true, // TODO remove this after removing edge menu // TODO stuck false after changing group colour
         canKeyboardUndo: true,
         groupDrag: false,
         destroy$: new Subject(),
@@ -490,6 +490,7 @@
         const svg = this.graph.getSVGElement().node();
         svg.focus();
         this.ifColorPickerOpen = false;
+        this.dbClickCreateNode = true;
         this.colors = value;
         this.hoverEdgeColor = value.hex;
         const idArray = Array.isArray(this.coloredNodeId) ? this.coloredNodeId : [this.coloredNodeId];
@@ -932,12 +933,13 @@
                * Passing in array of groups and children will map each set of children to each group
                * {type: GROUP,
                   group: {groupObj} | [{groupObj}],
-                  children: {nodes: [nodeIDs]} | [{nodes: [nodeIDs]}], }
+                  children: {nodes: [nodeIDs], groups:[groupID]} |
+                    [{nodes: [nodeIDs], groups:[groupID]}], }
                *
                * Remove from group
                * {type: GROUP,
                   group: false,
-                  children: {nodes: [nodeIDs]} | [{nodes: [nodeIDs]}], }
+                  children: {nodes: [nodeIDs], groups:[groupID]} | [{nodes: [nodeIDs]}], }
                *
                */
               case GROUP: {
@@ -946,11 +948,10 @@
                  */
                 const initGroupHelper = () => ({
                   id: `grup-${uuid()}`,
-                  data: { color: '#F6ECAF', class: '', text: '' },
+                  data: { color: '#F6ECAF', class: '', text: '', level: 0 },
                 });
 
-                const applyTranslationHelper = () => {
-                  // TODO fix use of trans, should be passed in
+                const applyTranslationHelper = (trans) => {
                   const nodeIDs = trans.targets;
                   const nodes = nodeIDs.map(id => this.graph.getNode(id));
                   const xVal = nodes.map(d => d.x + trans.x);
@@ -968,19 +969,31 @@
                   });
                 };
                 const children = Array.isArray(action.children) ? action.children : [action.children];
-                const trans = action.translation;
-                // save previous group node belonged to
+                // save previous group children belonged to
                 const prevGroupMap = new Map();
                 children.forEach((child) => {
-                  child.nodes.forEach((id) => {
-                    const d = this.graph.getNode(id);
-                    const g = d.parent ? this.graph.getGroup(d.parent.id) : false;
-                    if (prevGroupMap.has(g)) {
-                      prevGroupMap.get(g).nodes.push(id);
-                    } else {
-                      prevGroupMap.set(g, { nodes: [id] });
-                    }
-                  });
+                  if (child.nodes) {
+                    child.nodes.forEach((id) => {
+                      const d = this.graph.getNode(id);
+                      const g = d.parent ? this.graph.getGroup(d.parent.id) : false;
+                      if (prevGroupMap.has(g)) {
+                        prevGroupMap.get(g).nodes.push(id);
+                      } else {
+                        prevGroupMap.set(g, { nodes: [id], groups: [] });
+                      }
+                    });
+                  }
+                  if (child.groups) {
+                    child.groups.forEach((id) => {
+                      const g = this.graph.getGroup(id);
+                      const pg = g.parent ? this.graph.getGroup(g.parent.id) : false;
+                      if (prevGroupMap.has(pg)) {
+                        prevGroupMap.get(pg).groups.push(id);
+                      } else {
+                        prevGroupMap.set(pg, { nodes: [], groups: [id] });
+                      }
+                    });
+                  }
                 });
 
                 if (!action.group) {
@@ -1010,11 +1023,16 @@
                   group: [...prevGroupMap.keys()],
                   children: [...prevGroupMap.values()],
                 };
-                if (trans) {
-                  applyTranslationHelper();
-                  opposingAction.translation = { targets: trans.targets, x: -trans.x, y: -trans.y };
+                if (action.translation) {
+                  applyTranslationHelper(action.translation);
+                  opposingAction.translation = {
+                    targets: action.translation.targets,
+                    x: -action.translation.x,
+                    y: -action.translation.y,
+                  };
                 }
                 undoStack.push(opposingAction);
+                // todo opposing action is incorrect
                 break;
               }
 
@@ -1074,7 +1092,7 @@
         return Promise.resolve();
       },
 
-      mouseDownGroup(d, d3Selection, e) {
+      mouseDownGroup(target, d3Selection, e) {
         this.groupDrag = true;
         const svgSel = this.graph.getSVGElement();
         const scale = 1.25;
@@ -1085,12 +1103,20 @@
           .append('g')
           .attr('transform', `translate(0,0),scale(${scale})`);
 
-        // get nodes to be changed
+        // get selected items involved in drag
         let nodes = [];
+        let groups = [];
         if (this.mouseState === SELECT) {
           nodes = [...this.activeSelect.nodes.values()];
+          groups = [...this.activeSelect.groups.values()];
         }
-        nodes = [d].concat(nodes.filter(node => node.id !== d.id));
+        // make sure target is included in selection
+        if (target.id.slice(0, 4) === 'note') {
+          nodes = [target].concat(nodes.filter(node => node.id !== target.id));
+        } else if (target.id.slice(0, 4) === 'grup') {
+          groups = [target].concat(groups.filter(group => group.id !== target.id));
+        }
+
 
         // get elements involved in drag animation
         const elemArr = [];
@@ -1109,6 +1135,20 @@
             .attr('transform', `translate(${coord.x / scale},${coord.y / scale})`);
           elemArr.push(elem);
         });
+        groups.forEach((d) => {
+          // add semi transparent effect to groups
+          if (!d.data.class.includes('translucent')) {
+            d.data.class += ' translucent';
+          }
+          const coord = { x: (d.bounds.x - centreOffset), y: (d.bounds.y - centreOffset) };
+          coordArr.push(coord);
+          const elem = g.append('path')
+            .attr('fill', d.data.color)
+            .attr('d', this.nodeShapeToPath({ nodeShape: 'capsule' }))
+            .attr('stroke', 'grey')
+            .attr('transform', `translate(${coord.x / scale},${coord.y / scale})`);
+          elemArr.push(elem);
+        });
         this.graph.restart.styles();
         elemArr.slice(0, 2).reverse().forEach(sel => sel.raise());
 
@@ -1118,13 +1158,16 @@
         const end = fromEvent(document, 'mouseup');
         // move event
         const move = fromEvent(document, 'mousemove').pipe(
-          map(e => this.transformCoordinates({ x: e.x, y: e.y })),
+          map(ev => this.transformCoordinates({ x: ev.x, y: ev.y })),
           finalize(() => {
             // on end remove elements in drag animation
             g.node().remove();
             // remove translucency effect
             nodes.forEach((d) => {
               d.class = d.class.replace(' translucent', '');
+            });
+            groups.forEach((d) => {
+              d.data.class = d.data.class.replace(' translucent', '');
             });
             this.graph.restart.styles();
           }),
@@ -1134,53 +1177,78 @@
         move.pipe(takeLast(1))
           .subscribe(({ x: xf, y: yf }) => {
             // get mouse target
-            const target = this.graph.selectByCoords({ x: xf, X: xf, y: yf, Y: yf });
+            const destination = this.graph.selectByCoords({ x: xf, X: xf, y: yf, Y: yf });
             let targetGroup;
-            let draggedNodes = nodes; // nodes that are in the drag selection
-            if (target.groups.length > 0) { // mouse target is a group
-              targetGroup = target.groups[0];
-            } else if (target.nodes.length > 0) { // mouse target is another node
-              draggedNodes = draggedNodes.filter(node => node.id !== target.nodes[0].id);
-              nodes = draggedNodes.concat(target.nodes[0]);
+            let draggedNodes = nodes; // nodes that are being dragged ie ie target node excluded
+            let draggedGroups = groups; // groups that are being dragged ie target group excluded
+            if (destination.groups.length > 0) { // mouse target is a group
+              // get highest level group
+              const topGroup = destination.groups.reduce(
+                (acc, cur) => ((acc.data.level || 0) > (cur.data.level || 0) ? acc : cur),
+                destination.groups[0]);
+              // filter groups that are not being dragged
+              draggedGroups = draggedGroups.filter(group => group.id !== topGroup.id);
+              // if top level group is selected, then put all groups in new parent group
+              // else top group is target
+              if (groups.includes(topGroup)) {
+                targetGroup = true;
+              } else {
+                targetGroup = topGroup;
+              }
+            } else if (destination.nodes.length > 0) { // mouse target is another node
+              draggedNodes = draggedNodes.filter(node => node.id !== destination.nodes[0].id);
+              nodes = draggedNodes.concat(destination.nodes[0]);
             }
             // map nodes to IDs
-            const draggednodesIDs = draggedNodes.map(node => node.id);
+            const draggedNodesIDs = draggedNodes.map(node => node.id);
+            // map dragged groups to IDs
+            const draggedGroupIDs = draggedGroups.map(group => group.id);
             // if node interacted with is in a group and target is nothing ungroup all nodes
-            if (target.groups.length === 0 && target.nodes.length === 0) {
+            if (destination.groups.length === 0 && destination.nodes.length === 0) {
+              // filter out nodes/groups without a parent
               const nodeIDs = nodes.filter(d => d.parent).map(node => node.id);
-              if (nodeIDs.length > 0) {
+              const groupIDs = groups.filter(d => d.parent).map(group => group.id);
+              if (nodeIDs.length + groupIDs.length > 0) {
                 this.rootObservable.next({
                   type: GROUP,
                   group: false,
-                  children: { nodes: nodeIDs },
+                  children: { nodes: nodeIDs, groups: groupIDs },
                 });
               }
             } else {
+              // const xi = (target.id.slice(0, 4) === 'note') ? target.x :
+              //   target.bounds.x + ((target.bounds.X - target.bounds.x) / 2);
+              // const yi = (target.id.slice(0, 4) === 'note') ? target.y :
+              //   target.bounds.y + ((target.bounds.Y - target.bounds.y) / 2);
               this.rootObservable.next({
                 type: GROUP,
                 group: targetGroup || true,
-                children: { nodes: nodes.map(node => node.id) },
-                translation: { targets: draggednodesIDs, x: xf - d.x, y: yf - d.y },
+                children: { nodes: nodes.map(node => node.id), groups: groups.map(g => g.id) },
+                translation: {
+                  targets: draggedNodesIDs,
+                  x: xf - xi,
+                  y: yf - yi,
+                },
               });
             }
           });
 
         // drag animation - causes the "trails"
-        // updates every 25ms moving a part of the way between the previous position and the mouse position.
+        // updates every 25ms moving a part of the way between
+        // the previous position and the mouse position.
         // nodes "behind" have an offset to their target position
-        combineLatest(merge(move, of({ x: xi, y: yi })),
-          interval(25)).pipe(
-          takeUntil(end),
-        ).subscribe(([{ x, y }, ..._]) => {
-          coordArr = coordArr.map(({ x: xpp, y: ypp }, i) => ({
-            x: xpp + (x - centreOffset + 5 * Math.min(2, i) - xpp) / (damping + Math.min(2, i)),
-            y: ypp + (y - centreOffset + 5 * Math.min(2, i) - ypp) / (damping + Math.min(2, i)),
-          }));
+        combineLatest([merge(move, of({ x: xi, y: yi })), interval(25)])
+          .pipe(takeUntil(end))
+          .subscribe(([{ x, y }]) => {
+            coordArr = coordArr.map(({ x: xpp, y: ypp }, i) => ({
+              x: xpp + ((x - centreOffset + (5 * Math.min(2, i)) - xpp) / (damping + Math.min(2, i))),
+              y: ypp + ((y - centreOffset + (5 * Math.min(2, i)) - ypp) / (damping + Math.min(2, i))),
+            }));
 
-          elemArr.forEach((e, i) => {
-            e.attr('transform', `translate(${(coordArr[i].x) / scale},${coordArr[i].y / scale})`);
+            elemArr.forEach((elem, i) => {
+              elem.attr('transform', `translate(${(coordArr[i].x) / scale},${coordArr[i].y / scale})`);
+            });
           });
-        });
       },
 
       nodeShapeToPath(d) {
@@ -1612,7 +1680,10 @@
         this.rootObservable.next({
           type: GROUP,
           group: false,
-          children: { nodes: group.map(g => g.leaves.map(d => d.id)).reduce((acc, cur) => acc.concat(cur), []) },
+          children: {
+            nodes: group.map(g => g.leaves.map(d => d.id)).reduce((acc, cur) => acc.concat(cur), []),
+            groups: group.map(g => g.groups.map(d => d.id)).reduce((acc, cur) => acc.concat(cur), []),
+          },
         });
       },
 
@@ -1671,6 +1742,7 @@
           tap(e => e.preventDefault()),
         ).subscribe(() => {
           this.ifColorPickerOpen = false;
+          this.dbClickCreateNode = true;
         });
       },
 
@@ -2166,6 +2238,7 @@
               tap(e => e.preventDefault()),
             ).subscribe(() => {
               this.ifColorPickerOpen = false;
+              this.dbClickCreateNode = true;
             });
             break;
           }
@@ -2244,11 +2317,12 @@
 
           case GROUP : {
             const nodes = [...this.activeSelect.nodes.keys()];
-            if (nodes.length > 0) {
+            const groups = [...this.activeSelect.groups.keys()];
+            if ((nodes.length + groups.length) > 0) {
               this.rootObservable.next({
                 type: GROUP,
                 group: true,
-                children: { nodes },
+                children: { nodes, groups },
               });
               this.changeMouseState(POINTER);
             }

@@ -33,6 +33,10 @@ module.exports = {
       'js': 'never',
       'vue': 'never'
     }],
+  'no-mixed-operators': ['error',
+    {
+    'allowSamePrecedence': true
+    }],
     'linebreak-style': 'off',
     // allow optionalDependencies
     'import/no-extraneous-dependencies': ['error', {

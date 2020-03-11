@@ -52,7 +52,7 @@
     </div>
 
     <!--LEFT ICONS-->
-    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width/2}px`}" v-show="type==='note'">
+    <div class="icon-position v-center-align hand" :style="{right: `${posPad.width/2}px`}" >
       <div class="icon-wrapper">
         <svg style="width: 22px; height: 22px;" viewBox="0 0 539 512" class="custom-icon"
              @mousedown="interact('GROUPDRAG', $event)">
@@ -69,7 +69,7 @@
       H174.8v76.3c0,17.1-20.7,25.4-32.6,13.5L8.5,277C1.2,269.6,1.2,257.5,8.5,250z"></path>
         </svg>
       </div>
-      <div class="icon-wrapper">
+      <div class="icon-wrapper" v-show="type==='note'">
         <fa-icon icon="shapes" class="custom-icon" @mouseenter="timerStart" @mouseleave="timerCancel"></fa-icon>
       </div>
     </div>

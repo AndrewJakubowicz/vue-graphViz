@@ -1399,7 +1399,11 @@
                 currentMenuTarget = undefined;
               }
               if (currentMenuTarget !== group.id) {
-                this.hoverAwait = [group, selection, e];
+                if (currentMenuTarget.slice(0, 5) === 'grup-') {
+                  this.hoverQueue$.next(() => this.createHoverMenu(group, selection, e));
+                } else {
+                  this.hoverAwait = [group, selection, e];
+                }
               }
             }
           },

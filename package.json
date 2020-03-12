@@ -23,7 +23,7 @@
     "file-saver": "^2.0.2",
     "interactjs": "^1.3.4",
     "medium-editor": "^5.23.3",
-    "networkvizjs": "git+https://github.com/AndrewJakubowicz/networkVizJS.git#0967666784b8f38d9254535f196e53f95f373c9c",
+    "networkvizjs": "git+https://github.com/AndrewJakubowicz/networkVizJS.git#2eba16cbb12da9afba687976ae113997d7c8750e",
     "rxjs": "^6.4.0",
     "uuid": "^3.3.2",
     "vue": "^2.6.10",

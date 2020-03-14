@@ -44,7 +44,7 @@
    - mouseovernode, nodeId - String
    - mouseoutnode, void
    */
-  import uuid from 'uuid/v4';
+  import { v4 as uuid } from 'uuid';
   import { Compact } from 'vue-color';
   import networkViz from 'networkvizjs';
   import { Subject, merge, fromEvent, combineLatest, of, interval } from 'rxjs';

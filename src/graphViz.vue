@@ -1023,6 +1023,7 @@
                   group: [...prevGroupMap.keys()],
                   children: [...prevGroupMap.values()],
                 };
+                // TODO translation on group nesting?
                 if (action.translation) {
                   applyTranslationHelper(action.translation);
                   opposingAction.translation = {
@@ -1032,7 +1033,7 @@
                   };
                 }
                 undoStack.push(opposingAction);
-                // todo opposing action is incorrect
+                // todo opposing action is incorrect ~~ i think fixed? need to check
                 break;
               }
 
@@ -2134,7 +2135,13 @@
       changeDefaultShape(e) {
         this.defaultShape = e;
       },
-
+      /**
+       *  triggers on use of toolbar
+       *  set mouse state to POINTER to close toolbar after user interaction, recommended when restart occurs or
+       *  creating/deleting parts of the layout
+       *  otherwise set mouse state to SELECT
+       * @param state which action was performed by mouse
+       */
       changeMouseState(state) {
         if (!(state === ADDNOTE
           || state === BOLD
@@ -2156,7 +2163,12 @@
           || state === UNDO)) {
           console.error('Not sure what state', state, 'is');
         } else {
-          this.mouseStateObs$.next(state);
+          // bit hacky but prevents selection observable ending for states that revert to select
+          // because all cases either revert to POINTER state ending SELECT state, or remain in SELECT state
+          // SELECT and POINTER are the only 2 permanent states handled by this function
+          if (state === POINTER){
+            this.mouseStateObs$.next(state);
+          }
           this.mouseState = state;
         }
         switch (state) {
@@ -2248,7 +2260,10 @@
           }
 
           case COPY: {
-            if (this.activeSelect.nodes.size === 0) break;
+            if (this.activeSelect.nodes.size === 0){
+              this.changeMouseState(POINTER);
+              break;
+            }
             const idMap = new Map();
             const svg = this.graph.getSVGElement().node();
             const b = svg.getBoundingClientRect();
@@ -2306,6 +2321,7 @@
           }
 
           case DELETE: {
+            // TODO delete group
             const nodes = [...this.activeSelect.nodes.keys()];
             const edges = [...this.activeSelect.edges.values()];
             this.changeMouseState(POINTER);
@@ -2329,6 +2345,8 @@
                 children: { nodes, groups },
               });
               this.changeMouseState(POINTER);
+            } else {
+              this.mouseState = SELECT;
             }
             break;
           }

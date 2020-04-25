@@ -583,7 +583,6 @@
                       nodeShape: this.defaultShape,
                       text: 'New',
                       img: false,
-                      isSnip: false,
                       fixed: true,
                       color: '#aadcdc',
                       fixedWidth: false,
@@ -2390,7 +2389,7 @@
             const editorBounds = this.transformCoordinates({ x: b.width + b.x, y: b.height + b.y });
             const newNodes = [...this.activeSelect.nodes.values()]
               .map((d) => {
-                const { color, fixed, fixedWidth, img, isSnip, nodeShape, shortname, id, x, y, width, height } = d;
+                const { color, fixed, fixedWidth, img, nodeShape, shortname, id, x, y, width, height } = d;
                 const newId = `note-${uuid()}`;
                 const newX = x + 100 + width / 2 > editorBounds.x ? x - 20 - width / 2 : x + 20 + width / 2;
                 const newY = y + 160 + height > editorBounds.y ? y - 15 - height : y + 15 + height;
@@ -2399,7 +2398,6 @@
                   fixed,
                   fixedWidth,
                   img,
-                  isSnip,
                   nodeShape,
                   shortname,
                   class: d.class.replace(' highlight', ''),

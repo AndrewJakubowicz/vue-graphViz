@@ -102,6 +102,9 @@
   const UNDERLINE = 'UNDERLINE';
   const UNDO = 'UNDO';
   const WIDTH = 'WIDTH';
+  const ALIGNV = 'ALIGNV';
+  const ALIGNH = 'ALIGNH';
+  const CONSTRAIN = 'CONSTRAIN';
 
   const palette = [
     '#4D4D4D', '#999999', '#FFFFFF', '#F44E3B', '#FE9200', '#F6ECAF', '#DBDF00', '#A4DD00', '#AADCDC', '#73D8FF', '#AEA1FF', '#FDA1FF',
@@ -621,6 +624,20 @@
                   });
                 }
 
+                if (action.constraints) {
+                  // re add constraints that were affected by delete
+                  const constraints = [...action.constraints.entries()];
+                  constraints.forEach(([c, nodes]) => {
+                    if (c.type === 'separation') {
+                      const hasNodes = nodes.map(id => this.graph.hasNode(id));
+                      if (hasNodes.every(b => b)) {
+                        this.graph.constrain(c, nodes);
+                      }
+                    } else {
+                      this.graph.constrain(c, nodes);
+                    }
+                  });
+                }
 
                 // add edges
                 let triplet;
@@ -687,7 +704,22 @@
                     }
                   }
                 });
-                // promise containing all subject edges form DB
+                // save constraints on nodes
+                const constraintMap = new Map();
+                nodeArray.forEach((d) => {
+                  if (d.constraint) {
+                    d.constraint.forEach(c => {
+                      let nodes;
+                      if (c.type === "alignment") {
+                        nodes = [...c.nodeOffsets];
+                      } else {
+                        nodes = [c.leftID, c.rightID];
+                      }
+                      constraintMap.set(c, nodes);
+                    });
+                  }
+                });
+                // promise containing all subject edges from DB
                 const subjectEdges = nodeIds.map(id => new Promise((resolve, reject) => {
                   db.get({ subject: id }, (err, l) => {
                     if (err) {
@@ -749,6 +781,7 @@
                         triplet: edges,
                         existingNode: nodeArray,
                         groups: groupMap,
+                        constraints: constraintMap,
                       });
                     }))
                   // perform callbacks
@@ -943,6 +976,7 @@
                *
                */
               case GROUP: {
+                // TODO undoing nested group delete, results in group being recreated without being inside its parent
                 /**
                  * Helper function to create group object
                  */
@@ -1064,6 +1098,70 @@
                 } else {
                   this.graph.restart.styles();
                 }
+                break;
+              }
+
+              /**
+               * separation offsets not (yet) implemented in vuegraphviz all constraints must be alignment
+               * pass in false value to unconstrain, or constraint to add to or create new
+               * action structure: {
+               *  type: CONSTRAIN,
+               *  constraint:  (false | constraintObj) | (false | constraintObj)[],
+               *  id: string[] | string[][]   // node Ids
+               * }
+               * number of constraints should match number of sets of nodes being added to constraint
+               * new constraint object: {
+               *  type: 'alignment' | 'separation',
+               *  axis: 'x' | 'y';
+               *  gap: number // for separation constraint only
+               * }
+               * see networkViz documentation for more details
+               **/
+              case CONSTRAIN: {
+                // save previous constraints node belonged to
+                const prevConstraintMap = new Map();
+                action.id
+                  .flat()
+                  .forEach((id) => {
+                    const d = this.graph.getNode(id);
+                    const cs = d.constraint && d.constraint.length > 0 ? d.constraint : [false];
+                    cs.forEach((c) => {
+                      if (prevConstraintMap.has(c)) {
+                        prevConstraintMap.get(c).push(id);
+                      } else {
+                        prevConstraintMap.set(c, [id]);
+                      }
+                    });
+                  });
+
+                // if constraint is false or undefined, unconstrain node
+                if (!action.constraint) {
+                  const distinctIds = [...new Set(action.id.flat())];
+                  distinctIds.forEach(id => this.graph.unconstrain(id));
+                } else {
+                  const constraints = Array.isArray(action.constraint) ? action.constraint : [action.constraint];
+                  const idSet = typeof action.id[0] === 'string' ? [action.id] : action.id;
+                  // take array of constraints and match nodes to each constraint.
+                  constraints.forEach((constraint, i) => {
+                    // if constraint is false, then unconstrain nodes
+                    if (constraint === false) {
+                      this.graph.unconstrain(idSet[i]);
+                    } else {
+                      // add to existing or new constraint
+                      const nodeOffsets = idSet[i].map(id => ({ id, offset: 0 }));
+                      this.graph.constrain(constraint, nodeOffsets);
+                    }
+                  });
+                  this.graph.restart.layout();
+                }
+
+                // calculate opposite action, place in undo stack
+                const opposingAction = {
+                  type: CONSTRAIN,
+                  constraint: [...prevConstraintMap.keys()],
+                  id: [...prevConstraintMap.values()],
+                };
+                undoStack.push(opposingAction);
                 break;
               }
 
@@ -2144,6 +2242,8 @@
        */
       changeMouseState(state) {
         if (!(state === ADDNOTE
+          || state === ALIGNV
+          || state === ALIGNH
           || state === BOLD
           || state === CLEARSCREEN
           || state === COPY
@@ -2166,7 +2266,7 @@
           // bit hacky but prevents selection observable ending for states that revert to select
           // because all cases either revert to POINTER state ending SELECT state, or remain in SELECT state
           // SELECT and POINTER are the only 2 permanent states handled by this function
-          if (state === POINTER){
+          if (state === POINTER) {
             this.mouseStateObs$.next(state);
           }
           this.mouseState = state;
@@ -2179,6 +2279,26 @@
               type: CREATE,
               newNode: true,
             });
+            break;
+          }
+
+          case ALIGNH: {
+            this.mouseState = SELECT;
+            const id = [...this.activeSelect.nodes.values()].map(d => d.id);
+            if (id.length > 1) {
+              const constraint = { type: 'alignment', axis: 'y' };
+              this.rootObservable.next({ type: CONSTRAIN, constraint, id });
+            }
+            break;
+          }
+
+          case ALIGNV: {
+            this.mouseState = SELECT;
+            const id = [...this.activeSelect.nodes.values()].map(d => d.id);
+            if (id.length > 1) {
+              const constraint = { type: 'alignment', axis: 'x' };
+              this.rootObservable.next({ type: CONSTRAIN, constraint, id });
+            }
             break;
           }
 
@@ -2260,7 +2380,7 @@
           }
 
           case COPY: {
-            if (this.activeSelect.nodes.size === 0){
+            if (this.activeSelect.nodes.size === 0) {
               this.changeMouseState(POINTER);
               break;
             }

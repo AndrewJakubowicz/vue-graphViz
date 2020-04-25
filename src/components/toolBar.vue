@@ -66,8 +66,11 @@
     faSquareFull,
     faPlus,
     faPlusSquare as fasPlusSquare,
+    faGripLines,
+    faGripLinesVertical,
   } from '@fortawesome/free-solid-svg-icons';
-  import { faSave,
+  import {
+    faSave,
     faFolderOpen,
     faCopy,
     faTrashAlt,
@@ -77,7 +80,7 @@
 
   library.add(faMousePointer, faExpand, faPercent, faUndo, faRedo, faThumbtack, faBold,
     faItalic, faUnderline, faCircle, faSquare, faSquareFull, faSave, faFolderOpen,
-    faCopy, faTrashAlt, faObjectGroup, fasPlusSquare, faPlus, farPlusSquare);
+    faCopy, faTrashAlt, faObjectGroup, fasPlusSquare, faPlus, farPlusSquare, faGripLines, faGripLinesVertical);
 
   export default {
     props: ['mouse', 'shape'],
@@ -199,6 +202,20 @@
             toggled: false,
             tip: 'Group',
           },
+          {
+            action: 'ALIGNV',
+            icon: 'grip-lines-vertical',
+            iconStyle: 'fas',
+            toggled: false,
+            tip: 'Vertical Align',
+          },
+          {
+            action: 'ALIGNH',
+            icon: 'grip-lines',
+            iconStyle: 'fas',
+            toggled: false,
+            tip: 'Horizontal Align',
+          },
         ],
         shapes: [
           {
@@ -253,6 +270,8 @@
           || action === 'BOLD'
           || action === 'ITALIC'
           || action === 'GROUP'
+          || action === 'ALIGNH'
+          || action === 'ALIGNV'
           || action === 'UNDERLINE') {
           // For the above actions, default to mouse select state.
           newAction = 'SELECT';

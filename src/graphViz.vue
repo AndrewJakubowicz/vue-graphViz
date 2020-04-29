@@ -283,7 +283,7 @@
         filter(() => this.mouseState === POINTER || this.mouseState === SELECT),
         tap(e => e.preventDefault()),
       ).subscribe(() => {
-        const newSelect = this.graph.selectByCoords({
+        const newSelect = this.graph.getByCoords({
           x: -Infinity,
           X: Infinity,
           y: -Infinity,
@@ -1275,7 +1275,7 @@
         move.pipe(takeLast(1))
           .subscribe(({ x: xf, y: yf }) => {
             // get mouse target
-            const destination = this.graph.selectByCoords({ x: xf, X: xf, y: yf, Y: yf });
+            const destination = this.graph.getByCoords({ x: xf, X: xf, y: yf, Y: yf });
             let targetGroup;
             let draggedNodes = nodes; // nodes that are being dragged ie ie target node excluded
             let draggedGroups = groups; // groups that are being dragged ie target group excluded
@@ -1410,62 +1410,7 @@
           jaccardModifier: 0.9,
           height: document.getElementById(this.$el.id).clientHeight,
           width: document.getElementById(this.$el.id).clientWidth,
-          edgeSmoothness: 15,
           palette,
-
-          nodeToColor: function nodeToColor(d) {
-            return d.color ? d.color : ' "#ffffff"';
-          },
-
-          nodeToPin: function nodeToPin(d) {
-            // 1st bit is user set, second bit is set by d3 whilst dragging.
-            // hence check LSB if d.fixed is not bool
-            return (d.fixed === true || d.fixed % 2 === 1);
-          },
-
-          nodeShape: 'capsule',
-
-          // Shapes defined: rect, circle, capsule
-          nodePath: (d) => {
-            switch (d.nodeShape) {
-              case 'rect': {
-                return 'M16 48 L48 48 L48 16 L16 16 Z';
-              }
-              case 'circle': {
-                return 'M20,40a20,20 0 1,0 40,0a20,20 0 1,0 -40,0';
-              }
-              case 'capsule': {
-                const width = d.width;
-                const height = d.height;
-                if (width && height) {
-                  const x = width / 2;
-                  const y = height / 2;
-                  const r = Math.round(Math.min(width, height) / 8);
-                  const v0 = { x, y };
-                  const v1 = { x, y: y + height };
-                  const v2 = { x: x + width, y: y + height };
-                  const v3 = { x: x + width, y };
-                  return [`M${v0.x} ${v0.y + r}`,
-                    `V${v1.y - r}`,
-                    `C${v1.x} ${v1.y} ${v1.x + r} ${v1.y} ${v1.x + r} ${v1.y}`,
-                    `H${v2.x - r}`,
-                    `C${v2.x} ${v2.y} ${v2.x} ${v2.y - r} ${v2.x} ${v2.y - r}`,
-                    `V${v3.y + r}`,
-                    `C${v3.x} ${v3.y} ${v3.x - r} ${v3.y} ${v3.x - r} ${v3.y}`,
-                    `H${v0.x + r}`,
-                    `C${v0.x} ${v0.y} ${v0.x} ${v0.y + r} ${v0.x} ${v0.y + r} Z`]
-                    .join(' ');
-                }
-                return 'M16 20 V44 C16 48 20 48 20 48 H44 C48 48 48 44 48 44 V20 C48 16 44 16 44 16 H20 C16 16 16 20 16 20 Z';
-              }
-              default : {
-                // Return rect by default
-                return 'M16 48 L48 48 L48 16 L16 16 Z';
-              }
-            }
-          },
-
-          groupFillColor: g => g && g.data.color ? g.data.color : '#F6ECAF',
 
           clickAway: () => {
             // this.closeHoverMenu();
@@ -1481,7 +1426,7 @@
             this.updateHoverMenu();
           },
 
-          endGroupDrag: (d) => {
+          endGroupDrag: () => {
             this.groupDrag = false;
           },
 
@@ -1506,7 +1451,7 @@
             }
           },
 
-          mouseOutGroup: (group, selection, e) => {
+          mouseOutGroup: () => {
             this.hoverQueue$.next(false);
           },
 
@@ -1532,7 +1477,7 @@
             this.$emit('mouseovernode', node.hash);
           },
 
-          mouseOutNode: (node, selection, e) => {
+          mouseOutNode: (node) => {
             this.hoverQueue$.next(false);
             me.dbClickCreateNode = true;
             me.clickedGraphViz = true;
@@ -1551,15 +1496,7 @@
             this.hoverQueue$.next(false);
           },
 
-          edgeColor: predicate => predicate ? (predicate.stroke ? predicate.stroke.substring(1) : '000000') : '000000',
-
-          edgeArrowhead: predicate => (predicate && typeof predicate.arrowhead === 'number') ? predicate.arrowhead : 1,
-
-          edgeStroke: predicate => predicate ? (predicate.strokeWidth ? predicate.strokeWidth : 2) : 2,
-
-          edgeDasharray: predicate => predicate ? (predicate.strokeDasharray ? predicate.strokeDasharray : 0) : 0,
-
-          edgeRemove: (edge, selection, e) => {
+          edgeRemove: (edge) => {
             this.changeMouseState(POINTER);
             this.rootObservable.next({
               type: DELETE,
@@ -2699,7 +2636,7 @@
                 map(e => ({ X: e.x, Y: e.y })),
                 map(({ X, Y }) => {
                   elem.attr('d', `M${x} ${y} H${X} V${Y} H${x}Z`);
-                  const selection = this.graph.selectByCoords({ x, X, y, Y });
+                  const selection = this.graph.getByCoords({ x, X, y, Y });
                   return [...selection.nodes, ...selection.edges];
                 }),
                 pairwise(),

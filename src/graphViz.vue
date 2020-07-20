@@ -59,6 +59,7 @@
     takeLast,
     takeWhile,
     pairwise,
+    switchMap,
   } from 'rxjs/operators';
   import toolBar from './components/toolBar';
   import hoverMenuNode from './components/hoverMenuNode';
@@ -189,6 +190,9 @@
         activeSelect: new HighlightSelection(),
         mouseStateObs$: undefined,
         defaultShape: 'capsule',
+        nodeDragged$: undefined,
+        nodeDragEnd$: undefined,
+        nodeDragStart$: undefined,
       };
     },
     mounted() {
@@ -196,6 +200,9 @@
       this.mouseDown$ = new Subject().pipe(takeUntil(this.destroy$));
       this.mouseOverNode$ = new Subject().pipe(takeUntil(this.destroy$));
       this.mouseStateObs$ = new Subject().pipe(takeUntil(this.destroy$));
+      this.nodeDragged$ = new Subject().pipe(takeUntil(this.destroy$));
+      this.nodeDragEnd$ = new Subject().pipe(takeUntil(this.destroy$));
+      this.nodeDragStart$ = new Subject().pipe(takeUntil(this.destroy$));
 
       this.hoverQueue$ = new Subject().pipe(
         takeUntil(this.destroy$),
@@ -308,6 +315,42 @@
           e.preventDefault();
           this.changeMouseState(SELECT);
         });
+
+      this.nodeDragStart$.pipe(
+        switchMap((d) => {
+          return this.nodeDragged$.pipe(
+            takeUntil(this.nodeDragEnd$),
+            takeLast(1),
+            map((align) => {
+              // exclude offset alignments
+              // TODO: networkviz currently can't dynamically adjust offsets after creation
+              const x = align.x && align.x.offset === 0 ? { x: align.x } : false;
+              const y = align.y && align.y.offset === 0 ? { y: align.y } : false;
+              return { ...x, ...y };
+            }),
+            filter(x => x !== false),
+            map(align => ({ align: align, target: d })),
+          );
+        }),
+      ).subscribe(e => {
+        Object.entries(e.align).forEach(([axis, align]) => {
+          const targetID = e.target.id;
+          const alignedID = align.array.map(({ id }) => id);
+          const alignedNodes = alignedID.map(id => this.graph.getNode(id));
+          const existConstraints = alignedNodes
+            .map(({ constraint }) => constraint)
+            .flat(1)
+            .filter(cons => cons && cons.type === 'alignment' && cons.axis === axis);
+          const constraint = existConstraints.length > 0 ? existConstraints[0] : { type: 'alignment', axis };
+          // exclude nodes already constrained in existing constraint
+          const newAlignedID = existConstraints.length === 0 ? alignedID :
+            alignedID.filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
+          const id = existConstraints.length > 0 ? [targetID] : newAlignedID.concat(targetID);
+
+          this.rootObservable.next({ type: CONSTRAIN, constraint, id });
+        });
+      });
+
     },
     beforeDestroy() {
       this.destroy$.next(true);
@@ -1521,6 +1564,19 @@
               this.graph.restart.highlight();
             }
           },
+
+          nodeDragStart: (d, elem) => {
+            this.nodeDragStart$.next(d);
+          },
+
+          nodeDragged: (d, elem, align) => {
+            this.nodeDragged$.next(align);
+          },
+
+          nodeDragEnd: (d, elem) => {
+            this.nodeDragEnd$.next(d);
+          },
+
         };
 
         this.graph = networkViz('graph', layoutOptions);
@@ -2220,9 +2276,18 @@
 
           case ALIGNH: {
             this.mouseState = SELECT;
-            const id = [...this.activeSelect.nodes.values()].map(d => d.id);
-            if (id.length > 1) {
-              const constraint = { type: 'alignment', axis: 'y' };
+            const nodeArr = [...this.activeSelect.nodes.values()];
+            // find existing vertical constraint
+            const existConstraints = nodeArr
+              .map(({ constraint }) => constraint)
+              .flat(1)
+              .filter(cons => cons && cons.type === 'alignment' && cons.axis === 'y');
+            const constraint = existConstraints.length > 0 ? existConstraints[0] : { type: 'alignment', axis: 'y' };
+            // filter out nodes already in constraint
+            const id = existConstraints.length === 0 ? nodeArr.map(d => d.id) :
+              nodeArr.map(d => d.id).filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
+            // constrain if there is at least 1 new node in action
+            if (id.length > 1 || existConstraints.length > 0 && id.length === 1) {
               this.rootObservable.next({ type: CONSTRAIN, constraint, id });
             }
             break;
@@ -2230,9 +2295,18 @@
 
           case ALIGNV: {
             this.mouseState = SELECT;
-            const id = [...this.activeSelect.nodes.values()].map(d => d.id);
-            if (id.length > 1) {
-              const constraint = { type: 'alignment', axis: 'x' };
+            const nodeArr = [...this.activeSelect.nodes.values()];
+            // find existing vertical constraint
+            const existConstraints = nodeArr
+              .map(({ constraint }) => constraint)
+              .flat(1)
+              .filter(cons => cons && cons.type === 'alignment' && cons.axis === 'x');
+            const constraint = existConstraints.length > 0 ? existConstraints[0] : { type: 'alignment', axis: 'x' };
+            // filter out nodes already in constraint
+            const id = existConstraints.length === 0 ? nodeArr.map(d => d.id) :
+              nodeArr.map(d => d.id).filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
+            // constrain if there is at least 1 new node in action
+            if (id.length > 1 || existConstraints.length > 0 && id.length === 1) {
               this.rootObservable.next({ type: CONSTRAIN, constraint, id });
             }
             break;

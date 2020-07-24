@@ -21,6 +21,14 @@
                      @exitHover="closeEdgeHoverMenu($event)"
                      @clickedButton="hoverEdgeInteract($event)">
     </hover-menu-edge>
+    <hover-menu-constraint :position="hoverConstPos"
+                           :pad="5"
+                           :display="hoverConstDisplay"
+                           :data="hoverConstData"
+                           @exitHover="closeConstHoverMenu($event)"
+                           @clickedButton="hoverConstInteract($event)">
+      >
+    </hover-menu-constraint>
     <toolBar @clickedAction="changeMouseState($event)"
              @changeDefaultShape="changeDefaultShape($event)"
              @mouseEnter="closeHoverMenu()"
@@ -67,6 +75,7 @@
   import linkTool from './behaviours/link-tool';
   import textEdit from './behaviours/text-edit';
   import HighlightSelection from './behaviours/selection';
+  import HoverMenuConstraint from "./components/hoverMenuConstraint";
 
 
   const ADDNOTE = 'ADDNOTE';
@@ -137,6 +146,7 @@
     },
     name: 'graph-viz',
     components: {
+      HoverMenuConstraint,
       toolBar,
       'color-picker': Compact,
       hoverMenuNode,
@@ -171,6 +181,9 @@
         colors: {
           hex: '#FFFFFF',
         },
+        hoverConstPos: undefined,
+        hoverConstDisplay: false,
+        hoverConstData: undefined,
         palette,
         graph: undefined,
         nodesOutsideDiagram: [],
@@ -190,9 +203,7 @@
         activeSelect: new HighlightSelection(),
         mouseStateObs$: undefined,
         defaultShape: 'capsule',
-        nodeDragged$: undefined,
-        nodeDragEnd$: undefined,
-        nodeDragStart$: undefined,
+        shownConstraints: false,
       };
     },
     mounted() {
@@ -200,9 +211,6 @@
       this.mouseDown$ = new Subject().pipe(takeUntil(this.destroy$));
       this.mouseOverNode$ = new Subject().pipe(takeUntil(this.destroy$));
       this.mouseStateObs$ = new Subject().pipe(takeUntil(this.destroy$));
-      this.nodeDragged$ = new Subject().pipe(takeUntil(this.destroy$));
-      this.nodeDragEnd$ = new Subject().pipe(takeUntil(this.destroy$));
-      this.nodeDragStart$ = new Subject().pipe(takeUntil(this.destroy$));
 
       this.hoverQueue$ = new Subject().pipe(
         takeUntil(this.destroy$),
@@ -316,40 +324,44 @@
           this.changeMouseState(SELECT);
         });
 
-      this.nodeDragStart$.pipe(
-        switchMap((d) => {
-          return this.nodeDragged$.pipe(
-            takeUntil(this.nodeDragEnd$),
-            takeLast(1),
-            map((align) => {
-              // exclude offset alignments
-              // TODO: networkviz currently can't dynamically adjust offsets after creation
-              const x = align.x && align.x.offset === 0 ? { x: align.x } : false;
-              const y = align.y && align.y.offset === 0 ? { y: align.y } : false;
-              return { ...x, ...y };
-            }),
-            filter(x => x !== false),
-            map(align => ({ align: align, target: d })),
-          );
-        }),
-      ).subscribe(e => {
-        Object.entries(e.align).forEach(([axis, align]) => {
-          const targetID = e.target.id;
-          const alignedID = align.array.map(({ id }) => id);
-          const alignedNodes = alignedID.map(id => this.graph.getNode(id));
-          const existConstraints = alignedNodes
-            .map(({ constraint }) => constraint)
-            .flat(1)
-            .filter(cons => cons && cons.type === 'alignment' && cons.axis === axis);
-          const constraint = existConstraints.length > 0 ? existConstraints[0] : { type: 'alignment', axis };
-          // exclude nodes already constrained in existing constraint
-          const newAlignedID = existConstraints.length === 0 ? alignedID :
-            alignedID.filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
-          const id = existConstraints.length > 0 ? [targetID] : newAlignedID.concat(targetID);
-
-          this.rootObservable.next({ type: CONSTRAIN, constraint, id });
-        });
-      });
+      // this.nodeDragStart$.pipe(
+      //   switchMap((d) => {
+      //     return this.nodeDragged$.pipe(
+      //       takeUntil(this.nodeDragEnd$),
+      //       takeLast(1),
+      //       map((align) => {
+      //         // exclude offset alignments
+      //         // TODO: networkviz currently can't dynamically adjust offsets after creation
+      //         const x = align.x && align.x.offset === 0 ? { x: align.x } : false;
+      //         const y = align.y && align.y.offset === 0 ? { y: align.y } : false;
+      //         return { ...x, ...y };
+      //       }),
+      //       filter(x => x !== false),
+      //       map(align => ({ align: align, target: d })),
+      //     );
+      //   }),
+      // ).subscribe(e => {
+      //   Object.entries(e.align).forEach(([axis, align]) => {
+      //     const targetID = e.target.id;
+      //     const alignedID = align.array.map(({ id }) => id);
+      //     const alignedNodes = alignedID.map(id => this.graph.getNode(id));
+      //     const existConstraints = alignedNodes
+      //       .map(({ constraint }) => constraint)
+      //       .flat(1)
+      //       .filter(cons => cons && cons.type === 'alignment' && cons.axis === axis);
+      //     const constraint = existConstraints.length > 0 ? existConstraints[0] : {
+      //       type: 'alignment',
+      //       axis,
+      //       visible: true,
+      //     };
+      //     // exclude nodes already constrained in existing constraint
+      //     const newAlignedID = existConstraints.length === 0 ? alignedID :
+      //       alignedID.filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
+      //     const id = existConstraints.length > 0 ? [targetID] : newAlignedID.concat(targetID);
+      //
+      //     // this.rootObservable.next({ type: CONSTRAIN, constraint, id });
+      //   });
+      // });
 
     },
     beforeDestroy() {
@@ -1149,6 +1161,7 @@
                * action structure: {
                *  type: CONSTRAIN,
                *  constraint:  (false | constraintObj) | (false | constraintObj)[],
+               *  deleteConstraint?: boolean delete only given constraint, not delete all constraints on given node
                *  id: string[] | string[][]   // node Ids
                * }
                * number of constraints should match number of sets of nodes being added to constraint
@@ -1188,14 +1201,17 @@
                     // if constraint is false, then unconstrain nodes
                     if (constraint === false) {
                       this.graph.unconstrain(idSet[i]);
+                    } else if (action.deleteConstraint) {
+                      // only delete given constraint from nodes
+                      this.graph.unconstrain(idSet[i], constraint);
                     } else {
                       // add to existing or new constraint
                       const nodeOffsets = idSet[i].map(id => ({ id, offset: 0 }));
                       this.graph.constrain(constraint, nodeOffsets);
                     }
                   });
-                  this.graph.restart.layout();
                 }
+                this.graph.restart.layout();
 
                 // calculate opposite action, place in undo stack
                 const opposingAction = {
@@ -1565,16 +1581,52 @@
             }
           },
 
-          nodeDragStart: (d, elem) => {
-            this.nodeDragStart$.next(d);
+          nodeDragStart: (d) => {
+            // this.nodeDragStart$.next(d);
           },
 
           nodeDragged: (d, elem, align) => {
-            this.nodeDragged$.next(align);
+            // this.nodeDragged$.next(align);
           },
 
-          nodeDragEnd: (d, elem) => {
-            this.nodeDragEnd$.next(d);
+          nodeDragEnd: () => {
+            // this.nodeDragEnd$.next();
+          },
+
+          clickConstraintGuide: (d, alignedNodes, axis) => {
+            const alignedID = alignedNodes.map(({ id }) => id);
+            const existConstraints = alignedNodes
+              .map(({ constraint }) => constraint)
+              .flat(1)
+              .filter(cons => cons && cons.type === 'alignment' && cons.axis === axis);
+            const constraint = existConstraints.length > 0 ? existConstraints[0] : {
+              type: 'alignment',
+              axis,
+              visible: false,
+            };
+            // exclude nodes already constrained in existing constraint
+            const newAlignedID = existConstraints.length === 0 ? alignedID :
+              alignedID.filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
+            const id = existConstraints.length > 0 ? [d.id] : newAlignedID.concat(d.id);
+
+            this.rootObservable.next({ type: CONSTRAIN, constraint, id });
+
+          },
+
+          clickConstraint: (d) => {
+            this.graph.constraintVisibility(false, d);
+          },
+
+          mouseOverConstraint: (c, selection, e) => {
+            this.hoverQueue$.next(() => this.createConstraintHoverMenu(c, selection, e));
+            me.dbClickCreateNode = false;
+            me.clickedGraphViz = false;
+          },
+
+          mouseOutConstraint: () => {
+            this.hoverQueue$.next(false);
+            me.dbClickCreateNode = true;
+            me.clickedGraphViz = true;
           },
 
         };
@@ -1628,6 +1680,11 @@
               this.changeMouseState(SELECT);
             }
             this.activeSelect.selectExclusive(node);
+            const constraints = node.constraint && node.constraint.filter(({ type }) => type === 'alignment');
+            if (constraints && constraints.length > 0) {
+              this.graph.constraintVisibility(true, constraints);
+              this.shownConstraints = true;
+            }
             this.graph.restart.highlight();
           }
         });
@@ -1696,6 +1753,15 @@
           take(1),
         ).subscribe(() => {
           this.clickedGraphViz = true;
+        });
+
+        // hide and shown constraints on mousedown
+        fromEvent(svgElem, 'mousedown').pipe(
+          takeUntil(this.destroy$),
+          filter(() => this.shownConstraints),
+        ).subscribe(() => {
+          this.graph.constraintVisibility(false);
+          this.shownConstraints = false;
         });
 
         // TODO find permanent solution to nodes created wrong size upon loading
@@ -1923,6 +1989,7 @@
         this.hoverEdgeDisplay = false;
         this.hoverTextBar = d.id.slice(0, 4) === 'grup' && this.mouseState !== TEXTEDIT
           && (!d.data.text || d.data.text === '');
+        this.closeConstHoverMenu();
       },
 
       updateHoverMenu() {
@@ -2031,9 +2098,41 @@
           }
         }
       },
+      hoverConstInteract(event) {
+        const constraint = event.data.data;
+        if (event.type === DELETE) {
+          this.rootObservable.next({
+            type: CONSTRAIN,
+            constraint,
+            id: constraint.nodeOffsets.map(({ id }) => id),
+            deleteConstraint: true,
+          });
+        }
+      },
+
+      closeConstHoverMenu() {
+        this.hoverConstDisplay = false;
+        this.hoverConstData = undefined;
+        this.hoverConstPos = undefined;
+        if (this.hoverAwait) {
+          this.createHoverMenu(...this.hoverAwait);
+          this.hoverAwait = false;
+        }
+      },
+
+      createConstraintHoverMenu(d, selection, e) {
+        if (!this.hoverConstData) {
+          this.closeHoverMenu();
+          this.closeEdgeHoverMenu();
+          this.hoverConstData = { data: d, el: selection };
+          this.hoverConstPos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
+          this.hoverConstDisplay = true;
+        }
+      },
 
       createEdgeHoverMenu(d, selection, e) {
         if (!this.hoverEdgeDisplay) {
+          this.closeConstHoverMenu();
           this.hoverEdgePos = { x: e.clientX, y: e.clientY, width: 50, height: 50 };
           this.hoverEdgeColor = d.predicate ? (d.predicate.stroke || '#000000') : '#000000';
           this.hoverEdgeDisplay = true;
@@ -2282,7 +2381,11 @@
               .map(({ constraint }) => constraint)
               .flat(1)
               .filter(cons => cons && cons.type === 'alignment' && cons.axis === 'y');
-            const constraint = existConstraints.length > 0 ? existConstraints[0] : { type: 'alignment', axis: 'y' };
+            const constraint = existConstraints.length > 0 ? existConstraints[0] : {
+              type: 'alignment',
+              axis: 'y',
+              visible: false,
+            };
             // filter out nodes already in constraint
             const id = existConstraints.length === 0 ? nodeArr.map(d => d.id) :
               nodeArr.map(d => d.id).filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));
@@ -2301,7 +2404,11 @@
               .map(({ constraint }) => constraint)
               .flat(1)
               .filter(cons => cons && cons.type === 'alignment' && cons.axis === 'x');
-            const constraint = existConstraints.length > 0 ? existConstraints[0] : { type: 'alignment', axis: 'x' };
+            const constraint = existConstraints.length > 0 ? existConstraints[0] : {
+              type: 'alignment',
+              axis: 'x',
+              visible: false,
+            };
             // filter out nodes already in constraint
             const id = existConstraints.length === 0 ? nodeArr.map(d => d.id) :
               nodeArr.map(d => d.id).filter(nodeID => !constraint.nodeOffsets.map(({ id }) => id).includes(nodeID));

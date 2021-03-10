@@ -21,7 +21,7 @@
     "@fortawesome/vue-fontawesome": "^0.1.9",
     "file-saver": "^2.0.2",
     "medium-editor": "^5.23.3",
-    "networkvizjs": "git+https://github.com/AndrewJakubowicz/networkVizJS.git#e11739291fde9a4109bb244283a71ec920efb350",
+    "networkvizjs": "git+https://github.com/AndrewJakubowicz/networkVizJS.git#2daa8080a1d1a434d649fcafd2440ac2abd2f6c8",
     "rxjs": "^6.5.5",
     "uuid": "^8.0.0",
     "vue": "^2.6.11",

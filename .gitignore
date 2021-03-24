@@ -9,3 +9,5 @@ test/e2e/reports
 selenium-debug.log
 .idea/
 /vue-graphViz.iml
+
+package-lock.json
